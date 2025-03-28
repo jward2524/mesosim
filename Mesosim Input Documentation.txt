@@ -1,0 +1,27 @@
+MESOSIM Input Script Format
+
+The input script format for MESOSIM is formatted similarly to the input scripts of LAMMPS and SPPARKS; the script is read one line at a time, and changes take effect in the program as each line is read. Unlike these other two programs, MESOSIM will not execute the simulation until after the full input file is read, and any commands that are repeated in the file will be overwritten by the most recent instance. Below is a list of commands and their functions:
+
+-GEOMETRY-
+ * systemsize ssx ssy ssz - set the system size to be ssx by ssy by ssz
+ * struct FCC/BCC/SC/1/2/3 - set the crystal structure of the system to be face-centered cubic (1), body-centered cubic (2), or simple cubic (3).
+ * geometry sheet sheet_z - add atoms that form a flat sheet of thickness sheet_z; sheet_z cannot be negative.
+ * geometry cluster cluster_r - add atoms that form a spherical cluster of radius cluster_r; cluster_r cannot exceed half the smallest dimension of the system to avoid initializing atoms that overlap with each other.
+ * geometry file filename - add atoms according to a .xyz or .kmc file specified by filename. 
+ * composition xa [xb] [xc] - set the system composition to atomic fractions of A = xa, B = xb, C = xc. If a composition is not specified, it is assumed to be 0, allowing the user to set a unary or binary system
+
+-THERMODYNAMICS-
+ * temp t - set the temperature to be t (Kelvin)
+ * nne AA [AB] [AC] [BB] [BC CC] - set the nearest neighbor energies [eV] for all combinations of atoms. If only 1 value is read, the system is assumed to be unary; if only 3 values are read, the system is assumed to be binary; if all 6 are read, the system is ternary.
+ * 2nne AA AB [AC] BB [BC CC] - set the next-nearest neighbor energies [eV] for all combinations of atoms. If only 3 values are read, the system is assumed to be binary; if all 6 are read, the system is ternary. [NOTE: not implemented fully yet]
+ * dissolution A [B C] - set whether each type of atom is able to dissolve as a boolean value (acceptable formats include true/false, True/False, TRUE/FALSE, T/F, 1/0). Number of values read corresponds to number of elements in the system, up to 3.
+
+-TIME-BASED FUNCTIONS-
+ * potential initial [ramp max] - set the potential sweep to start at initial, ramping with frequency ramp [eV/s] to end at max value. If ramp and max are not included, the potential stays constant over the simulation
+ * time linear first interval runtime - set the frequency of data recording; first is the first time for which to record, interval is the linear (additive) interval of time before the next data point is recorded, runtime is the final time at which to record data
+ * time log first multiplier runtime - set the frequency of data recording; first is the first time for which to record, multiplier is the logarithmic (multiplicative) interval of time before the next data point is recorded, runtime is the final time at which to record data
+
+-OTHER-
+ * seed default/random/int - set the random seed for the system; default uses a pre-defined long int that is consistent across program iterations, random seeds using the current time, and int is an arbitrary long integer chosen by the user. 
+ * atomtype A [B C] - set the names of each type of atom; number of strings found by the parser determines the number of atoms in the system (unary/binary/ternary).
+ * output filename - set the filename for outputs 
