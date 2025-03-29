@@ -1,2 +1,8 @@
 extras/
 .vs*
+*.o
+*.i
+*.s
+*.exe
+*.h.gch
+tmp/
