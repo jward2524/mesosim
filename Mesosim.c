@@ -6,6 +6,7 @@
 #include "Vector.h"
 #include "Globals.h"
 #include "Simulation Globals.h"
+#include <error.h>
 //notable absence of Windows.h!
 
 void write_backlog(FILE*, FILE*);
@@ -15,15 +16,20 @@ time_t starttime, endtime;
 //use main function to run everything
 int main(int argc, char* argv[]) {
 
-    printf("main entered");
+    printf("main entered\n");
 
     //start the time
     time(&starttime);
 
     //write to a temporary file until a logfile is identified
-    // TODO: change to using tmpnam and opening file, removing it after data transfer
-    temp_log = tmpfile();
-    fprintf(temp_log, "MESOSIM 2024\n");
+    char* temp_name = "tmp/tmp.log";
+    temp_log = fopen(temp_name, "w");
+    printf("Temp log: %s\n", temp_name);
+    if (temp_log == NULL) {
+        perror("Failed to make temp file");
+        exit(errno);
+    }
+    fputs("MESOSIM 2024\n", temp_log);
     initialize_lattice_geometry(); //this gets replaced in the input file
 
     simulation_type = -1; //TODO: need to define in globals!!
@@ -70,7 +76,8 @@ int main(int argc, char* argv[]) {
 
     // put everything that was in temp_log into outFile
     write_backlog(temp_log, sim_log_file);
-    // TODO: close and remove temp_log
+    fclose(temp_log);
+    remove(temp_name);
 
     //print a lot of information to the log
     // TODO: move this to a function, esp since most of these are globals anyways
