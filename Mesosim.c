@@ -6,7 +6,7 @@
 #include "Vector.h"
 #include "Globals.h"
 #include "Simulation Globals.h"
-#include <error.h>
+#include <errno.h>
 //notable absence of Windows.h!
 
 void write_backlog(FILE*, FILE*);
