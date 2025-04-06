@@ -602,7 +602,7 @@ bool process_xyz_file(char *xyz_filename)
 		atom[i]->type = atype;
 		atom[i]->bsradius = radius;
 
-		//vecmul(atom[i]->coord, ilatmat, atom[i]->lattice); //need to do this later now!
+		//vecmul(atom[i]->coord, ilatmat, atom[i]->lattice); // TODO: need to do this later now!
 
         /*switch(atom[i]->type)
         {

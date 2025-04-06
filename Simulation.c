@@ -492,7 +492,7 @@ int create_new_transition(double r)
 
 // add to list[tl] the atom at going in direction vc
 // [ ]: help understanding this - what is offset, number, ia, fa
-void add_to_transition_list(int tl, int at, int vc)
+void add_to_transition_list(int tl, int at, int vc) // transition list index, atom index, diffusion vector index
 {
 	int i;
 	int n;

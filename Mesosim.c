@@ -22,6 +22,7 @@ int main(int argc, char* argv[]) {
     time(&starttime);
 
     //write to a temporary file until a logfile is identified
+    // TODO: remove requirement of tmp folder
     char* temp_name = "tmp/tmp.log";
     temp_log = fopen(temp_name, "w");
     printf("Temp log: %s\n", temp_name);
