@@ -2,7 +2,7 @@
 
 // The definitions in this file primarily relate specifically to the simulation module
 
-#define MAXIMUM_NUMBER_OF_ATOMS 50000					// maximum number of atoms; each atom is allocated dynamically
+#define MAXIMUM_NUMBER_OF_ATOMS 500000					// maximum number of atoms; each atom is allocated dynamically
 //#define MAXIMUM_NUMBER_OF_SURFACE_ATOMS 2000000
 
 #define MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS 100		//used! // maximum number of distinct activation barriers for different
@@ -11,7 +11,7 @@
 
 // this is (diffusion)+(deposition)
 
-#define MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS ((MAXIMUM_NUMBER_OF_NEIGHBORS+DISSOLUTION)*MAXIMUM_NUMBER_OF_ATOMS)+10
+#define MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS ((MAXIMUM_NUMBER_OF_NEIGHBORS+DISSOLUTION)*((unsigned long long int) MAXIMUM_NUMBER_OF_ATOMS))+10
 
 														// The maximum number of transitions going on simulataneously
 														// is equal to (the number of atoms) * (the number of things
