@@ -5,7 +5,7 @@
 #include "Prototypes.h"
 #include "Vector.h"
 #include "Globals.h"
-#include "Simulation Globals.h"
+#include "Simulation_Globals.h"
 #include <errno.h>
 //notable absence of Windows.h!
 

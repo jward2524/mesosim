@@ -1,34 +1,40 @@
 SHELL = /bin/sh
 
-CFLAGS = -mcmodel=medium
-ALL_CFLAGS = -std=c11 $(CFLAGS)
+debug := 1
+SRC_DIR := src
+BUILD_DIR := build
+INCLUDE_DIR := include
+# LIB_DIR := lib
+# TESTS_DIR := tests
+BIN_DIR := bin
 
-mesosim: Mesosim.o Atoms.o FileIO.o Random.o Simulation\ Aux.o Simulation.o Vector.o
-	gcc $(ALL_CFLAGS) -v -o mesosim Mesosim.o Atoms.o FileIO.o Random.o Simulation\ Aux.o Simulation.o Vector.o -lm
+XS_CFLAGS := -mcmodel=medium
+CFLAGS := -std=c11 -Wall -Wextra -Wpedantic $(XS_CFLAGS)
+# -v verbose
+LDFLAGS := -lm
 
-Mesosim.o: Mesosim.c stdafx.h.gch Defs.h Geometry.h Prototypes.h Vector.h Globals.h Simulation\ Globals.h
-	gcc $(ALL_CFLAGS) -c Mesosim.c
+ifeq ($(debug), 1)
+	CFLAGS := $(CFLAGS) -ggdb -O0
+else
+	CFLAGS := $(CFLAGS) -O2
+endif
 
-Atoms.o: Atoms.c stdafx.h.gch Defs.h Geometry.h Prototypes.h Vector.h Global\ Externs.h Simulation\ Global\ Externs.h
-	gcc $(ALL_CFLAGS) -c Atoms.c
+# object files, use for mesosim target
+# object_names := Mesosim.o Atoms.o FileIO.o Random.o Simulation_Aux.o Simulation.o Vector.o
+# OBJS := $(addprefix $(BUILD_DIR)/,$(object_names))
+OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o, $(wildcard $(SRC_DIR)/*.c))
 
-FileIO.o: FileIO.c stdafx.h.gch Defs.h Geometry.h Prototypes.h Vector.h Global\ Externs.h Simulation\ Global\ Externs.h
-	gcc $(ALL_CFLAGS) -c FileIO.c
+# build binary using object files
+# timestamp-checking won't work on Windows, since Windows creates mesosim.exe
+$(BIN_DIR)/mesosim: $(OBJS)
+	gcc $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
 
-Random.o: Random.c stdafx.h.gch Defs.h Geometry.h Prototypes.h Vector.h Global\ Externs.h Simulation\ Global\ Externs.h
-	gcc $(ALL_CFLAGS) -c Random.c
+# make object files based on .c files in SRC_DIR, looking for header files in INCLUDE_DIR
+# wildcards needed on both sides, otherwise all .c files would be prerequisites
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(BUILD_DIR) $(BIN_DIR)
+	gcc $(CFLAGS) -I$(INCLUDE_DIR) -o $@ -c $<
 
-Simulation\ Aux.o: Simulation\ Aux.c stdafx.h.gch Defs.h Geometry.h Prototypes.h Vector.h Global\ Externs.h Simulation\ Global\ Externs.h
-	gcc $(ALL_CFLAGS) -c Simulation\ Aux.c
-
-Simulation.o: Simulation.c stdafx.h.gch Defs.h Geometry.h Prototypes.h Vector.h Global\ Externs.h Simulation\ Global\ Externs.h
-	gcc $(ALL_CFLAGS) -c Simulation.c
-
-Vector.o: Vector.c stdafx.h.gch Vector.h
-	gcc $(ALL_CFLAGS) -c Vector.c
-
-stdafx.h.gch: stdafx.h
-	gcc -x c-header stdafx.h -o stdafx.h.gch
-
+# Clean build and bin directories
 clean:
-	rm *.o *.i *.s mesosim.exe
+	@rm -rf $(BUILD_DIR) $(BIN_DIR)

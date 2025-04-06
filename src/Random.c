@@ -4,8 +4,8 @@
 #include "Geometry.h"
 #include "Prototypes.h"
 #include "Vector.h"
-#include "Global Externs.h"
-#include "Simulation Global Externs.h"
+#include "Global_Externs.h"
+#include "Simulation_Global_Externs.h"
 // TODO: remove most of these
 
 //this file is the exact same as Random Number.cpp except for the obvious change in header
