@@ -21,12 +21,6 @@ bool simulation_should_kill_itself;
 char atom_names[3][3]={"1", "2", "3"};
 double total_internal_energy;
 
-/* RNG related variables */
-long seed = (long)DEFAULT_SEED;
-long idum2;
-long iy;
-long iv[NTAB];
-
 /* IO related variables */
 char console_outstring[512]; //keep for now; change when file writing changes
 FILE *view_save_file;

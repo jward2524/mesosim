@@ -21,10 +21,10 @@ extern Atom temp_atom;
 extern double total_internal_energy;
 
 //random number generation
-extern long seed;
-extern long idum2;
-extern long iy;
-extern long iv[NTAB];
+// extern long seed;
+// extern long idum2;
+// extern long iy;
+// extern long iv[NTAB];
 
 //input-output
 extern char console_outstring[];

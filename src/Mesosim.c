@@ -6,6 +6,7 @@
 #include "Vector.h"
 #include "Globals.h"
 #include "Simulation_Globals.h"
+#include "Random.h"
 #include <errno.h>
 //notable absence of Windows.h!
 

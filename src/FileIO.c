@@ -6,6 +6,7 @@
 #include "Vector.h"
 #include "Global_Externs.h"
 #include "Simulation_Global_Externs.h"
+#include "Random.h"
 
 bool get_input_file(char* filename)
 {

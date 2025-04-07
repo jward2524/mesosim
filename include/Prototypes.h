@@ -45,9 +45,6 @@ int random_reincarnate_atom(double x, double y, double z, int type, int vc); //f
 int reincarnate_atom(double x, double y, double z, int type, int vc); //will not be called
 void bury_atom(int at, int *pos); //no longer relevant
 
-void srandj(long *idum);
-double drandj(long *idum);
-
 // console
 //void sparse(char original_string[], char string1[], char string2[], int comp_length); //keep this seems like a utility?
 //int parse (int num, char cps[], int kind[], double defs[], double dest[]); //totally unused

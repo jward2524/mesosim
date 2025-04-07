@@ -1,17 +1,14 @@
-﻿#include "stdafx.h"
-//#include "Mesosim Resources.h"
-#include "Defs.h"
-#include "Geometry.h"
-#include "Prototypes.h"
-#include "Vector.h"
-#include "Global_Externs.h"
-#include "Simulation_Global_Externs.h"
-// TODO: remove most of these
+﻿#include "Random.h"
 
 //this file is the exact same as Random Number.cpp except for the obvious change in header
 
 /******************************************************************************/
 /******************************************************************************/
+
+long seed = (long)DEFAULT_SEED;
+long iv[NTAB];
+long iy;
+long idum2;
 
 double drandj(long *idum)
 	{
