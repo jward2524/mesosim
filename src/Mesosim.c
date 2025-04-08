@@ -2,12 +2,17 @@
 //#include "Mesosim Resources.h"
 #include "Defs.h"
 #include "Geometry.h"
-#include "Prototypes.h"
+// #include "Prototypes.h"
+#include "Mesosim.h"
 #include "Vector.h"
 #include "Globals.h"
 #include "Simulation_Globals.h"
 #include "Random.h"
 #include <errno.h>
+#include "FileIO.h"
+#include "Simulation_Aux.h"
+#include "Simulation.h"
+#include "Atoms.h"
 //notable absence of Windows.h!
 
 void write_backlog(FILE*, FILE*);

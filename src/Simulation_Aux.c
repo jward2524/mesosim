@@ -2,11 +2,15 @@
 //#include "Mesosim Resources.h"
 #include "Defs.h"
 #include "Geometry.h"
-#include "Prototypes.h"
+// #include "Prototypes.h"
 #include "Vector.h"
 #include "Global_Externs.h"
 #include "Simulation_Global_Externs.h"
 #include "Random.h"
+#include "Simulation_Aux.h"
+#include "FileIO.h"
+#include "Atoms.h"
+#include "Simulation.h"
 
 /******************************************************************************/
 /******************************************************************************/
