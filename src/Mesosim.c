@@ -11,9 +11,8 @@
 #include "Atoms.h"
 //notable absence of Windows.h!
 
-void write_backlog(FILE*, FILE*);
-
-time_t starttime, endtime;
+time_t starttime = NULL;
+time_t endtime = NULL;
 
 //use main function to run everything
 int main(int argc, char* argv[]) {
