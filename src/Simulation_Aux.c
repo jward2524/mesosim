@@ -1,16 +1,54 @@
 ﻿#include "stdafx.h"
-//#include "Mesosim Resources.h"
 #include "Defs.h"
 #include "Geometry.h"
-// #include "Prototypes.h"
 #include "Vector.h"
-#include "Global_Externs.h"
-#include "Simulation_Global_Externs.h"
 #include "Random.h"
 #include "Simulation_Aux.h"
 #include "FileIO.h"
 #include "Atoms.h"
 #include "Simulation.h"
+
+double total_internal_energy = 0;
+// [ ]: what are these?
+int zixshift, ziyshift, zizshift;
+int ssxshift, ssyshift, sszshift;
+int zsh, ysh, xsh;							// shifts
+
+// [ ]: what are the units for this? how does it relate to atomic spacing?
+int ssx = DSIMSIZE, ssy = DSIMSIZE, ssz = DSIMSIZE;					// system size x, y, z
+double ssr;
+int zix = TTS, ziy = TTS, ziz = TTS;
+
+int lattice_type = FCC;
+int number_of_possible_neighbors = 12;
+
+int sheet_thickness = -1;
+int cluster_radius = -1;
+char atoms_filename[256] = "";
+
+// [ ]: what is this for?
+Zone zone[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
+
+double initialoverpotential = DEFAULT_OVERPOTENTIAL;
+double overpotentialramprate = 0.0;
+double maxoverpotential = DEFAULT_OVERPOTENTIAL;
+
+double substrate_percent_a = DEFAULT_COMPOSITION_A;
+double substrate_percent_b = DEFAULT_COMPOSITION_B;
+
+double initial_logtime = 1.0e-4;
+
+int analysis_type = REGULAR_TIME_INTERVALS;
+
+double logtime_multiplier;
+
+//double vacancy_density = 0.01; //can always add back in
+
+double overpotential_ramp_rate = 0.0;
+
+//int ncsk = 0;
+
+int total_volume_dissolved;
 
 /******************************************************************************/
 /******************************************************************************/

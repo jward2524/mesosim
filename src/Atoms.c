@@ -1,17 +1,94 @@
 ﻿#include "stdafx.h"
-//#include "Mesosim Resources.h"
 #include "Defs.h"
 #include "Geometry.h"
-// #include "Prototypes.h"
 #include "Vector.h"
-#include "Global_Externs.h"
-#include "Simulation_Global_Externs.h"
 #include "Random.h"
 #include "Atoms.h"
 #include "Simulation_Aux.h"
 #include "Simulation.h"
 
 // [ ]: atoms, zones, orientation
+
+/* symmetry related variables */
+double rmat[3][3];
+double cg[3]={(double)0.,(double)0.,(double)0.};
+crystal_offset jump_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
+int opposite_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
+double latmat[3][3], ilatmat[3][3];
+double cell[6]={1.,1.,1.,90.,90.,90.};
+double dax, day, daz;
+double normal_x, normal_y, normal_z;
+crystal_offset lattice_first_offset[24];
+crystal_offset lattice_second_offset[24];
+
+Atom_Color atom_color[10];
+
+crystal_offset bcc_offset[8] = 
+		{
+		{-1, -1, -1},
+		{0, 0, -1},
+		{1, 0, 0},
+		{-1, 0, 0},
+		{0, 1, 0},
+		{0, -1, 0},
+		{0, 0, 1},
+		{1, 1, 1}
+		};
+
+crystal_offset fcc_offset[12] = 
+		{
+		{0, 1, -1},
+		{1, 0, -1},
+		{0, 0, -1},
+		{1, 0, 0},
+		{-1, 0, 0},
+		{0, 1, 0},
+		{0, -1, 0},
+		{0, 0, 1},
+		{-1, 1, 0},
+		{1, -1, 0},
+		{-1, 0, 1},
+		{0, -1, 1}
+};
+
+crystal_offset sc_offset[6] = 
+		{
+		{0, 0, -1},
+		{0, 0, 1},
+		{0, 1, 0},
+		{0, -1, 0},
+		{1, 0, 0},
+		{-1, 0, 0}};
+
+crystal_offset sc_second_offsets[12] = 
+		{{1, 1, 0},
+		{1, -1, 0},
+		{-1, 1, 0},
+		{-1, -1, 0},
+		{1, 0, 1},
+		{-1, 0, 1},
+		{1, 0, -1},
+		{-1, 0, -1},
+		{0, 1, 1},
+		{0, -1, 1},
+		{0, 1, -1},
+		{0, -1, -1}};
+
+crystal_offset fcc_second_offsets[6] = 
+		{{1, -1, 1},
+		{-1, 1, 1},
+		{-1, -1, 1},
+		{-1, 1, -1},
+		{1, 1, -1},
+		{1, -1, -1}};
+
+crystal_offset bcc_second_offsets[6] = 
+		{{1, 0, 1},
+		{-1, 0, -1},
+		{1, 1, 0},
+		{-1, -1, 0},
+		{0, 1, 1},
+		{0, -1, -1}};
 
 void create_default_atom(int n)
 {

@@ -1,11 +1,7 @@
 ﻿#include "stdafx.h"
-//#include "Mesosim Resources.h"
 #include "Defs.h"
 #include "Geometry.h"
-// #include "Prototypes.h"
 #include "Vector.h"
-#include "Global_Externs.h"
-#include "Simulation_Global_Externs.h"
 #include "Random.h"
 #include "Simulation.h"
 #include "Simulation_Aux.h"
@@ -20,6 +16,65 @@ double rw[3], rrp[3];
 double ta1, ta2;
 
 int adatom_before;
+
+char atom_names[3][3]={"1", "2", "3"};
+double default_color[3] = {0., 0., 0.};
+
+int simulation_type = SIMULATION_TYPE_UNDEFINED;
+int nat = 0;
+Atom temp_atom;
+bool simulation_should_kill_itself;
+Atom* atom[];
+double elapsed_time = 0;
+
+bool evaporation_flag = true;
+char coordinate_log_prefix[256] = "default_simulation_analysis.dat";
+
+double run_time = 1.e8; //default (in seconds)
+double data_time_interval = 0.1;
+double time_interval_end;
+
+int number_rates;
+int total_current_transitions;
+double sum_of_frequencies;
+
+double overpotential = 0.0;
+
+double nnE[6] = {
+	DEFAULT_BOND_ENERGY_AA,
+	DEFAULT_BOND_ENERGY_AB,
+	DEFAULT_BOND_ENERGY_AC,
+	DEFAULT_BOND_ENERGY_BB,
+	DEFAULT_BOND_ENERGY_BC,
+	DEFAULT_BOND_ENERGY_CC};
+
+double nnnE[6] = {0., 0., 0., 0., 0., 0.};
+
+bool solubility[3] = {false, false, false}; //all elements cannot dissolve by default
+
+double temperature = DEFAULT_TEMPERATURE;
+
+int dissolution = DISSOLUTION;
+
+int number_final_configuration_neighbors;
+int number_intial_configuration_neighbors;
+
+// ENHANCE: malloc?
+Rate rate[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS];
+
+Transition_List *transition_list[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
+//Transition_List transition_list[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
+
+Trans_Prob transition_probability;
+
+
+long int final_iteration = 1e9;
+double lastxt, lastyt, lastzt;
+
+//bool simulation_is_going = false; //probably don't need this
+
+double sum_of_rate_populations;
+double current_probability;
 
 // ENHANCE: pass struct with all simulation parameters as argument
 unsigned long perform_simulation(void) //potentially FILE* as arguments

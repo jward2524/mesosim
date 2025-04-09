@@ -23,3 +23,21 @@ void create_default_atom(int na); //can modify this to remove things like color?
 void kill_atom(int atom_number);
 void cell_to_latmat(double c[6], double ltmt[3][3]);
 void latmat_to_cell(double ltmt[3][3], double c[6]);
+
+/* symmetry related variables */
+extern double rmat[3][3];
+extern double cg[3];
+extern crystal_offset jump_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
+extern int opposite_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
+extern double latmat[3][3], ilatmat[3][3];
+extern double cell[6];
+extern double dax, day, daz;
+extern double normal_x, normal_y, normal_z;
+extern crystal_offset lattice_first_offset[24];
+extern crystal_offset lattice_second_offset[24];
+extern crystal_offset bcc_offset[8];
+extern crystal_offset fcc_offset[12];
+extern crystal_offset sc_offset[6];
+extern crystal_offset sc_second_offsets[12];
+extern crystal_offset fcc_second_offsets[6];
+extern crystal_offset bcc_second_offsets[6];

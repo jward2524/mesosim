@@ -1,14 +1,20 @@
 ﻿#include "stdafx.h"
-//#include "Mesosim Resources.h"
 #include "Defs.h"
 #include "Geometry.h"
-// #include "Prototypes.h"
 #include "Vector.h"
-#include "Global_Externs.h"
-#include "Simulation_Global_Externs.h"
 #include "Random.h"
 #include "FileIO.h"
 #include "Atoms.h"
+#include "Simulation.h"
+#include "Simulation_Aux.h"
+#include "Mesosim.h"
+
+char outFile[260] = ""; //MAX_PATH variable Windows related, default 260
+char default_extension[] = "out";
+FILE *temp_log = NULL;
+char command_string[1024] = "";
+FILE *sim_log_file = NULL;
+// char return_message[512] = "";
 
 bool get_input_file(char* filename)
 {

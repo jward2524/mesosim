@@ -1,12 +1,8 @@
 ﻿#include "stdafx.h"
-//#include "Mesosim Resources.h"
 #include "Defs.h"
 #include "Geometry.h"
-// #include "Prototypes.h"
 #include "Mesosim.h"
 #include "Vector.h"
-#include "Globals.h"
-#include "Simulation_Globals.h"
 #include "Random.h"
 #include <errno.h>
 #include "FileIO.h"

@@ -25,3 +25,46 @@ void initialize_spherical_cluster_1(int radius_of_sphere);
 void initialize_from_file(char* filename);
 
 //void initialize_vacancies_1(void); //might be good to have
+
+extern double total_internal_energy;
+
+// [ ]: what are these?
+extern int zixshift, ziyshift, zizshift;
+extern int ssxshift, ssyshift, sszshift;
+extern int zsh, ysh, xsh;							// shifts
+
+// [ ]: what are the units for this? how does it relate to atomic spacing?
+extern int ssx, ssy, ssz;					// system size x, y, z
+extern double ssr;
+extern int zix, ziy, ziz;
+
+extern int lattice_type;
+extern int number_of_possible_neighbors;
+
+extern int sheet_thickness;
+extern int cluster_radius;
+extern char atoms_filename[256];
+
+// [ ]: what is this for?
+extern Zone zone[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
+
+extern double initialoverpotential;
+extern double overpotentialramprate;
+extern double maxoverpotential;
+
+extern double substrate_percent_a;
+extern double substrate_percent_b;
+
+extern double initial_logtime;
+
+extern int analysis_type;
+
+extern double logtime_multiplier;
+
+//double vacancy_density = 0.01; //can always add back in
+
+extern double overpotential_ramp_rate;
+
+//int ncsk = 0;
+
+extern int total_volume_dissolved;
