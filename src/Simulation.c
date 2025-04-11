@@ -125,7 +125,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 
 	calculate_internal_energy(nat);
 	//printf("energy calculated\n");
-	output_log_file(framenum);
+	output_log_file(sim_log_file, framenum);
 	write_xyz_file(coordinate_log_prefix, framenum);
 	//printf("files written\n");
 	++framenum;
@@ -144,7 +144,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 			//find_average_curvature(); //no longer valid
 
 			calculate_internal_energy(nat);
-			output_log_file(framenum);
+			output_log_file(sim_log_file, framenum);
 			write_xyz_file(coordinate_log_prefix, framenum);
 
 			simulation_should_kill_itself = false;
@@ -173,7 +173,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 				//record the elapsed time in a file here
 
 				calculate_internal_energy(nat);
-				output_log_file(framenum);
+				output_log_file(sim_log_file, framenum);
 				write_xyz_file(coordinate_log_prefix, framenum);
 
 				while (time_interval_end <= elapsed_time)
@@ -194,7 +194,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 			else if (analysis_type == LOG_TIME_INTERVALS)
 			{
 				calculate_internal_energy(nat);
-				output_log_file(framenum);
+				output_log_file(sim_log_file, framenum);
 				write_xyz_file(coordinate_log_prefix, framenum);
 
 				while (time_interval_end <= elapsed_time)
@@ -346,7 +346,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 
 		//TODO: finish IO
 		calculate_internal_energy(nat);
-		output_log_file(framenum);
+		output_log_file(sim_log_file, framenum);
 		write_xyz_file(coordinate_log_prefix, framenum);	
 
 	printf("Finished simulation\n"); //move this to the log file

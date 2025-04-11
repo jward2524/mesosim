@@ -70,8 +70,10 @@
 #define MAXIMUM_NUMBER_OF_NEIGHBORS2 12	//(2nns) default is SC to make it large
 #define MAXIMUM_NUMBER_OF_NEIGHBORS2_FCC 6
 #define MAXIMUM_NUMBER_OF_NEIGHBORS2_BCC 6		
-#define MAXIMUM_NUMBER_OF_NEIGHBORS2_SC 12			
+#define MAXIMUM_NUMBER_OF_NEIGHBORS2_SC 12		
 
+// TODO: make these into an enum
+// TODO: then use enum to get features of lattice
 #define FCC 1
 #define BCC 2
 #define SC 3

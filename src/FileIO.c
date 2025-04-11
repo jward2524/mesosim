@@ -35,22 +35,22 @@ bool get_input_file(char* filename)
 	if (strncmp(extension, "xyz", 3) == 0)
 	{
 		// open simple x,y,z,type coordinate file
-		return process_xyz_file(filename);
+		return process_xyz_file(temp_log, filename);
 	}
 	else if (strncmp(extension, "kmc", 3) == 0)
 	{
 		// open kmc type file
-		return process_kmc_file(filename);
+		return process_kmc_file(temp_log, filename);
 	}
 	else if (strncmp(extension, "in", 2) == 0)
 	{
 		//open and process parameter input file
-		return process_in_file(filename);
+		return process_in_file(temp_log, filename);
     }
 	else if (strncmp(extension, "kmx", 3) == 0)
 	{
 		//open and process new kmc input type that removes fluff (does this need to happen)
-		return process_kmx_file(filename);
+		return process_kmx_file(temp_log, filename);
     }
 	else
 	{
@@ -66,7 +66,7 @@ bool get_input_file(char* filename)
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_in_file(char* in_filename) {
+bool process_in_file(FILE* temp_log, char* in_filename) {
 	FILE* fileid;
 	char parameter_line[200];
 	int errnum;
@@ -440,7 +440,7 @@ int parse_boolean(char *str) {
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_kmc_file(char *kmc_filename)
+bool process_kmc_file(FILE* temp_log, char *kmc_filename)
 	{
 		FILE *view_command_file;
 		int newnat;
@@ -537,7 +537,7 @@ bool process_kmc_file(char *kmc_filename)
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_xyz_file(char *xyz_filename)
+bool process_xyz_file(FILE* temp_log, char *xyz_filename)
 {
 	// processes file with .xyz format (number of atoms / comment / type x y z)
 
@@ -699,7 +699,7 @@ int match_atom_type(char* type, char* types[], int* num_types) {
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_kmx_file(char* kmx_filename) {
+bool process_kmx_file(FILE* temp_log, char* kmx_filename) {
 	FILE *view_command_file;
 
 	int newnat;
@@ -770,11 +770,12 @@ bool process_kmx_file(char* kmx_filename) {
 /*******************************************************************************
 *******************************************************************************/
 
-bool output_log_file(int frame_num)
+bool output_log_file(FILE* sim_log_file, int frame_num)
 {
 	fprintf(sim_log_file, "![%d]\t", frame_num);
 	fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t", elapsed_time, temperature, overpotential);
 	fprintf(sim_log_file, "atoms = %d\tinternal energy = %lf [eV]\n", nat, total_internal_energy);
+	fflush(sim_log_file);
 	return true;
 }
 
