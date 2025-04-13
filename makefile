@@ -34,6 +34,7 @@ XS_HEADERS := Defs.h Geometry.h
 # depends on object files and the headers that don't have corresponding objects
 $(BIN_DIR)/$(EXECUTABLE): $(OBJS) $(addprefix $(INCLUDE_DIR)/,$(XS_HEADERS))
 	gcc $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
+	@touch print
 
 # make object files based on .c files in SRC_DIR, looking for header files in INCLUDE_DIR
 # wildcards needed on both sides, otherwise all .c files would be prerequisites
@@ -44,3 +45,8 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(INCLUDE_DIR)/%.h
 # Clean build and bin directories
 clean:
 	@rm -rf $(BUILD_DIR) $(BIN_DIR)
+
+# prints the filenames of files that were updated since the last 
+# time the executable is built (tracked with the empty `print` file)
+print: $(SRC_DIR)/* $(INCLUDE_DIR)/*
+	@echo -ne " $(addsuffix \n,$?)"
