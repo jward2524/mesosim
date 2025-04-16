@@ -81,14 +81,14 @@ void get_system_normal(void) // XXX: supposedly only for vizualization
 	double n[3];
 
 	// first (x) coordinates of lat vectors
-	a[0] = latmat[0][0];
-	a[1] = latmat[1][0];
-	a[2] = latmat[2][0];
+	a[0] = primitive_basis[0][0];
+	a[1] = primitive_basis[1][0];
+	a[2] = primitive_basis[2][0];
 
 	// second (y) coordinates of lat vectors
-	b[0] = latmat[0][1];
-	b[1] = latmat[1][1];
-	b[2] = latmat[2][1];
+	b[0] = primitive_basis[0][1];
+	b[1] = primitive_basis[1][1];
+	b[2] = primitive_basis[2][1];
 
 	cross(a,b,n);
 
@@ -142,7 +142,7 @@ void general_simulation_initialization(void)
 
 	// system geometry initialization
 
-	set_latmat(lattice_type);
+	set_primitive_basis(lattice_type);
 	set_default_orientation(); // supposedly was only for visualization
 	get_system_normal();	// maybe only for visualization
 
@@ -499,55 +499,55 @@ void calculate_internal_energy(int nat) {
 /********************************************************************************/
 /********************************************************************************/
 
-void set_latmat(int lt) // lt = lattice type
+void set_primitive_basis(int lattice_type) // lattice_type = crystal structure type
 {
-	switch(lt)
+	switch(lattice_type)
 	{
 		case FCC:
-			latmat[0][0] = (double)FCCXV1;
-			latmat[0][1] = (double)FCCXV2;
-			latmat[0][2] = (double)FCCXV3;
+			primitive_basis[0][0] = (double)FCCXV1;
+			primitive_basis[0][1] = (double)FCCXV2;
+			primitive_basis[0][2] = (double)FCCXV3;
 
-			latmat[1][0] = (double)FCCYV1;
-			latmat[1][1] = (double)FCCYV2;
-			latmat[1][2] = (double)FCCYV3;
+			primitive_basis[1][0] = (double)FCCYV1;
+			primitive_basis[1][1] = (double)FCCYV2;
+			primitive_basis[1][2] = (double)FCCYV3;
 
-			latmat[2][0] = (double)FCCZV1;
-			latmat[2][1] = (double)FCCZV2;
-			latmat[2][2] = (double)FCCZV3;
+			primitive_basis[2][0] = (double)FCCZV1;
+			primitive_basis[2][1] = (double)FCCZV2;
+			primitive_basis[2][2] = (double)FCCZV3;
 			break;
 	
 		case BCC:
-			latmat[0][0] = (double)BCCXV1;
-			latmat[0][1] = (double)BCCXV2;
-			latmat[0][2] = (double)BCCXV3;
+			primitive_basis[0][0] = (double)BCCXV1;
+			primitive_basis[0][1] = (double)BCCXV2;
+			primitive_basis[0][2] = (double)BCCXV3;
 
-			latmat[1][0] = (double)BCCYV1;
-			latmat[1][1] = (double)BCCYV2;
-			latmat[1][2] = (double)BCCYV3;
+			primitive_basis[1][0] = (double)BCCYV1;
+			primitive_basis[1][1] = (double)BCCYV2;
+			primitive_basis[1][2] = (double)BCCYV3;
 
-			latmat[2][0] = (double)BCCZV1;
-			latmat[2][1] = (double)BCCZV2;
-			latmat[2][2] = (double)BCCZV3;
+			primitive_basis[2][0] = (double)BCCZV1;
+			primitive_basis[2][1] = (double)BCCZV2;
+			primitive_basis[2][2] = (double)BCCZV3;
 			break;
 
 		case SC:
-			latmat[0][0] = (double)SCXV1;
-			latmat[0][1] = (double)SCXV2;
-			latmat[0][2] = (double)SCXV3;
+			primitive_basis[0][0] = (double)SCXV1;
+			primitive_basis[0][1] = (double)SCXV2;
+			primitive_basis[0][2] = (double)SCXV3;
 
-			latmat[1][0] = (double)SCYV1;
-			latmat[1][1] = (double)SCYV2;
-			latmat[1][2] = (double)SCYV3;
+			primitive_basis[1][0] = (double)SCYV1;
+			primitive_basis[1][1] = (double)SCYV2;
+			primitive_basis[1][2] = (double)SCYV3;
 
-			latmat[2][0] = (double)SCZV1;
-			latmat[2][1] = (double)SCZV2;
-			latmat[2][2] = (double)SCZV3;
+			primitive_basis[2][0] = (double)SCZV1;
+			primitive_basis[2][1] = (double)SCZV2;
+			primitive_basis[2][2] = (double)SCZV3;
 			break;
 	}
 
-	inver(latmat, ilatmat);
-	latmat_to_cell(latmat, cell);
+	inver(primitive_basis, invert_primitive_basis);
+	primitive_basis2ucell_params(primitive_basis, ucell_params);
 
 	organize(atom, nat); // ENHACNE: likely unnecessary bc at this point nat=0
 	return;
@@ -685,8 +685,8 @@ void initialize_spherical_cluster_1(int radius_of_sphere) // radius of cluster i
 	lc[1] = ssy/2.;
 	lc[2] = ssz/2.;
 	// # of atoms * translation vector
-	vecmul(lc, latmat, c);	// c is the cartesian coordinates of the central point
-	// BUG: c is twice what I think it should be - latmat isn't normalized (not unit vectors)
+	vecmul(lc, primitive_basis, c);	// c is the cartesian coordinates of the central point
+	// BUG: c is twice what I think it should be - primitive_basis isn't normalized (not unit vectors)
 	radius = (double)radius_of_sphere;
 	// TODO: change from min/max in xyz to equation of a sphere; radial coordinates?
 	// find the min/max x, y, z points (cartesian coords)
@@ -695,8 +695,8 @@ void initialize_spherical_cluster_1(int radius_of_sphere) // radius of cluster i
 		max_xyz[i] = c[i] + radius;
 	}
 	// turn min/max from cartesian coords into atom/lattice coords
-	vecmul(min_xyz, ilatmat, min_lat);
-	vecmul(max_xyz, ilatmat, max_lat);
+	vecmul(min_xyz, invert_primitive_basis, min_lat);
+	vecmul(max_xyz, invert_primitive_basis, max_lat);
 
 	for (i = 0; i < 3; ++i) {
 		min_lat[i] = (int)min_lat[i];
@@ -718,7 +718,7 @@ void initialize_spherical_cluster_1(int radius_of_sphere) // radius of cluster i
 				p[0] = i;
 				p[1] = j;
 				p[2] = k;
-				vecmul(p, latmat, op); // to cartesian coordinates
+				vecmul(p, primitive_basis, op); // to cartesian coordinates
 				dist = (op[0] - c[0]) * (op[0] - c[0]) + (op[1] - c[1]) * (op[1] - c[1]) + (op[2] - c[2]) * (op[2] - c[2]); // distance to center
 				if (dist <= (radius*radius)) {
 					//particle is in bounds

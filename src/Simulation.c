@@ -323,7 +323,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 
 					// now invert xr, yr, zr into lattice vectors;
 
-					vecmul(rrp, ilatmat, rw);
+					vecmul(rrp, invert_primitive_basis, rw);
 
 					rwx = (int)rw[0] + ssx/2;
 					rwy = (int)rw[1] + ssy/2;

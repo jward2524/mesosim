@@ -179,14 +179,20 @@ void initialize_lattice_geometry(void)
 {
 	// Initializes the generic lattice geometry to be simple cubic (i.e., a=1, b=1, c=1, alpha = 90, beta = 90, gamma = 90)
 
-	int i,j;
+	// int i,j;
 
-	for (i=0;i<3;++i)
-		for (j=0;j<3;++j)
-			if (i == j) latmat[i][j] = 1.0; else latmat[i][j] = 0.0;
+	// for (i=0;i<3;++i)
+	// 	for (j=0;j<3;++j)
+	// 		if (i == j) primitive_basis[i][j] = 1.0; else primitive_basis[i][j] = 0.0;
 
-	inver(latmat, ilatmat);
-	latmat_to_cell(latmat, cell);
+    double primitive_basis[3][3] = {
+        {1., 0., 0.},
+        {0., 1., 0.},
+        {0., 0., 1.},
+    };
+
+	inver(primitive_basis, invert_primitive_basis);
+	primitive_basis2ucell_params(primitive_basis, ucell_params);
 
 	ssx = 1;
 	ssy = 1;

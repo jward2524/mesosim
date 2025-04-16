@@ -14,8 +14,8 @@ double rmat[3][3];
 double cg[3]={(double)0.,(double)0.,(double)0.};
 crystal_offset jump_offset[MAXIMUM_NUMBER_OF_NEIGHBORS]; // possible atom jumps in simulation
 int opposite_offset[MAXIMUM_NUMBER_OF_NEIGHBORS]; // index in jump_offset that has the jump in the opposite direction in simulation; opposite_offset[0]=11 means the opposite direction of jump_offset[0] is jump_offset[11]
-double latmat[3][3], ilatmat[3][3]; // primitive unit cell basis vectors + inverted; latmat[*][0] = basis1, latmat[0][*] = x component of basises
-double cell[6]={1.,1.,1.,90.,90.,90.}; // unit cell parameters; a b c alpha beta gamma
+double primitive_basis[3][3], invert_primitive_basis[3][3]; // primitive unit cell basis vectors + inverted; primitive_basis[*][0] = basis1, primitive_basis[0][*] = x component of basises
+double ucell_params[6]={1.,1.,1.,90.,90.,90.}; // unit cell parameters; a b c alpha beta gamma
 double dax, day, daz;
 crystal_offset lattice_first_offset[24];
 crystal_offset lattice_second_offset[24];
@@ -372,7 +372,7 @@ int add_atom(double x, double y, double z, int type, int special) // lattice coo
 				sp[1] = jump_offset[i].dy;
 				sp[2] = jump_offset[i].dz;
 					
-				vecmul(sp, latmat, spo);
+				vecmul(sp, primitive_basis, spo);
 				unit(spo, spo);
 
 				if (dot(spo, a_pn) > 0.5)
@@ -401,7 +401,7 @@ int add_atom(double x, double y, double z, int type, int special) // lattice coo
 				sp[1] = jump_offset[i].dy;
 				sp[2] = jump_offset[i].dz;
 					
-				vecmul(sp, latmat, spo);
+				vecmul(sp, primitive_basis, spo);
 				unit(spo, spo);
 
 				if (dot(spo, a_pn) > 0.5)
@@ -1010,7 +1010,7 @@ void organize(Atom* a[], int na) // na=number of atoms
 {
 	// like copy_xyz_to_coord, but adjusts center of gravity, too
 
-	orthomol(a, na, latmat);	// use the cell dimensions to orthogonalize
+	orthomol(a, na, primitive_basis);	// use the cell dimensions to orthogonalize
 	//centerg(a, na); //don't do this!
 }
 
@@ -1055,26 +1055,28 @@ void centerg(Atom* atm[], int na)
 	return;
 }
 
-// [ ]: what does this do?
-void latmat_to_cell(double com[3][3], double celld[6]) // com = basis vectors, celld = unit cell parameters
+// converts lattice basis vectors to unit cell parameters
+void primitive_basis2ucell_params(double primitive_basis[3][3], double ucell_params[6]) // primitive_basis = basis vectors (rows/first index), ucell_params = unit cell parameters
 {
-	double pir = 180.0/PI; // radians to degrees conversion factor
+	double rad2deg = 180.0/PI; // radians to degrees conversion factor
 	// a b c - magnitude of basis0 basis1 basis2 vectors
-	celld[0] = sqrt(com[0][0]*com[0][0] + com[1][0]*com[1][0] + com[2][0]*com[2][0]);
-	celld[1] = sqrt(com[0][1]*com[0][1] + com[1][1]*com[1][1] + com[2][1]*com[2][1]);
-	celld[2] = sqrt(com[0][2]*com[0][2] + com[1][2]*com[1][2] + com[2][2]*com[2][2]);
+	// ENHANCE: if a vector was primitive_basis[0][*], then this could be done with dot(x,x) and mag(x)
+	// TODO: flip indices of primitive_basis
+	ucell_params[0] = sqrt(primitive_basis[0][0]*primitive_basis[0][0] + primitive_basis[1][0]*primitive_basis[1][0] + primitive_basis[2][0]*primitive_basis[2][0]);
+	ucell_params[1] = sqrt(primitive_basis[0][1]*primitive_basis[0][1] + primitive_basis[1][1]*primitive_basis[1][1] + primitive_basis[2][1]*primitive_basis[2][1]);
+	ucell_params[2] = sqrt(primitive_basis[0][2]*primitive_basis[0][2] + primitive_basis[1][2]*primitive_basis[1][2] + primitive_basis[2][2]*primitive_basis[2][2]);
 	// gamma - angle between basis0 and basis1 = arccos(dot(basis0, basis1) / (mag(basis0) * mag(basis1))); from cos(theta) = dot(a,b) / (mag(a)*mag(b))
-	celld[5] = com[0][0]*com[0][1] + com[1][0]*com[1][1] + com[2][0]*com[2][1];
-	celld[5] = celld[5]/(celld[0]*celld[1]);
-	celld[5] = pir*acos(celld[5]);
+	ucell_params[5] = primitive_basis[0][0]*primitive_basis[0][1] + primitive_basis[1][0]*primitive_basis[1][1] + primitive_basis[2][0]*primitive_basis[2][1];
+	ucell_params[5] = ucell_params[5]/(ucell_params[0]*ucell_params[1]);
+	ucell_params[5] = rad2deg*acos(ucell_params[5]);
 	// beta - angle between basis0 and basis2
-	celld[4] = com[0][0]*com[0][2] + com[1][0]*com[1][2] + com[2][0]*com[2][2];
-	celld[4] = celld[4]/(celld[0]*celld[2]);
-	celld[4] = pir*acos(celld[4]);
+	ucell_params[4] = primitive_basis[0][0]*primitive_basis[0][2] + primitive_basis[1][0]*primitive_basis[1][2] + primitive_basis[2][0]*primitive_basis[2][2];
+	ucell_params[4] = ucell_params[4]/(ucell_params[0]*ucell_params[2]);
+	ucell_params[4] = rad2deg*acos(ucell_params[4]);
 	// alpha - angle between basis1 and basis2
-	celld[3] = com[0][2]*com[0][1] + com[1][2]*com[1][1] + com[2][2]*com[2][1];
-	celld[3] = celld[3]/(celld[1]*celld[2]);
-	celld[3] = pir*acos(celld[3]);
+	ucell_params[3] = primitive_basis[0][2]*primitive_basis[0][1] + primitive_basis[1][2]*primitive_basis[1][1] + primitive_basis[2][2]*primitive_basis[2][1];
+	ucell_params[3] = ucell_params[3]/(ucell_params[1]*ucell_params[2]);
+	ucell_params[3] = rad2deg*acos(ucell_params[3]);
 	// ENHANCE: double arithmetic leads to imprecise values
 	return;
 }

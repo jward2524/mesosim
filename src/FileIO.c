@@ -466,9 +466,9 @@ bool process_kmc_file(FILE* temp_log, char *kmc_filename)
 
 		//read in the lattice and rotation matrices
 		fscanf(view_command_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
-			&latmat[0][0], &latmat[0][1], &latmat[0][2], 
-			&latmat[1][0], &latmat[1][1], &latmat[1][2], 
-			&latmat[2][0], &latmat[2][1], &latmat[2][2]); 
+			&primitive_basis[0][0], &primitive_basis[0][1], &primitive_basis[0][2], 
+			&primitive_basis[1][0], &primitive_basis[1][1], &primitive_basis[1][2], 
+			&primitive_basis[2][0], &primitive_basis[2][1], &primitive_basis[2][2]); 
 			
 		fscanf(view_command_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
 			&rmat[0][0], &rmat[0][1], &rmat[0][2], 
@@ -526,7 +526,7 @@ bool process_kmc_file(FILE* temp_log, char *kmc_filename)
 			}
 		}
 
-		latmat_to_cell(latmat, cell);
+		primitive_basis2ucell_params(primitive_basis, ucell_params);
 		organize(atom, nat);
 
 
@@ -557,7 +557,7 @@ bool process_xyz_file(FILE* temp_log, char *xyz_filename)
 		return false;
 	}
 
-	//set_latmat(SC); //is this always true? this should be set somewhere else (beforehand or after?)
+	//set_primitive_basis(SC); //is this always true? this should be set somewhere else (beforehand or after?)
 
 	//first line should be the number of atoms
 	int nremain; //number of expected atoms
@@ -611,7 +611,7 @@ bool process_xyz_file(FILE* temp_log, char *xyz_filename)
 		atom[i]->type = atype;
 		atom[i]->bsradius = radius;
 
-		//vecmul(atom[i]->coord, ilatmat, atom[i]->lattice); // TODO: need to do this later now!
+		//vecmul(atom[i]->coord, invert_primitive_basis, atom[i]->lattice); // TODO: need to do this later now!
 
         /*switch(atom[i]->type)
         {
@@ -714,9 +714,9 @@ bool process_kmx_file(FILE* temp_log, char* kmx_filename) {
 	}
 
 	fscanf(view_command_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
-		&latmat[0][0], &latmat[0][1], &latmat[0][2], 
-		&latmat[1][0], &latmat[1][1], &latmat[1][2], 
-		&latmat[2][0], &latmat[2][1], &latmat[2][2]); 
+		&primitive_basis[0][0], &primitive_basis[0][1], &primitive_basis[0][2], 
+		&primitive_basis[1][0], &primitive_basis[1][1], &primitive_basis[1][2], 
+		&primitive_basis[2][0], &primitive_basis[2][1], &primitive_basis[2][2]); 
 			
 	fscanf(view_command_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
 		&rmat[0][0], &rmat[0][1], &rmat[0][2], 
@@ -758,7 +758,7 @@ bool process_kmx_file(FILE* temp_log, char* kmx_filename) {
 		}
 	}
 
-	latmat_to_cell(latmat, cell);
+	primitive_basis2ucell_params(primitive_basis, ucell_params);
 	organize(atom, nat);
 
 

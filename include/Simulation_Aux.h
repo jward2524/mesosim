@@ -10,7 +10,7 @@ int get_initial_configuration2(int at, int vc, int initial_config[]);
 int get_final_configuration2(int at, int vc, int final_config[]);
 void findzone(int *xz, int *yz, int *zz, double xxx, double yyy, double zzz);
 void adjust_pbc(double *x, double *y, double *z);
-void set_latmat(int lt);
+void set_primitive_basis(int lt);
 
 void calculate_internal_energy(int nat);
 
