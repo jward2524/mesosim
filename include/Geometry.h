@@ -11,9 +11,9 @@ typedef struct
 		double coord[3]; 		// working orthogonal coordinates
 
 		// [ ]: why is this a double? when is it ever fractional?
-		double lattice[3];		// multiples of unit cell vectors
+		double lattice[3];		// multiples of unit cell / lattice vectors
 
-		double bsradius;		// atom ball and stick radius
+		double bsradius;		// atom ball and stick radius // XXX: visualization, and should depend on atom type, not per atom
 		//double sfradius;		// atom spacefilling radius
 
 		//char visible;			// Visible to draw/plot routine
@@ -41,7 +41,7 @@ typedef struct
 		//		-1: empty
       	//		-2: buried
 		//		-3: random
-
+		// position on this list relates to jump vector in jump_offset list
 		int occupied_neighbor_sites[MAXIMUM_NUMBER_OF_NEIGHBORS];
 		//int int_or_ext[MAXIMUM_NUMBER_OF_NEIGHBORS];
 
@@ -99,7 +99,7 @@ typedef struct
 		char name[25];
 		int number;
 	} Command;
-
+// the direction of an atomic jump / diffusion move
 typedef struct
 	{
 		int dx;
@@ -121,16 +121,16 @@ typedef struct
 
 typedef struct
 	{
-		double k;
+		double k;						// rate constant?
 		double frequency;
-		int number;           			// number (count?) of this type of transition
-		int offset; 					// index to start of transition list
+		int number;           			// number (count?) of this type of transition in transition list
+		int offset; 					// index to first item in transition list with this rate constant 
 	} Rate;
 
 typedef struct
 	{
-		int number_in_list;		// location on atom list
-		char offset_vector;   	// this is the translation vector
+		int number_in_list;		// location on atom list of atom that the transition belongs to / is acting on
+		char offset_vector;   	// this is the translation vector, index in jump offset?
 
 	} Transition_List;
 

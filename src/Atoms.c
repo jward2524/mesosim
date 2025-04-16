@@ -12,19 +12,18 @@
 /* symmetry related variables */
 double rmat[3][3];
 double cg[3]={(double)0.,(double)0.,(double)0.};
-crystal_offset jump_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
-int opposite_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
-double latmat[3][3], ilatmat[3][3];
-double cell[6]={1.,1.,1.,90.,90.,90.};
+crystal_offset jump_offset[MAXIMUM_NUMBER_OF_NEIGHBORS]; // possible atom jumps in simulation
+int opposite_offset[MAXIMUM_NUMBER_OF_NEIGHBORS]; // index in jump_offset that has the jump in the opposite direction in simulation; opposite_offset[0]=11 means the opposite direction of jump_offset[0] is jump_offset[11]
+double latmat[3][3], ilatmat[3][3]; // primitive unit cell basis vectors + inverted; latmat[*][0] = basis1, latmat[0][*] = x component of basises
+double cell[6]={1.,1.,1.,90.,90.,90.}; // unit cell parameters; a b c alpha beta gamma
 double dax, day, daz;
-double normal_x, normal_y, normal_z;
 crystal_offset lattice_first_offset[24];
 crystal_offset lattice_second_offset[24];
 
 Atom_Color atom_color[10];
-
+// direction of possible atom jumps for each crystal lattice type
 crystal_offset bcc_offset[8] = 
-		{
+		{ // not normalized, in orthogonal? composite cell? cubic? coordinates
 		{-1, -1, -1},
 		{0, 0, -1},
 		{1, 0, 0},
@@ -90,10 +89,10 @@ crystal_offset bcc_second_offsets[6] =
 		{0, 1, 1},
 		{0, -1, -1}};
 
-void create_default_atom(int n)
+void create_default_atom(int n) // n = position on atom list
 {
 	int i,j;
-	char errorstring[256];
+	char errorstring[256]; // XXX: unused
 
 	atom[n] = (Atom *)malloc(sizeof(Atom));
 
@@ -103,16 +102,16 @@ void create_default_atom(int n)
 		return;
 	}
 
-	strcpy(atom[n]->name, DEFAULT_ATOM_NAME); 			
+	strcpy(atom[n]->name, DEFAULT_ATOM_NAME);
 	atom[n]->type = 1;
 		
 	for (i=0;i<3;++i)
-		{
-			atom[n]->coord[i] = 0.0;
-			atom[n]->lattice[i] = 0.0;
-		}
+	{
+		atom[n]->coord[i] = 0.0;
+		atom[n]->lattice[i] = 0.0;
+	}
 
-	atom[n]->bsradius = DEFAULT_BS_RADIUS; //set or optional
+	atom[n]->bsradius = DEFAULT_BS_RADIUS; //set or optional // XXX: vis + commented code
 	//atom[n]->sfradius = DEFAULT_SF_RADIUS; //set or optional
 		
 	//atom[n]->visible = true; //can remove
@@ -130,12 +129,12 @@ void create_default_atom(int n)
 	for (i=0;i<MAXIMUM_NUMBER_OF_NEIGHBORS;++i)
 		atom[n]->occupied_neighbor_sites[i] = -1;
 
-	// linked list structure
+	// linked list structure // [ ]: but why
 
 	atom[n]->next_atom = -1;
 	atom[n]->previous_atom = -1;
-		
-	// bonding
+	
+	// bonding // XXX: commented code
 	/*for (i=0;i<MAXIMUM_NUMBER_OF_COSMETIC_BONDS;++i) //can remove this part?
 		atom[n]->bond[i] = -1;								// links to the bond drawing list
 	atom[n]->nob = 0;*/										// number_of_bonds
@@ -155,19 +154,19 @@ void create_default_atom(int n)
 /*******************************************************************************
 *******************************************************************************/
 
-int add_atom(double x, double y, double z, int type, int special)
-{
+int add_atom(double x, double y, double z, int type, int special) // lattice coordinates xyz, atom type, special atom conditions (unused)
+{ // XXX: special isn't really used
 	/*if (x > 60)
 		printf("made it in!\n");*/
 	int i, j, k, m, n1;
 
 	int xzone, yzone, zzone;
-	double checkx, checky, checkz;
+	double checkx, checky, checkz; // position of potential move
 
-	int pos, ct, n2;
+	int pos, ct, n2; // position in atom array, presumably; // XXX: ct n2 are unused
 
 	double sp[3], spo[3];
-
+	// [ ]: this is a sanity check? iterating over atom list instead of zone (like atom_at)
 	if (atom_at(x,y,z) >= 0)
 	{
 		int num_overlapping = 0;
@@ -185,7 +184,7 @@ int add_atom(double x, double y, double z, int type, int special)
 	// allocate memory pointed to by the last element of the atom list
 	/*if (x > 60)
 		printf("atom of type %d being added at %lf %lf %lf\n", type, x, y, z);*/
-	pos = nat;
+	pos = nat; // position in atom array, presumably
 	create_default_atom(nat);
 
 	/*if (x > 60)
@@ -198,8 +197,8 @@ int add_atom(double x, double y, double z, int type, int special)
 
 	++nat;
 
-	findzone(&xzone, &yzone, &zzone, x, y, z);
-
+	findzone(&xzone, &yzone, &zzone, x, y, z); // TODO: this is already done in atom_at - why repeat it
+	// XXX: commended code
 	/*if (x > 60)
 		printf("found zone\n");*/
 	// xzone, yzone, zzone now have a position open at the end of the zone
@@ -209,11 +208,11 @@ int add_atom(double x, double y, double z, int type, int special)
 	// update the zone.  Increment the number of elements.  If the zone was
 	// empty, create a link to the first element in that zone
 
-	if (zone[xzone][yzone][zzone].offset == -1)		// first atom in linked list
+	if (zone[xzone][yzone][zzone].offset == -1)	// first atom in [zone?] linked list
 	{
 		zone[xzone][yzone][zzone].offset = pos;
 
-		atom[pos]->next_atom = -1;							// no valid link
+		atom[pos]->next_atom = -1;	// no valid link
 		atom[pos]->previous_atom = -1;
 	}
 	else
@@ -232,7 +231,7 @@ int add_atom(double x, double y, double z, int type, int special)
 		atom[pos]->next_atom = -1;
 	}
 
-	/*if (x > 60)
+	/*if (x > 60) // XXX: commented prints
 		printf("other zone logic done\n");*/
 
 	atom[pos]->lattice[0] = x;
@@ -240,26 +239,26 @@ int add_atom(double x, double y, double z, int type, int special)
 	atom[pos]->lattice[2] = z;
 
 	atom[pos]->type = type;
-	strcpy(atom[nat-1]->name, atom_names[type-1]);
+	strcpy(atom[nat-1]->name, atom_names[type-1]); // TODO: use pos instead of nat-1
 
-	/*if (x > 60)
+	/*if (x > 60) // XXX: commented prints
 		printf("copied the name: atom is type %s\n", atom[nat-1]->name);*/
 
 	// find (or set) the occupied neighbor sites
 
-	// saturate all the bonds
+	// saturate all the bonds, except it doesn't?
 
 	for (i=0;i<number_of_possible_neighbors;++i)
 	{
 		// mark that this atom cannot yet jump in direction i
-		/*if (x > 60)
+		/*if (x > 60) // XXX: commented prints
 			printf("i am testing neighbor %d\n", i);*/
 
 		atom[pos]->position_on_transition_list[i] = -1;
-
+		// [ ]: if system size is still 1 (in z direction?) and jump isn't zero, skip it?
 		if ((ssz == 1)&&(jump_offset[i].dz != 0))
 		{
-			/*if (x > 60)
+			/*if (x > 60) // XXX: commented prints
 				printf("met the corner case\n");*/
 			continue;
 		}
@@ -270,7 +269,7 @@ int add_atom(double x, double y, double z, int type, int special)
 		checkx = x + jump_offset[i].dx;
 		checky = y + jump_offset[i].dy;
 		checkz = z + jump_offset[i].dz;
-		/*if (x > 60)
+		/*if (x > 60) // XXX: commented prints
 			printf("before pbc xyz %lf %lf %lf\n", checkx, checky, checkz);*/
 		adjust_pbc(&checkx, &checky, &checkz);
 		/*if (x > 60)
@@ -288,9 +287,9 @@ int add_atom(double x, double y, double z, int type, int special)
 				}*/
 				atom[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz);
 
-				/*if (x>60)
+				/*if (x>60) // XXX: commented prints
 					printf("pos = %d, i = %d, atom[pos]->occupied[i] = %d\n", pos, i, atom[pos]->occupied_neighbor_sites[i]);*/
-
+				// if atom is present at potential jump site, fill position in occupied_neighbor_sites of this atom and the found neighbor atom
 				if (atom[pos]->occupied_neighbor_sites[i] >= 0 ) {
 					/*if (x>60)
 						printf("reverse: index %d, opposite offset %d, pos %d\n", atom[pos]->occupied_neighbor_sites[i], opposite_offset[i], pos);*/
@@ -302,7 +301,7 @@ int add_atom(double x, double y, double z, int type, int special)
 				/*if (x > 60)
 					printf("About to leave the normal case\n");*/
 				break;
-
+			// XXX: commented code
 			/*case RANDOM_SURROUND:								// normal bonding considerations
 				// set occupied_neighbor_site[i] to the atom at that site.
 				// If there really is an atom there, cross-link it to our new atom.
@@ -438,7 +437,7 @@ int add_atom(double x, double y, double z, int type, int special)
 
 	//printf("bond saturated\n");
 	// can't evaporate either
-
+	// [ ]: bc bonds saturated, except they aren't? so don't let it evaporate
 	atom[pos]->position_on_transition_list[number_of_possible_neighbors] = -1;
 
 	//printf("did you cause a problem\n");
@@ -449,10 +448,10 @@ int add_atom(double x, double y, double z, int type, int special)
 
 	// now set the transition rates
 
-	refresh_transitions(pos);
+	refresh_transitions(pos); // [ ]: why doing this now, after every atom, when neighbors haven't been created yet?
 
 	//printf("my transition refreshed\n");
-	// cycle through the near neighbors, refresh their transitions [or bury as necessary]
+	// cycle through the nearest neighbors, refresh their transitions [or bury as necessary]
 
 	for (i=0;i<number_of_possible_neighbors;++i)
 	{
@@ -461,7 +460,7 @@ int add_atom(double x, double y, double z, int type, int special)
 
 		if (j >= 0)
 		{
-			k = refresh_transitions(j);					// refresh transitions of neighbor
+			k = refresh_transitions(j);	// refresh transitions of neighbor
 			//we don't want to bury our atoms: this is removed from this point
 		}
 	}
@@ -746,7 +745,7 @@ void remove_atom(int at)
 // checks if there is an atom at point (cx, cy, cz).
 // If so, it returns the index to that atom.  If not, return -1.
 
-int atom_at(double cx, double cy, double cz)
+int atom_at(double cx, double cy, double cz) // lattice coordinate xyz
 {
 	int i;
 	int zx, zy, zz;
@@ -756,7 +755,7 @@ int atom_at(double cx, double cy, double cz)
 
 	// cycle through the zone linked list
 	i = zone[zx][zy][zz].offset;
-
+	// TODO: if doubles for lattice coordinates are necessary, then should probably change from == to fabs(a-b) < epsilon
 	while (i != -1)
 	{
 		if ((atom[i]->lattice[0] == cx)&&
@@ -766,7 +765,7 @@ int atom_at(double cx, double cy, double cz)
 		else i = atom[i]->next_atom;
 	}
 
-	return -1;			// no atom
+	return -1;	// no atom
 }
 
 int reincarnate(double x, double y, double z, int type, int vc, int buried) {
@@ -1007,11 +1006,11 @@ void copy_atom(int i, int j)
 /******************************************************************************/
 /******************************************************************************/
 
-void organize(Atom* a[], int na)
+void organize(Atom* a[], int na) // na=number of atoms
 {
 	// like copy_xyz_to_coord, but adjusts center of gravity, too
 
-	orthomol(a, na, latmat);					// use the cell dimensions to orthogonalize
+	orthomol(a, na, latmat);	// use the cell dimensions to orthogonalize
 	//centerg(a, na); //don't do this!
 }
 
@@ -1057,26 +1056,26 @@ void centerg(Atom* atm[], int na)
 }
 
 // [ ]: what does this do?
-void latmat_to_cell(double com[3][3], double celld[6])
+void latmat_to_cell(double com[3][3], double celld[6]) // com = basis vectors, celld = unit cell parameters
 {
-	double pir = 180.0/PI;
-
+	double pir = 180.0/PI; // radians to degrees conversion factor
+	// a b c - magnitude of basis0 basis1 basis2 vectors
 	celld[0] = sqrt(com[0][0]*com[0][0] + com[1][0]*com[1][0] + com[2][0]*com[2][0]);
 	celld[1] = sqrt(com[0][1]*com[0][1] + com[1][1]*com[1][1] + com[2][1]*com[2][1]);
 	celld[2] = sqrt(com[0][2]*com[0][2] + com[1][2]*com[1][2] + com[2][2]*com[2][2]);
-		
+	// gamma - angle between basis0 and basis1 = arccos(dot(basis0, basis1) / (mag(basis0) * mag(basis1))); from cos(theta) = dot(a,b) / (mag(a)*mag(b))
 	celld[5] = com[0][0]*com[0][1] + com[1][0]*com[1][1] + com[2][0]*com[2][1];
 	celld[5] = celld[5]/(celld[0]*celld[1]);
 	celld[5] = pir*acos(celld[5]);
-
+	// beta - angle between basis0 and basis2
 	celld[4] = com[0][0]*com[0][2] + com[1][0]*com[1][2] + com[2][0]*com[2][2];
 	celld[4] = celld[4]/(celld[0]*celld[2]);
 	celld[4] = pir*acos(celld[4]);
-
+	// alpha - angle between basis1 and basis2
 	celld[3] = com[0][2]*com[0][1] + com[1][2]*com[1][1] + com[2][2]*com[2][1];
 	celld[3] = celld[3]/(celld[1]*celld[2]);
 	celld[3] = pir*acos(celld[3]);
-
+	// ENHANCE: double arithmetic leads to imprecise values
 	return;
 }
 

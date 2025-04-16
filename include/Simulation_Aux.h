@@ -68,3 +68,5 @@ extern double overpotential_ramp_rate;
 //int ncsk = 0;
 
 extern int total_volume_dissolved;
+
+extern double normal_x, normal_y, normal_z; // XXX: likely vistigal

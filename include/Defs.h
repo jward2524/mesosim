@@ -30,9 +30,9 @@
 
 // the default number of zones is tts
 
-#define DSIMSIZE 256 //used
+#define DSIMSIZE 256 //used - system size
 
-#define TTS 256
+#define TTS 256 // zone size
 
 #define ZONES_IN_X TTS		
 #define ZONES_IN_Y TTS	
@@ -40,9 +40,9 @@
 
 // numerical and fundamental constants
 
-#define kBoltz 8.617e-5
+#define kBoltz 8.617e-5  // eV per Kelvin
 #define PI 3.141592654
-#define RT 1.0//0.70710678									// 1/root(2); gives the nn spacing in fcc to be exactly 1
+#define RT 1.0//0.70710678	// 1/sqrt(2); gives the nn spacing in fcc to be exactly 1
 
 #define NUMBER_OF_ZONES ZONES_IN_X*ZONES_IN_Y*ZONES_IN_Z
 
@@ -80,7 +80,7 @@
 #define DIAMOND 4
 
 // simple cubic lattice vectors in orthogonal space
-
+// unit is lattice parameters (a)
 #define SCXV1 1.0
 #define SCYV1 0.0
 #define SCZV1 0.0
@@ -93,8 +93,8 @@
 #define SCYV3 0.0
 #define SCZV3 1.0
 
-// fcc cubic lattice vectors in orthogonal space
-
+// fcc primitive lattice vectors in orthogonal space (xyz axes)
+// RT should be 1/2, not 1/sqrt(2) or 1, for primitive cell
 #define FCCXV1 1.0*RT
 #define FCCYV1 1.0*RT
 #define FCCZV1 0.0*RT
@@ -107,7 +107,7 @@
 #define FCCYV3 1.0*RT
 #define FCCZV3 1.0*RT
 
-// bcc cubic lattice vectors in orthogonal space
+// bcc primitve lattice vectors in orthogonal space
 
 #define BCCXV1 0.5
 #define BCCYV1 -0.5

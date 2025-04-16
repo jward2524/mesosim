@@ -32,7 +32,6 @@ extern int opposite_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
 extern double latmat[3][3], ilatmat[3][3];
 extern double cell[6];
 extern double dax, day, daz;
-extern double normal_x, normal_y, normal_z;
 extern crystal_offset lattice_first_offset[24];
 extern crystal_offset lattice_second_offset[24];
 extern crystal_offset bcc_offset[8];

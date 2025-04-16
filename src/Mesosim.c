@@ -32,12 +32,12 @@ int main(int argc, char* argv[]) {
         exit(errno);
     }
     fputs("MESOSIM 2024\n", temp_log);
-    initialize_lattice_geometry(); //this gets replaced in the input file
+    initialize_lattice_geometry(); //this gets overwritten by info from the input file
 
     simulation_type = -1; //TODO: need to define in globals!!
-
+    // TODO: check length of argv with argc
     fprintf(temp_log, "Attempting to read in file %s\n", argv[1]);
-    
+    // get_input_file also initializes atom list
     if (get_input_file(argv[1]) == false) {
         fprintf(temp_log, "ERROR! Something bad happened when reading the input file\n");
         return 1;

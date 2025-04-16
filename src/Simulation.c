@@ -24,7 +24,7 @@ int simulation_type = SIMULATION_TYPE_UNDEFINED;
 int nat = 0;
 Atom temp_atom;
 bool simulation_should_kill_itself;
-Atom* atom[];
+Atom* atom[]; // array containing all atoms in the simulation
 double elapsed_time = 0;
 
 bool evaporation_flag = true;
@@ -34,8 +34,8 @@ double run_time = 1.e8; //default (in seconds)
 double data_time_interval = 0.1;
 double time_interval_end;
 
-int number_rates;
-int total_current_transitions;
+int number_rates; // number of rates in rate list (filled indices)
+int total_current_transitions; // size of filled portion of transition list
 double sum_of_frequencies;
 
 double overpotential = 0.0;
@@ -50,7 +50,7 @@ double nnE[6] = {
 
 double nnnE[6] = {0., 0., 0., 0., 0., 0.};
 
-bool solubility[3] = {false, false, false}; //all elements cannot dissolve by default
+bool solubility[3] = {false, false, false}; // whether ABC-type atoms can be dissolved/evaporated - all elements cannot dissolve by default
 
 double temperature = DEFAULT_TEMPERATURE;
 
@@ -60,9 +60,9 @@ int number_final_configuration_neighbors;
 int number_intial_configuration_neighbors;
 
 // ENHANCE: malloc?
-Rate rate[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS];
+Rate rate[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS]; // array containing all the unique rate constants and count of atoms that have that k - Rates default initalized to all zeros values?
 
-Transition_List *transition_list[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
+Transition_List *transition_list[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS]; // array of the possible atom transitions (atom index + jump offset index)
 //Transition_List transition_list[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
 
 Trans_Prob transition_probability;
@@ -404,29 +404,29 @@ void compute_transition_array(void)
 /******************************************************************************/
 /******************************************************************************/
 
-int refresh_transitions(int at)
+int refresh_transitions(int at) // at = index on atom list
 {
 	int i, j;
-	int tl;
-	double r;
+	int tl; // position of rate r in rate list rate[]
+	double r; // rate constant from bond-breaking model
 	double nx, ny, nz;
 
-	int nr;				// this is returned as the number of transitions this atom can undergo
-		
+	int nr;	// this is returned as the number of transitions (jump_offsets) this atom can undergo, excluding evaporation
+	// 
 	int initial_config[MAXIMUM_NUMBER_OF_NEIGHBORS]; // -1 if empty, type if filled
 	int final_config[MAXIMUM_NUMBER_OF_NEIGHBORS];
 
-	//bool ok_to_evaporate; //doesn't get used
+	//bool ok_to_evaporate; //doesn't get used // XXX: commented code
 
-	//printf("removing\n");
+	//printf("removing\n"); // XXX: commented print
 	// first, remove all mention of this atom from transition list
-	for (i=0;i<number_of_possible_neighbors + dissolution;++i)		// extra 1 for evaporation
+	for (i=0; i<number_of_possible_neighbors + dissolution; ++i) // extra 1 for evaporation
 	{
-		if (atom[at]->position_on_transition_list[i] != -1)		// something can happen in the "i" direction
+		if (atom[at]->position_on_transition_list[i] != -1) // something can happen in the "i" direction
 			take_off_transition_list(at, i);
 	}
 
-	//printf("cycling\n");
+	//printf("cycling\n"); // XXX: commented print
 	// cycle through neighbor coordinates, and check if there is an atom there
 	for (i=0;i<number_of_possible_neighbors;++i)
 	{
@@ -439,14 +439,14 @@ int refresh_transitions(int at)
         j = atom_at(nx, ny, nz);
 
 		if (j >= 0) atom[at]->occupied_neighbor_sites[i] = j;
-
+		// if no atom at that position but occ_neighbor array says there is, fix it
 		if ((j == -1)&&(atom[at]->occupied_neighbor_sites[i] >= 0))
 			atom[at]->occupied_neighbor_sites[i] = -1;
 	}
 
 	// cycle through the neighbor sites.  if there's an empty one, calculate the transition rate to it
 
-	//printf("getting config\n");
+	//printf("getting config\n"); // XXX: commented prints
 	nr = 0;
 	//ok_to_evaporate = true; //doesn't get used
 
@@ -458,11 +458,11 @@ int refresh_transitions(int at)
 	for (i=0;i<number_of_possible_neighbors;++i)
 	{
 		if (atom[at]->occupied_neighbor_sites[i] == -1)
-		{
+		{ // if unoccupied, consider transition // [ ]: how does this handle diffusion steps into the solution / away from the solid
 			//printf("final config\n");
 			number_final_configuration_neighbors = get_final_configuration2(at, i, final_config);
 			//printf("surf diffusion\n");
-			calculate_surf_diffusion_rate(		initial_config,
+			calculate_surf_diffusion_rate(		initial_config, // ENHANCE: make this look prettier
 												final_config,
 												number_of_possible_neighbors,
 												atom[at]->type,
@@ -472,15 +472,15 @@ int refresh_transitions(int at)
 												&r);
 					
 			++nr;
-			//printf("adding step\n");
+			//printf("adding step\n"); 
 			if ((tl = is_on_transition_list(r)) != -1)
-			{
+			{ // if rate constant already in rate list, use that rate list index
 				add_to_transition_list(tl, at, i);
 			}
 			else
 			{
-				// the transition rate to that spot turned out to be a new one.
-
+				// the transition rate with rate constant r turned out to be a new one
+				// add to rate list/array
 				tl = create_new_transition(r);
 				add_to_transition_list(tl, at, i);
 			}
@@ -513,7 +513,7 @@ int refresh_transitions(int at)
 	if (tl == -1)
 		tl = create_new_transition(r); //the transition rate to the spot is a new one!
 
-	add_to_transition_list(tl, at, number_of_possible_neighbors);
+	add_to_transition_list(tl, at, number_of_possible_neighbors); // evaporation is considered to be last in jump_offset (not really in array but uses that index number)
 	//printf("gonna return %d\n", nr);
 	return nr;						// gives number of current transitions for that atom
 }
@@ -522,7 +522,7 @@ int refresh_transitions(int at)
 /******************************************************************************/
 
 //is there a better way of doing this?
-
+// checks the rate constant is already in the rate list
 int is_on_transition_list(double r) 
 {
 	int i;
@@ -535,7 +535,7 @@ int is_on_transition_list(double r)
 
 /******************************************************************************/
 /******************************************************************************/
-
+// create new Rate struct in rate array
 int create_new_transition(double r)
 {
 	rate[number_rates].k = r;
@@ -552,11 +552,11 @@ int create_new_transition(double r)
 
 // add to list[tl] the atom at going in direction vc
 // [ ]: help understanding this - what is offset, number, ia, fa
-void add_to_transition_list(int tl, int at, int vc) // transition list index, atom index, diffusion vector index
+void add_to_transition_list(int tl, int at, int vc) // rate list index, atom index, jump offset index
 {
-	int i;
+	int i; // loop variable
 	int n;
-	int ia, fa;
+	int ia, fa; // initial and final [something]
 
 	// make room for the new arrival
 
@@ -567,7 +567,7 @@ void add_to_transition_list(int tl, int at, int vc) // transition list index, at
 	//		transition_list[fa] = (Transition_List *)malloc(sizeof(Transition_List));
 
 	for (i = number_rates-1;i>tl;--i)
-		{
+		{ // [ ]: what does this do
 			ia = rate[i].offset;
 			fa = ia+rate[i].number;
 
@@ -599,8 +599,8 @@ void add_to_transition_list(int tl, int at, int vc) // transition list index, at
 /******************************************************************************/
 /******************************************************************************/
 
-void take_off_transition_list(int at, int vc)			// removes atom jumping in the vc direction
-	{
+void take_off_transition_list(int at, int vc)	// removes atom jumping in the vc direction
+	{ // vc is index in atom's position_on_transition_list list?
 		int i;
 		int tl, tl_pos1, tl_pos2;
 
@@ -921,39 +921,39 @@ void check_system(void)
 
 /******************************************************************************/
 /******************************************************************************/
-
+// calculates surface diffusion rate constant
 int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial configuration array
 									int final_configuration[],				// final configuration array
 									int number_of_neighbors,				// number of 1st near neighbors in current xtal structure
 									int atom_type,							// type of atom in consideration for transition
-									double nnE[6],							// bond energy (type 2)-(type 2)
+									double nnE[6],							// bond energy (type 2)-(type 2) [nearest neighbor energy]
 									double temperature,						// system temperature
 									double overpotential,					// system overpotential
-									double *rate)							// return value
-{
+									double *rate)							// return value - rate constant k
+{ // ENHANCE: pass the number of nearest neighbors?
 	int i;
 	double energy = 0.0;
-
-	double nsi[3], nsf[3];
-	double ti;
-	double tf;
-
-	static double baf[12] = {1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.};			// optional anistropy factor
+	// [ ]: what are these
+	double nsi[3], nsf[3]; //number of type A/B/C [index 012] neighboring atoms in initial/final configuration
+	double ti; // total number of neighbors in initial configuration
+	double tf; // total number of neighbors in final configuration
+	// [ ]: why is this static, not const? it should also be a simulation input
+	static double baf[12] = {1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.}; // "optional" anistropy factor, indices match jump_offset
 
 	tf = 0.0;
 	ti = 0.0;
 
-	for (i=0;i<3;++i)
+	for (i=0;i<3;++i) // ENHANCE: cmon man, just use {}
 	{
 		nsi[i] = 0.0;
 		nsf[i] = 0.0;
 	}
 
-	int nneA_index[3] = {0, 1, 2}; //indices of A-A, A-B, A-C bonds
+	int nneA_index[3] = {0, 1, 2}; //indices of A-A, A-B, A-C bonds in nnE array
 	int nneB_index[3] = {1, 3, 4}; //indices of B-A, B-B, B-C bonds
 	int nneC_index[3] = {2, 4, 5}; //indices of C-A, C-B, C-C bonds
 	int neighbor_type; //type of atom for nearest neighbor
-
+	// XXX: commented prints
 	//printf("before teh switch: atom type = %d\n", atom_type);
 
 	/*printf("final configuration: ");
@@ -961,17 +961,17 @@ int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial con
 		printf("%d ", final_configuration[i]);
 	printf("\n");*/
 
-	// ENHANCE: lol these are basically identical, do it better (fxn)
+	// ENHANCE: lol these are identical except for nnE[nne*_index...], do it better (fxn)
 	switch(atom_type)
 	{
 		case 1:
-			for (i=0;i<number_of_neighbors;++i)
+			for (i=0; i<number_of_neighbors; ++i)
 			{
 				neighbor_type = initial_configuration[i];
 				//printf("init neighbor type %d\n", neighbor_type);
 				if (neighbor_type > 0) {
 					++nsi[neighbor_type - 1]; //number of type A/B/C neighboring atoms in init configuration
-					energy += nnE[nneA_index[neighbor_type - 1]]*baf[i]; //A-A/B/C bond
+					energy += nnE[nneA_index[neighbor_type - 1]]*baf[i]; //A-A/B/C bond - grab correct index of nnE array from nne*_index array based on neighbor type
 				}
 				neighbor_type = final_configuration[i];
 				//printf("final neighbor type %d\n", neighbor_type);
@@ -1028,11 +1028,11 @@ int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial con
 		ti += nsi[i];
 		tf += nsf[i];
 	}
-
+	// these override the previous energy sum
 	if (ti == 0)
 	{
-		// this condition corresponds to a diffuser walking through a lattice (a lattice gas)
-
+		// no neighbors - this condition corresponds to a diffuser walking through a lattice (a lattice gas)
+		
 		energy = -1.0;
 
 	}
@@ -1044,7 +1044,7 @@ int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial con
 									// Don't let it happen!
 	}
 
-	// ENHANCE: replace calculating the exp with looking up the value (uhash?) -> speedup?
+	// ENHANCE: replace calculating the exp with memoizing up the value (uhash?) -> speedup?
 	//*rate = 1e13*exp(-energy/(kBoltz*temperature)) //+ 1e-4*exp(-(energy-overpotential)/(kBoltz*temperature));
 	*rate = 1e13*exp(-energy/(kBoltz*temperature));
 	//printf("rate = %le\n", *rate);
@@ -1054,7 +1054,7 @@ int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial con
 /******************************************************************************/
 /******************************************************************************/
 
-int calculate_evaporation_rate(	int initial_configuration[],			// initial configuration array
+int calculate_evaporation_rate(	int initial_configuration[],			// initial configuration array of atom's nearest neighbors
 									int number_of_neighbors,				// number of 1st near neighbors in current xtal structure
 									int atom_type,							// type of atom in consideration for transition
 									double nnE[6],							// bond energy (type 2)-(type 2)
@@ -1064,7 +1064,7 @@ int calculate_evaporation_rate(	int initial_configuration[],			// initial config
 {
 	int i;
 	double energy;
-
+	// XXX: not used
 	double EAu = .5;
 	double nscale = 0.0;
 
@@ -1079,19 +1079,19 @@ int calculate_evaporation_rate(	int initial_configuration[],			// initial config
 		return 1;
 	}*/
 
-	int nneA_index[3] = {0, 1, 2}; //indices of A-A, A-B, A-C bonds
+	int nneA_index[3] = {0, 1, 2}; //indices of A-A, A-B, A-C bonds in nnE array
 	int nneB_index[3] = {1, 3, 4}; //indices of B-A, B-B, B-C bonds
 	int nneC_index[3] = {2, 4, 5}; //indices of C-A, C-B, C-C bonds
 	int neighbor_type; //type of atom for nearest neighbor
 
-
+	// ENHANCE: lol these are identical except for nnE[nne*_index...], be better (fxn)
 	switch(atom_type)
-	{
+	{ // [ ]: how much of this is duplicated with calculate_surf_diffusion_rate
 		case 1:
 			if (solubility[0]) {
 				//A can evaporate
 				for (i=0;i<number_of_neighbors;++i)
-				{
+				{ // calculate energy of initial state before evaporation
 					neighbor_type = initial_configuration[i];
 					if (neighbor_type > 0)
 						energy += nnE[nneA_index[neighbor_type - 1]]*baf[i]; //bonding with A
@@ -1099,7 +1099,7 @@ int calculate_evaporation_rate(	int initial_configuration[],			// initial config
 			}
 			else
 				energy = 1000.; //A cannot evaporate
-			*rate = 1e4*exp(-(energy-overpotential)/(kBoltz*temperature));
+			*rate = 1e4*exp(-(energy-overpotential)/(kBoltz*temperature)); // [ ]: dissolution/evaporation equation
 			break;
 
 		case 2:

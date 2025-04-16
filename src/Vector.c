@@ -310,7 +310,7 @@ matmul(a,b,c) NOT INCLUDED because it's not relevant
 vecmul(x,a,y):  Multiplies the matrix a by the vector x to produce
 				vector y. (y=ax).
 ******************************************************************/
-
+// assuming a[row index][col index] and y=a*x, x and y are column vectors
 void vecmul(double x[3], double a[3][3], double y[3])
 	{
 		int i;
@@ -319,7 +319,7 @@ void vecmul(double x[3], double a[3][3], double y[3])
 		for (i=0;i<3;++i)
 			t[i]=a[i][0]*x[0]+a[i][1]*x[1]+a[i][2]*x[2];
 
-		for (i=0;i<3;++i) y[i]=t[i];
+		for (i=0;i<3;++i) y[i]=t[i]; // XXX: waste of spacetime
 
 		return;
 	}
