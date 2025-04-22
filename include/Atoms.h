@@ -12,9 +12,9 @@ void bury_atom(int at, int *pos); //no longer relevant
 // rotation and molecule orientation
 // these prototypes are wrong, redefined somewhere else
 // void rotmat(Atom* atm[], int na, double rtmat[3][3]);
-void organize(Atom* atm[], int n); //keep for now but need to retool
-void orthomol(Atom* atm[], int na, double com[3][3]);
-void centerg(Atom* atm[], int na); //not really relevant now
+void organize(Atom* atom_arr[], int atom_cnt); //keep for now but need to retool
+void orthomol(Atom* atom_arr[], int atom_cnt, double basis[3][3]);
+void centerg(Atom* atom_arr[], int atom_cnt); //not really relevant now (visualization)
 
 // general atom and bond handling routines
 void copy_atom(int, int);
@@ -26,7 +26,7 @@ void primitive_basis2ucell_params(double ltmt[3][3], double c[6]);
 
 /* symmetry related variables */
 extern double rmat[3][3];
-extern double cg[3];
+extern double centroid[3];
 extern crystal_offset jump_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
 extern int opposite_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
 extern double primitive_basis[3][3], invert_primitive_basis[3][3];

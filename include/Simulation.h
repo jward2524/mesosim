@@ -27,9 +27,9 @@ int	calculate_evaporation_rate( int initial_configuration[],
 
 extern int simulation_type;
 // bool simulation_initialized;
-extern Atom *atom[MAXIMUM_NUMBER_OF_ATOMS];
+extern Atom *atom_arr[MAXIMUM_NUMBER_OF_ATOMS];
 extern Bond bond[MAXIMUM_NUMBER_OF_BONDS];
-extern int nat;
+extern int atom_cnt;
 extern double overpotential;
 extern int num_sims;
 extern double elapsed_time;
@@ -41,10 +41,10 @@ extern char atom_names[3][3];
 extern double default_color[3];
 
 extern int simulation_type;
-extern int nat;
+extern int atom_cnt;
 extern Atom temp_atom;
 extern bool simulation_should_kill_itself;
-extern Atom* atom[];
+extern Atom* atom_arr[];
 extern double elapsed_time;
  
 extern bool evaporation_flag;
@@ -54,9 +54,9 @@ extern double run_time; //default (in seconds)
 extern double data_time_interval;
 extern double time_interval_end;
  
-extern int number_rates;
-extern int total_current_transitions;
-extern double sum_of_frequencies;
+extern int rate_cnt;
+extern int transition_cnt;
+extern double frequency_sum;
 
 extern double overpotential;
  
@@ -69,14 +69,14 @@ extern double temperature;
 
 extern int dissolution;
  
-extern int number_final_configuration_neighbors;
-extern int number_intial_configuration_neighbors;
+extern int final_config_neighbor_cnt;
+extern int intial_config_neighbor_cnt;
  
 // ENHANCE: malloc?
-extern Rate rate[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS];
+extern Rate rate_arr[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS];
  
-extern Transition_List *transition_list[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
-//Transition_List transition_list[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
+extern Transition *transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
+//Transition transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
  
 extern Trans_Prob transition_probability;
  

@@ -15,7 +15,7 @@ FILE *temp_log = NULL;
 char command_string[1024] = "";
 FILE *sim_log_file = NULL;
 // char return_message[512] = "";
-
+// updates a lot of shit
 bool get_input_file(char* filename)
 {
 	char extension[4];
@@ -154,17 +154,17 @@ int parse_input(char* line)
 	else if (strncmp(cmd, "seed", 4) == 0) {
 		// set the random seed
 		if (strncmp(params, "random", 6) == 0) {
-			//seed should be based on time
+			//rand_seed should be based on time
 			time_t seedtime;
 			time(&seedtime);
-			seed = (long int)seedtime;
-			fprintf(temp_log, "Using random time seed %ld\n", seed);
+			rand_seed = (long int)seedtime;
+			fprintf(temp_log, "Using random time seed %ld\n", rand_seed);
 		}
 		else if (strncmp(params, "default", 7) == 0) {
-			seed = DEFAULT_SEED;
-			fprintf(temp_log, "Using default time seed %ld\n", seed);
+			rand_seed = DEFAULT_SEED;
+			fprintf(temp_log, "Using default time seed %ld\n", rand_seed);
 		}
-		else if ((argsread = sscanf(params, "%ld", &seed)) != 1) //read in a long int
+		else if ((argsread = sscanf(params, "%ld", &rand_seed)) != 1) //read in a long int
 		{
 			fprintf(temp_log, "ERROR! Could not correctly read random seed parameter %s\n", params);
 			return FILE_COMMAND_IGNORED;
@@ -491,12 +491,12 @@ bool process_kmc_file(FILE* temp_log, char *kmc_filename)
 
 			fscanf(view_command_file, "%d\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%*lf\t%*d\t%*d\t%*d\t%*lf\t%*lf\t%*lf\t",
 				&temp_atom.type,
-				&temp_atom.coord[0], &temp_atom.coord[1], &temp_atom.coord[2],
+				&temp_atom.cart_coord[0], &temp_atom.cart_coord[1], &temp_atom.cart_coord[2],
 				&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2],
 				&temp_atom.bsradius);
 
 			for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS+DISSOLUTION;++j) //when do we pick lattice?
-				fscanf(view_command_file, "%d\t", &temp_atom.position_on_transition_list[j]);
+				fscanf(view_command_file, "%d\t", &temp_atom.transition_indices[j]);
 
 			for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS;++j)
 				fscanf(view_command_file, "%d\t", &temp_atom.occupied_neighbor_sites[j]);
@@ -527,7 +527,7 @@ bool process_kmc_file(FILE* temp_log, char *kmc_filename)
 		}
 
 		primitive_basis2ucell_params(primitive_basis, ucell_params);
-		organize(atom, nat);
+		organize(atom_arr, atom_cnt);
 
 
 		fclose(view_command_file);
@@ -580,11 +580,11 @@ bool process_xyz_file(FILE* temp_log, char *xyz_filename)
       	{
 			fclose(view_command_file);
 			fprintf(temp_log, "ERROR! Ran into EOF for %s, expected %d atoms remaining\n", xyz_filename, nremain);
-			//organize(atom, nat); //do I need to call this?
+			//organize(atom, atom_cnt); //do I need to call this?
 			return false;
 		}
 
-		i=nat;	
+		i=atom_cnt;	
 				
 		create_default_atom(i);
 
@@ -595,23 +595,23 @@ bool process_xyz_file(FILE* temp_log, char *xyz_filename)
 			return false;
         }
 
-		atom[i]->coord[0] = xyz_pos[0];
-		atom[i]->coord[1] = xyz_pos[1];
-		atom[i]->coord[2] = xyz_pos[2];
+		atom_arr[i]->cart_coord[0] = xyz_pos[0];
+		atom_arr[i]->cart_coord[1] = xyz_pos[1];
+		atom_arr[i]->cart_coord[2] = xyz_pos[2];
 		atype = match_atom_type(xyz_type, typenames, &ntypes);
 
 		if (atype == -1) //check to see if atom type is successfully added
 		{
 			for (int i = 0; i < ntypes; ++i)
 				free(typenames[i]);
-			//organize(atoms, nat) //???
+			//organize(atoms, atom_cnt) //???
 			return false;
 		}
 
-		atom[i]->type = atype;
-		atom[i]->bsradius = radius;
+		atom_arr[i]->type = atype;
+		atom_arr[i]->bsradius = radius;
 
-		//vecmul(atom[i]->coord, invert_primitive_basis, atom[i]->lattice); // TODO: need to do this later now!
+		//vecmul(atom[i]->cart_coord, invert_primitive_basis, atom[i]->lattice); // TODO: need to do this later now!
 
         /*switch(atom[i]->type)
         {
@@ -658,7 +658,7 @@ bool process_xyz_file(FILE* temp_log, char *xyz_filename)
 				break;
 	    }*/
 
-		++nat;
+		++atom_cnt;
 		
 	}
 
@@ -666,9 +666,9 @@ bool process_xyz_file(FILE* temp_log, char *xyz_filename)
 	for (int i = 0; i < ntypes; ++i)
 		free(typenames[i]);
 	
-	fprintf(temp_log, "Successfully read %d atoms from .xyz file %s\n", nat, xyz_filename);
+	fprintf(temp_log, "Successfully read %d atoms from .xyz file %s\n", atom_cnt, xyz_filename);
 	fclose(view_command_file);
-	//organize(atom, nat); //???
+	//organize(atom, atom_cnt); //???
 	return true;
 }
 
@@ -737,11 +737,11 @@ bool process_kmx_file(FILE* temp_log, char* kmx_filename) {
 
 		fscanf(view_command_file, "%d\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t",
 			&temp_atom.type,
-			&temp_atom.coord[0], &temp_atom.coord[1], &temp_atom.coord[2],
+			&temp_atom.cart_coord[0], &temp_atom.cart_coord[1], &temp_atom.cart_coord[2],
 			&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2]); //get rid of lattice coords too?
 
 		for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS+DISSOLUTION;++j) //when do we pick lattice?
-			fscanf(view_command_file, "%d\t", &temp_atom.position_on_transition_list[j]);
+			fscanf(view_command_file, "%d\t", &temp_atom.transition_indices[j]);
 
 		for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS;++j)
 			fscanf(view_command_file, "%d\t", &temp_atom.occupied_neighbor_sites[j]);
@@ -759,7 +759,7 @@ bool process_kmx_file(FILE* temp_log, char* kmx_filename) {
 	}
 
 	primitive_basis2ucell_params(primitive_basis, ucell_params);
-	organize(atom, nat);
+	organize(atom_arr, atom_cnt);
 
 
 	fclose(view_command_file);
@@ -774,7 +774,7 @@ bool output_log_file(FILE* sim_log_file, int frame_num)
 {
 	fprintf(sim_log_file, "![%d]\t", frame_num);
 	fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t", elapsed_time, temperature, overpotential);
-	fprintf(sim_log_file, "atoms = %d\tinternal energy = %lf [eV]\n", nat, total_internal_energy);
+	fprintf(sim_log_file, "atoms = %d\tinternal energy = %lf [eV]\n", atom_cnt, total_internal_energy);
 	fflush(sim_log_file);
 	return true;
 }
@@ -789,11 +789,11 @@ bool write_xyz_file(char* xyz_filename, int frame_num)
 		printf("ERROR! Couldn't open output file %s\n", filename_full);
 		return false;
 	}
-	fprintf(fileid, "%d\n", nat); //start with number of atoms
+	fprintf(fileid, "%d\n", atom_cnt); //start with number of atoms
 	fprintf(fileid, "time = %lf, temperature = %lf, potential = %lf, energy = %lf\n", elapsed_time, temperature, overpotential, total_internal_energy); //need to compute energy here!
 
-	for (int i = 0; i < nat; ++i)
-		fprintf(fileid, "%s %lf %lf %lf %lf\n", atom[i]->name, atom[i]->coord[0], atom[i]->coord[1], atom[i]->coord[2], atom[i]->bsradius); //name is now element type
+	for (int i = 0; i < atom_cnt; ++i)
+		fprintf(fileid, "%s %lf %lf %lf %lf\n", atom_arr[i]->name, atom_arr[i]->cart_coord[0], atom_arr[i]->cart_coord[1], atom_arr[i]->cart_coord[2], atom_arr[i]->bsradius); //name is now element type
 	//ball and stick or space filling?
 	fclose(fileid);
 	return true;

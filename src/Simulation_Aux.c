@@ -27,7 +27,7 @@ int cluster_radius = -1;
 char atoms_filename[256] = "";
 
 // [ ]: what is this for?
-Zone zone[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
+Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
 
 double initialoverpotential = DEFAULT_OVERPOTENTIAL;
 double overpotentialramprate = 0.0;
@@ -73,7 +73,7 @@ void get_system_rw_radius(void)
 
 /******************************************************************************/
 /******************************************************************************/
-
+// updates normal_x, normal_y, normal_z
 void get_system_normal(void) // XXX: supposedly only for vizualization
 {
 	double nmag;
@@ -125,19 +125,17 @@ void get_system_normal(void) // XXX: supposedly only for vizualization
 
 /******************************************************************************/
 /******************************************************************************/
-
+// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; rmat; normal_x, normal_y, normal_z; number_of_possible_neighbors, jump_offset, opposite_offset; zi*, zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_time, overpotential, time_interval_end
 void general_simulation_initialization(void)
 {
-	int i;
-
 	// first, remove any atoms that may exist
-	// [ ]: why would nat not be zero????
-	while (nat != 0)
-		kill_atom(nat-1);
+	// [ ]: why would atom_cnt not be zero????
+	while (atom_cnt != 0) // TODO: start here
+		kill_atom(atom_cnt-1);
 
-	if (seed > 0) seed = -seed;
-	srandj(&seed);
-	// nat=0 for the initialization functions, so some of them end up doing nothing
+	if (rand_seed > 0) rand_seed = -rand_seed;
+	srandj(&rand_seed);
+	// atom_cnt=0 for the initialization functions, so some of them end up doing nothing
 	getshifts();	// bit shifts for periodic boundary conditions
 
 	// system geometry initialization
@@ -153,12 +151,12 @@ void general_simulation_initialization(void)
 
 	//set_atom_colors(atom_color); // not needed anymore
 
-	number_rates = 0;							// initialize global transition variables
-	total_current_transitions = 0;
+	rate_cnt = 0;	// initialize global transition variables
+	transition_cnt = 0;
 
-	nat = 0;									// initialize global atom variables
+	atom_cnt = 0;	// initialize global atom variables
 	//current_iteration = 0; //not needed if only running 1 simulation at a time // XXX: commented code, never used
-	sum_of_frequencies = 0.0;
+	frequency_sum = 0.0;
 
 	elapsed_time = 0.0;
 
@@ -175,7 +173,6 @@ void general_simulation_initialization(void)
 
 void do_initialize_simulation(int simulation_index) // index represents simulation_type, from macros
 {
-	int i, j, n, m;
 	//printf("I'm in here, simulation index is %d\n", simulation_index);
 	switch(simulation_index) // TODO: just use the damn macros instead
 	{
@@ -193,7 +190,7 @@ void do_initialize_simulation(int simulation_index) // index represents simulati
 	//printf("My atoms are added\n");
 	check_system(); // optimizes the atoms added in the initialization routines
 	//printf("My atoms are checked\n");
-	organize(atom, nat);
+	organize(atom_arr, atom_cnt);
 	//printf("My atoms are organized\n");
 	//simulation_initialized = true; //this never really gets used
 
@@ -204,7 +201,7 @@ void do_initialize_simulation(int simulation_index) // index represents simulati
 /********************************************************************************/
 // zi* are the number of zones in that dimension, zi*shift is for bit shifting to find which zone a lattice coordinate corresponds to?
 void getshifts(void)
-{
+{ // updates zi*, zi*shift, *sh
 	int temp1;
 
 	temp1 = zix;
@@ -308,18 +305,18 @@ void findzone(int *xz, int *yz, int *zz, double xxx, double yyy, double zzz)
 
 /********************************************************************************/
 /********************************************************************************/
-
+// updates rmat
 void set_default_orientation(void) // supposedly for viewing
 {
 	static int index[3] = {1,1,1};
-	double axis[3], pnormal[3], axismag;
-	double zeropoint[3] = {0.,0.,0.}, a_a[3];
+	double axis[3], pnormal[3], axis_mag;
+	double zero_point[3] = {0.,0.,0.}, a_a[3];
 	double zaxis[3]={0.,0.,1.};
 	double zeroa[3]={0.,0.,0.};
-	double spinax[3];
-	double vanle;
+	double spin_ax[3];
+	double vec_angle;
 
-	organize(atom, nat); // nat ='d 0
+	organize(atom_arr, atom_cnt); // atom_cnt ='d 0
 
 	switch(lattice_type)
 	{
@@ -343,13 +340,13 @@ void set_default_orientation(void) // supposedly for viewing
 		 	break;
 	}
 
-	axismag = sqrt(axis[0]*axis[0] + axis[1]*axis[1] + axis[2]*axis[2]);
+	axis_mag = sqrt(axis[0]*axis[0] + axis[1]*axis[1] + axis[2]*axis[2]);
 
 	// direction cosines of axis normal to plane
 
-	pnormal[0] = axis[0]/axismag;
-	pnormal[1] = axis[1]/axismag;
-	pnormal[2] = axis[2]/axismag;
+	pnormal[0] = axis[0]/axis_mag;
+	pnormal[1] = axis[1]/axis_mag;
+	pnormal[2] = axis[2]/axis_mag;
 
 	if ((pnormal[0]==zaxis[0])&&(pnormal[1]==zaxis[1])&&(pnormal[1]==zaxis[1]))
 	{
@@ -359,13 +356,13 @@ void set_default_orientation(void) // supposedly for viewing
 	}
 
 	// orient
-	vecdif(pnormal, zeropoint, a_a);
+	vecdif(pnormal, zero_point, a_a);
 	if (((a_a[0]==0.)&&(a_a[1]==0.))||(magnitude(a_a)==0.)) return;
 
-	normto(a_a, zaxis, spinax);
-	vanle = -0.0174533*vangle(zaxis,zeroa,a_a);
+	normto(a_a, zaxis, spin_ax);
+	vec_angle = -0.0174533*vangle(zaxis,zeroa,a_a);
 
-	rotmata(spinax,vanle,rmat);
+	rotmata(spin_ax, vec_angle, rmat);
 	transpose(rmat);
 
 	//rotation_notify_flag removed
@@ -375,7 +372,7 @@ void set_default_orientation(void) // supposedly for viewing
 
 /********************************************************************************/
 /********************************************************************************/
-// creates zone array based on zi* (zone sizes?), initializes offset to -1; 
+// updates zone (array) based on zi* (zone sizes?), initializes offset to -1 
 void initialize_zones(void)
 {
 	int i, j, k;
@@ -383,100 +380,101 @@ void initialize_zones(void)
 	for (i=0;i<zix;++i)
 		for (j=0;j<ziy;++j)
 			for (k=0;k<ziz;++k)
-				zone[i][j][k].offset = -1;
+				zone_arr[i][j][k].offset = -1;
 	return;
 }
 
 /********************************************************************************/
 /********************************************************************************/
-
+// updates number_of_possible_neighbors, [jump_offset, opposite_offset]
 void initialize_neighbor_offsets(void)
-	{	
-		switch(lattice_type)
-			{
-				case FCC:
-					number_of_possible_neighbors = 12;
-					initialize_jump_offsets(FCC);
-					break;
-
-				case SC:
-					number_of_possible_neighbors = 6;
-					initialize_jump_offsets(SC);
-					break;
-
-				case BCC:
-					number_of_possible_neighbors = 8;
-					initialize_jump_offsets(BCC);
-					break;
-			}
-	
-		return;
-	}
-
-
-void initialize_jump_offsets(int l_t)	// l_t = lattice type
-	{
-		int i;
-		int fcc_offs[12] = {11, 10, 7, 4, 3, 6, 5, 2, 9, 8, 1, 0};
-		int sc_offs[6] = {1, 0, 3, 2, 5, 4};
-		int bcc_offs[8] = {7, 6, 3, 2, 5, 4, 1, 0};
-
-		switch (l_t)
+{	
+	switch(lattice_type)
 		{
 			case FCC:
-				for (i=0;i<12;++i)
-				{
-					jump_offset[i].dx = fcc_offset[i].dx;
-					jump_offset[i].dy = fcc_offset[i].dy;
-					jump_offset[i].dz = fcc_offset[i].dz;
-					opposite_offset[i] = fcc_offs[i];
-				}
-
+				number_of_possible_neighbors = 12;
+				initialize_jump_offsets(FCC);
 				break;
 
 			case SC:
-				for (i=0;i<6;++i)
-				{
-					jump_offset[i].dx = sc_offset[i].dx;
-					jump_offset[i].dy = sc_offset[i].dy;
-					jump_offset[i].dz = sc_offset[i].dz;
-					opposite_offset[i] = sc_offs[i];
-				}
-
+				number_of_possible_neighbors = 6;
+				initialize_jump_offsets(SC);
 				break;
 
-	        case BCC:
-		        for (i=0;i<8;++i)
-				{
-				    jump_offset[i].dx = bcc_offset[i].dx;
-					jump_offset[i].dy = bcc_offset[i].dy;
-					jump_offset[i].dz = bcc_offset[i].dz;
-					opposite_offset[i] = bcc_offs[i];
-				}
+			case BCC:
+				number_of_possible_neighbors = 8;
+				initialize_jump_offsets(BCC);
 				break;
 		}
 
-		return;
+	return;
+}
+
+// initializes jump_offset, opposite_offset
+void initialize_jump_offsets(int lattice_type)	// lattice_type = crystal lattice type
+{
+	int i;
+	int fcc_offs[12] = {11, 10, 7, 4, 3, 6, 5, 2, 9, 8, 1, 0};
+	int sc_offs[6] = {1, 0, 3, 2, 5, 4};
+	int bcc_offs[8] = {7, 6, 3, 2, 5, 4, 1, 0};
+
+	switch (lattice_type)
+	{
+		case FCC:
+			for (i=0;i<12;++i)
+			{
+				jump_offset[i].dx = fcc_offset[i].dx;
+				jump_offset[i].dy = fcc_offset[i].dy;
+				jump_offset[i].dz = fcc_offset[i].dz;
+				opposite_offset[i] = fcc_offs[i];
+			}
+
+			break;
+
+		case SC:
+			for (i=0;i<6;++i)
+			{
+				jump_offset[i].dx = sc_offset[i].dx;
+				jump_offset[i].dy = sc_offset[i].dy;
+				jump_offset[i].dz = sc_offset[i].dz;
+				opposite_offset[i] = sc_offs[i];
+			}
+
+			break;
+
+		case BCC:
+			for (i=0;i<8;++i)
+			{
+				jump_offset[i].dx = bcc_offset[i].dx;
+				jump_offset[i].dy = bcc_offset[i].dy;
+				jump_offset[i].dz = bcc_offset[i].dz;
+				opposite_offset[i] = bcc_offs[i];
+			}
+			break;
 	}
+
+	return;
+}
 
 /********************************************************************************/
 /********************************************************************************/
-void calculate_internal_energy(int nat) {
+void calculate_internal_energy(int atom_cnt)
+{
 	int neighbor, type;
 	total_internal_energy = 0.;
 	int nneA_index[3] = {0, 1, 2}; //indices of A-A, A-B, A-C bonds
 	int nneB_index[3] = {1, 3, 4}; //indices of B-A, B-B, B-C bonds
 	int nneC_index[3] = {2, 4, 5}; //indices of C-A, C-B, C-C bonds
-	for (int i = 0; i < nat; ++i) {
+	for (int i = 0; i < atom_cnt; ++i) {
 		for (int j = 0; j < number_of_possible_neighbors; ++j)
 		{
-			neighbor = atom[i]->occupied_neighbor_sites[j];
+			neighbor = atom_arr[i]->occupied_neighbor_sites[j];
 
 			if (neighbor != -1) //site is not empty
 			{
-				type = atom[neighbor]->type;
+				type = atom_arr[neighbor]->type;
 				//bonds are assumed to be isotropic
-				switch (atom[i]->type) {
+				switch (atom_arr[i]->type) {
 					case 1:
 						total_internal_energy += nnE[nneA_index[type - 1]];
 						break;
@@ -498,7 +496,7 @@ void calculate_internal_energy(int nat) {
 }
 /********************************************************************************/
 /********************************************************************************/
-
+// updates primitive_basis, ucell_params, Atoms' cart_coords? to match lattice type
 void set_primitive_basis(int lattice_type) // lattice_type = crystal structure type
 {
 	switch(lattice_type)
@@ -549,76 +547,76 @@ void set_primitive_basis(int lattice_type) // lattice_type = crystal structure t
 	inver(primitive_basis, invert_primitive_basis);
 	primitive_basis2ucell_params(primitive_basis, ucell_params);
 
-	organize(atom, nat); // ENHACNE: likely unnecessary bc at this point nat=0
+	organize(atom_arr, atom_cnt); // ENHACNE: likely unnecessary bc at this point atom_cnt=0
 	return;
 }
 
 /********************************************************************************/
 /********************************************************************************/
-// fills initial_config with type of neighbors to atom[at], before jump vc
-int get_initial_configuration2(int at, int vc, int initial_config[]) // at is position in atom list, vc is index in offset list?
+// fills initial_config with type of neighbors to atom[at], before jump offset_idx
+int get_initial_configuration2(int atom_idx, int offset_idx, int initial_config[]) // atom_idx is position in atom list, offset_idx is index in jump_offset
 {	// TODO: rename to remove the 2
    	int i, j;
-	int nn = 0;
+	int nn_count = 0; // nearest-neighbors
 
-	for (i=0;i<number_of_possible_neighbors;++i)
+	for (i=0; i<number_of_possible_neighbors; ++i)
     {
-		j = atom[at]->occupied_neighbor_sites[i];
+		j = atom_arr[atom_idx]->occupied_neighbor_sites[i];
 
 		if (j == -1)
 			initial_config[i] = -1;	// site is empty
 	    else
 		{
-			++nn;	// increment number of near neighbors
-			initial_config[i] = atom[at]->type;	// site is occupied by some atom
+			++nn_count;	// increment number of near neighbors
+			initial_config[i] = atom_arr[atom_idx]->type;	// site is occupied by some atom
 		}
 	}
 
-	return nn;
+	return nn_count;
 }
 
 /********************************************************************************/
 /********************************************************************************/
-// fills initial_config with type of neighbors to atom[at], after jump in direction jump_offset[vc]
-int get_final_configuration2(int at, int vc, int final_config[]) // vc is position in offset list
+// fills initial_config with type of neighbors to atom[at], after jump in direction jump_offset[offset_idx]
+int get_final_configuration2(int at, int offset_idx, int final_config[]) // offset_idx is position in offset list
 {
 	int i, j, k;
-	double x, y, z;
-	double nx, ny, nz;
-	//int n = 0;
-	int nnn = 0;
-	// atom position after jump vc
-	x = atom[at]->lattice[0] + jump_offset[vc].dx;
-	y = atom[at]->lattice[1] + jump_offset[vc].dy;
-	z = atom[at]->lattice[2] + jump_offset[vc].dz;
+	double new_x, new_y, new_z;
+	double neighbor_x, neighbor_y, neighbor_z;
+	//int n = 0; // XXX:
+	int nn_cnt = 0; // nearest-neighbors
+	// atom position after jump offset_idx
+	new_x = atom_arr[at]->lattice[0] + jump_offset[offset_idx].dx;
+	new_y = atom_arr[at]->lattice[1] + jump_offset[offset_idx].dy;
+	new_z = atom_arr[at]->lattice[2] + jump_offset[offset_idx].dz;
 
 	//printf("before pbc xyz %lf %lf %lf\n", x, y, z); // XXX: commented print
-	adjust_pbc(&x, &y, &z);
+	adjust_pbc(&new_x, &new_y, &new_z);
 
 	//printf("after pbc xyz %lf %lf %lf\n", x, y, z);
-	for (i=0;i<number_of_possible_neighbors;++i)
+	for (i=0; i<number_of_possible_neighbors; ++i)
       	{
-			//printf("vc = %d, i = %d\n", vc, i);
-			if (i == opposite_offset[vc]) { // if direction is where the jump came from, set as empty 
+			//printf("offset_idx = %d, i = %d\n", offset_idx, i);
+			if (i == opposite_offset[offset_idx]) { // if direction is where the jump came from, set as empty 
 				final_config[i] = -1; //hardcode this? // [ ]: is there a case where it won't be empty?
 				//printf("opposite offset! final_config[i] = %d\n", final_config[i]);
 				continue;
 			}
 			// location of neighbor
-      		nx = x + jump_offset[i].dx;
-			ny = y + jump_offset[i].dy;
-	        nz = z + jump_offset[i].dz;
+      		neighbor_x = new_x + jump_offset[i].dx;
+			neighbor_y = new_y + jump_offset[i].dy;
+	        neighbor_z = new_z + jump_offset[i].dz;
 
-			//printf("before pbc nxyz %lf %lf %lf\n", nx, ny, nz);
-			adjust_pbc(&nx, &ny, &nz);
-			//printf("after pbc nxyz %lf %lf %lf\n", nx, ny, nz);
-	        j = atom_at(nx, ny, nz);
+			//printf("before pbc nxyz %lf %lf %lf\n", neighbor_x, neighbor_y, neighbor_z);
+			adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z);
+			//printf("after pbc nxyz %lf %lf %lf\n", neighbor_x, neighbor_y, neighbor_z);
+	        j = atom_at(neighbor_x, neighbor_y, neighbor_z);
 			//printf("j = %d\n", j);
 	        if (j != -1)
 		        { // if there is an atom present, 'return' its type
-					final_config[i] = atom[at]->type;
+					final_config[i] = atom_arr[at]->type;
 					//printf("at = %d, atom[at]->type = %d, atom[j]->type = %d\n", at, atom[at]->type, atom[j]->type);
-					++nnn;
+					++nn_cnt;
 				}
 			else final_config[i] = -1;
 		}
@@ -627,7 +625,7 @@ int get_final_configuration2(int at, int vc, int final_config[]) // vc is positi
 		printf("%d ", final_config[i]);
 	printf("\n");*/
 
-	return nnn;
+	return nn_cnt;
 }
 
 /********************************************************************************/
@@ -645,7 +643,7 @@ void initialize_flat_sheet_1(int z)
 		{
 			for (j=0;j<ssy;++j)
 			{
-				nz = drandj(&seed);
+				nz = drandj(&rand_seed);
 				//printf("i, j, k = %d, %d, %d\n", i, j, k);
 				if (nz <= substrate_percent_a)
 					add_atom(i, j, k, 1, NORMAL);
@@ -662,17 +660,17 @@ void initialize_flat_sheet_1(int z)
 /********************************************************************************/
 /********************************************************************************/
 
-void initialize_spherical_cluster_1(int radius_of_sphere) // radius of cluster in number of atoms
+void initialize_spherical_cluster_1(int radius_lattice) // radius of cluster in number of atoms
 {
 	int i,j,k;
 
-	double c[3]; // cartesian/orthogonal coordinates of center point
-	double lc[3]; // lattice coordinates of center point
-	double p[3], op[3]; // atom position in lattice coords (p), cartesian/orthogonal coords (op)
+	double center_cart[3]; // cartesian/orthogonal coordinates of center point
+	double center_lattice[3]; // lattice coordinates of center point
+	double atom_pos_lattice[3], atom_pos_cart[3]; // atom position in lattice coords (atom_pos_lattice), cartesian/orthogonal coords (atom_pos_cart)
 	
-	double rn; // random number
+	double random_num; // random number
 	
-	double radius; // radius of cluster, in cartesian units
+	double radius_cart; // radius of cluster, in cartesian units
 
 	int sa; // substrate atom? the atom created // XXX: unused
 
@@ -680,19 +678,19 @@ void initialize_spherical_cluster_1(int radius_of_sphere) // radius of cluster i
 	double min_lat[3], max_lat[3];
 	double dist;
 
-	//center of the cluster is the halfway point - lc=lattice/atom coordinate of cluster center
-	lc[0] = ssx/2.;
-	lc[1] = ssy/2.;
-	lc[2] = ssz/2.;
-	// # of atoms * translation vector
-	vecmul(lc, primitive_basis, c);	// c is the cartesian coordinates of the central point
-	// BUG: c is twice what I think it should be - primitive_basis isn't normalized (not unit vectors)
-	radius = (double)radius_of_sphere;
+	//center of the cluster is the halfway point - center_lattice=lattice/atom coordinate of cluster center
+	center_lattice[0] = ssx/2.;
+	center_lattice[1] = ssy/2.;
+	center_lattice[2] = ssz/2.;
+	// # of atoms * translation vector -> cartesian
+	vecmul(center_lattice, primitive_basis, center_cart);	// center_cart is the cartesian coordinates of the central point
+	// BUG: center_cart is twice what I think it should be - primitive_basis isn't normalized (not unit vectors)
+	radius_cart = (double)radius_lattice;
 	// TODO: change from min/max in xyz to equation of a sphere; radial coordinates?
 	// find the min/max x, y, z points (cartesian coords)
 	for (i = 0; i < 3; ++i) {
-		min_xyz[i] = c[i] - radius;
-		max_xyz[i] = c[i] + radius;
+		min_xyz[i] = center_cart[i] - radius_cart;
+		max_xyz[i] = center_cart[i] + radius_cart;
 	}
 	// turn min/max from cartesian coords into atom/lattice coords
 	vecmul(min_xyz, invert_primitive_basis, min_lat);
@@ -705,28 +703,28 @@ void initialize_spherical_cluster_1(int radius_of_sphere) // radius of cluster i
 			return;
 		}
 		max_lat[i] = (int)max_lat[i];
-		if (max_lat[i] > (int)(2*lc[i])) {
+		if (max_lat[i] > (int)(2*center_lattice[i])) {
 			printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
 			return;
 		}
 	}
-
+	// iterates through the bounding box of the sphere to identify positions in cluster // ENHANCE: 52% of loops will be successful - start from center and work outwards instead
 	for (i = min_lat[0]; i <= max_lat[0]; ++i) {
 		for (j = min_lat[1]; j <= max_lat[1]; ++j) {
 			for (k = min_lat[2]; k <= max_lat[2]; ++k) {
 				//convert i, j, k to cartesian coordinates
-				p[0] = i;
-				p[1] = j;
-				p[2] = k;
-				vecmul(p, primitive_basis, op); // to cartesian coordinates
-				dist = (op[0] - c[0]) * (op[0] - c[0]) + (op[1] - c[1]) * (op[1] - c[1]) + (op[2] - c[2]) * (op[2] - c[2]); // distance to center
-				if (dist <= (radius*radius)) {
+				atom_pos_lattice[0] = i;
+				atom_pos_lattice[1] = j;
+				atom_pos_lattice[2] = k;
+				vecmul(atom_pos_lattice, primitive_basis, atom_pos_cart); // to cartesian coordinates
+				dist = (atom_pos_cart[0] - center_cart[0]) * (atom_pos_cart[0] - center_cart[0]) + (atom_pos_cart[1] - center_cart[1]) * (atom_pos_cart[1] - center_cart[1]) + (atom_pos_cart[2] - center_cart[2]) * (atom_pos_cart[2] - center_cart[2]); // distance to center
+				if (dist <= (radius_cart*radius_cart)) {
 					//particle is in bounds
-					rn = drandj(&seed);
+ 					random_num = drandj(&rand_seed);
 					// determining composition of atom to be placed
-					if (rn < substrate_percent_a)
+					if (random_num < substrate_percent_a)
 						sa = add_atom(i, j, k, 1, NORMAL);
-					else if (rn < substrate_percent_a + substrate_percent_b)
+					else if (random_num < substrate_percent_a + substrate_percent_b)
 						sa = add_atom(i, j, k, 2, NORMAL);
 					else
 						sa = add_atom(i, j, k, 3, NORMAL);
@@ -735,7 +733,7 @@ void initialize_spherical_cluster_1(int radius_of_sphere) // radius of cluster i
 		}
 	}
 
-	organize(atom, nat);
+	organize(atom_arr, atom_cnt);
 
 	return;
 }

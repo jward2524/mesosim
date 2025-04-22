@@ -20,7 +20,7 @@ double drandj(long *idum);
 #define DEFAULT_SEED 154358203
 
 /* RNG related variables */
-extern long seed;
+extern long rand_seed;
 extern long idum2;
 extern long iy;
 extern long iv[];

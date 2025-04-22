@@ -5,11 +5,11 @@
 /******************************************************************************/
 /******************************************************************************/
 
-long seed = (long)DEFAULT_SEED;
+long rand_seed = (long)DEFAULT_SEED;
 long iv[NTAB];
 long iy;
 long idum2;
-
+// updates iy, iv
 double drandj(long *idum)
 	{
 		int j;

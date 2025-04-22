@@ -8,14 +8,14 @@ typedef struct
 		char name[24]; 			// name, 24 characters long
 		char type;				// up to 255 atom types
 
-		double coord[3]; 		// working orthogonal coordinates
+		double cart_coord[3]; 		// working [cart]esian (orthogonal) [coord]inates
 
 		// [ ]: why is this a double? when is it ever fractional?
 		double lattice[3];		// multiples of unit cell / lattice vectors
 
 		double bsradius;		// atom ball and stick radius // XXX: visualization, and should depend on atom type, not per atom
 		//double sfradius;		// atom spacefilling radius
-
+		// XXX: commented code - related to visualization
 		//char visible;			// Visible to draw/plot routine
 		//char selected;			// Selected or not
 
@@ -28,13 +28,13 @@ typedef struct
 
 		// simulation data
 
-		// atom lives multiple times on the transition list
-		// index refers to the transition vector
+		// atom lives multiple times on the transition list transition_arr
+		// index of this list refers to the transition vector in jump_offset[index]
 		// in the implementation here, the maximum number of times the atom may live on the transition list
 		// equals the number of directions it may diffuse, plus one more special transition such as dissolution
 		// or transformation into another kind of atom
 
-		int position_on_transition_list[MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION];		// add 1 for evaporation
+		int transition_indices[MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION];		// add 1 for evaporation
 
 		// If occupied_neighbor_sites[i] >= 0, the site at vector offset i is occupied by an atom indexed by the
 		// value of occupied_neighbor_sites[i].  There are three special cases
@@ -50,7 +50,7 @@ typedef struct
 
 		int next_atom;
 		int previous_atom;
-		
+		// XXX: commented code - related to visualization
 		// information about drawing bonds to nearby atoms.  this is purely visual, or "cosmetic" and does not affect
 		// the simulation.  In fact, the first thing the simulation will do is kill any existing bonds.
 
@@ -97,7 +97,7 @@ typedef struct
 typedef struct
 	{
 		char name[25];
-		int number;
+		int count;
 	} Command;
 // the direction of an atomic jump / diffusion move
 typedef struct
@@ -123,16 +123,16 @@ typedef struct
 	{
 		double k;						// rate constant?
 		double frequency;
-		int number;           			// number (count?) of this type of transition in transition list
-		int offset; 					// index to first item in transition list with this rate constant 
+		int count;           			// number (count?) of this type of transition in transition_arr
+		int offset; 					// index to first item in transition_arr with this rate constant 
 	} Rate;
 
 typedef struct
 	{
-		int number_in_list;		// location on atom list of atom that the transition belongs to / is acting on
-		char offset_vector;   	// this is the translation vector, index in jump offset?
+		int atom_idx;		// index in atom_arr of atom that the transition belongs to / is acting on
+		char offset_idx;   	// this represents the translation vector, as the index in jump_offset
 
-	} Transition_List;
+	} Transition;
 
 typedef struct
 	{
@@ -175,7 +175,7 @@ typedef struct
 		int neighbors[20];
 		int nn;
 		int rnn;
-		double coord[3];
+		double cart_coord[3];
 		double color[3];
 		int triangles[20];
 		int num_triangles;
@@ -199,7 +199,7 @@ typedef struct
 {
 	int index[3];				// surface atoms comprising triangle
 	double normal[3][3];		// normals of atoms comprising triangle
-	double coord[3][3];
+	double cart_coord[3][3];
 	double overallnormal[3];
 	int mark;
 

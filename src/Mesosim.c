@@ -11,14 +11,14 @@
 #include "Atoms.h"
 //notable absence of Windows.h!
 
-time_t starttime = NULL;
-time_t endtime = NULL;
+time_t starttime = 0;
+time_t endtime = 0;
 
 //use main function to run everything
 int main(int argc, char* argv[]) {
 
     printf("main entered\n");
-
+    // TODO: check if argc<=1 and print a usage blub and exit/return
     //start the time
     time(&starttime);
 
@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
     else if (analysis_type == LOG_TIME_INTERVALS)
         fprintf(sim_log_file, "Recording data at log intervals [s] from %lf to %lf at %lf multiples\n", initial_logtime, logtime_multiplier, run_time);
 
-    fprintf(sim_log_file, "Random seed is %ld\n", seed);
+    fprintf(sim_log_file, "Random seed is %ld\n", rand_seed);
 
     switch (simulation_type) {
         case SIMULATION_TYPE_FLAT_SHEET:
@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
             break;
     }
 
-    fprintf(sim_log_file, "Atoms created, %d total\n", nat);
+    fprintf(sim_log_file, "Atoms created, %d total\n", atom_cnt);
     fprintf(sim_log_file, "Beginning simulation\n");  
     
     //get the necessary file name prefix for xyz outputs
@@ -164,17 +164,17 @@ int main(int argc, char* argv[]) {
     //finalize everything
 
     //free the only malloced memory
-    for (int i = total_current_transitions; i > 0; --i)
-        free(transition_list[i-1]);
-    for (int i = nat; i > 0; --i)
-        free(atom[i-1]);
+    for (int i = transition_cnt; i > 0; --i)
+        free(transition_arr[i-1]);
+    for (int i = atom_cnt; i > 0; --i)
+        free(atom_arr[i-1]);
 
     time(&endtime);
     fprintf(sim_log_file, "Finished! Total time taken: %d seconds\n", (int)(endtime-starttime));
     fclose(sim_log_file);
     return 0;
 }
-
+// initializes primitve_basis, ucell_params
 void initialize_lattice_geometry(void)
 {
 	// Initializes the generic lattice geometry to be simple cubic (i.e., a=1, b=1, c=1, alpha = 90, beta = 90, gamma = 90)

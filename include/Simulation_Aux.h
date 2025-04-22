@@ -12,7 +12,7 @@ void findzone(int *xz, int *yz, int *zz, double xxx, double yyy, double zzz);
 void adjust_pbc(double *x, double *y, double *z);
 void set_primitive_basis(int lt);
 
-void calculate_internal_energy(int nat);
+void calculate_internal_energy(int atom_cnt);
 
 //bool do_initialize_simulation_parameters(int simulation_index); //modified AND needs additional arguments
 void do_initialize_simulation(int simulation_index);
@@ -46,7 +46,7 @@ extern int cluster_radius;
 extern char atoms_filename[256];
 
 // [ ]: what is this for?
-extern Zone zone[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
+extern Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
 
 extern double initialoverpotential;
 extern double overpotentialramprate;
