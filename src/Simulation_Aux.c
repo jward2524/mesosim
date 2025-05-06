@@ -675,7 +675,7 @@ void initialize_spherical_cluster_1(int radius_lattice) // radius of cluster in 
 	int sa; // substrate atom? the atom created // XXX: unused
 
 	double min_xyz[3], max_xyz[3];
-	double min_lat[3], max_lat[3];
+	double min_lattice[3], max_lattice[3];
 	double dist;
 
 	//center of the cluster is the halfway point - center_lattice=lattice/atom coordinate of cluster center
@@ -685,7 +685,7 @@ void initialize_spherical_cluster_1(int radius_lattice) // radius of cluster in 
 	// # of atoms * translation vector -> cartesian
 	vecmul(center_lattice, primitive_basis, center_cart);	// center_cart is the cartesian coordinates of the central point
 	// BUG: center_cart is twice what I think it should be - primitive_basis isn't normalized (not unit vectors)
-	radius_cart = (double)radius_lattice;
+	radius_cart = (double)radius_lattice; // BUG: no shot this is right; max_lattice - center_lattice neq radius_lattice
 	// TODO: change from min/max in xyz to equation of a sphere; radial coordinates?
 	// find the min/max x, y, z points (cartesian coords)
 	for (i = 0; i < 3; ++i) {
@@ -693,25 +693,30 @@ void initialize_spherical_cluster_1(int radius_lattice) // radius of cluster in 
 		max_xyz[i] = center_cart[i] + radius_cart;
 	}
 	// turn min/max from cartesian coords into atom/lattice coords
-	vecmul(min_xyz, invert_primitive_basis, min_lat);
-	vecmul(max_xyz, invert_primitive_basis, max_lat);
-
+	vecmul(min_xyz, invert_primitive_basis, min_lattice);
+	vecmul(max_xyz, invert_primitive_basis, max_lattice);
+	// define circle in lattice coorinates
+	// cartesian: x^2 + y^2 + z^2 < r^2
+	// [x; y; z] = [dot(x,u), dot(x,v), dot(x,w);...] [u; v; w]
+	// x = _u + _v + _w; y = ...; z = ...
+	// cart = primitive basis * lattice
+	// x = primitive
 	for (i = 0; i < 3; ++i) {
-		min_lat[i] = (int)min_lat[i];
-		if (min_lat[i] < 0) {
+		min_lattice[i] = (int)min_lattice[i];
+		if (min_lattice[i] < 0) {
 			printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
 			return;
 		}
-		max_lat[i] = (int)max_lat[i];
-		if (max_lat[i] > (int)(2*center_lattice[i])) {
+		max_lattice[i] = (int)max_lattice[i];
+		if (max_lattice[i] > (int)(2*center_lattice[i])) {
 			printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
 			return;
 		}
 	}
-	// iterates through the bounding box of the sphere to identify positions in cluster // ENHANCE: 52% of loops will be successful - start from center and work outwards instead
-	for (i = min_lat[0]; i <= max_lat[0]; ++i) {
-		for (j = min_lat[1]; j <= max_lat[1]; ++j) {
-			for (k = min_lat[2]; k <= max_lat[2]; ++k) {
+	// iterates through the bounding box of the sphere to identify positions in cluster // ENHANCE: only 52% of loops will be successful - make it more efficient
+	for (i = min_lattice[0]; i <= max_lattice[0]; ++i) {
+		for (j = min_lattice[1]; j <= max_lattice[1]; ++j) {
+			for (k = min_lattice[2]; k <= max_lattice[2]; ++k) {
 				//convert i, j, k to cartesian coordinates
 				atom_pos_lattice[0] = i;
 				atom_pos_lattice[1] = j;
@@ -732,7 +737,7 @@ void initialize_spherical_cluster_1(int radius_lattice) // radius of cluster in 
 			}
 		}
 	}
-
+	// conversion from aotm->lattice to cartesian and store in atom->cart_coord
 	organize(atom_arr, atom_cnt);
 
 	return;

@@ -30,7 +30,7 @@ double elapsed_time = 0;
 bool evaporation_flag = true;
 char coordinate_log_prefix[256] = "default_simulation_analysis.dat";
 
-double run_time = 1.e8; //default (in seconds)
+double run_time = 1.e8; //default (in seconds) // TODO: move to input file
 double data_time_interval = 0.1;
 double time_interval_end;
 
@@ -68,7 +68,7 @@ Transition *transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS]; // array o
 Trans_Prob transition_probability;
 
 
-long int final_iteration = 1e9;
+long int final_iteration = 1e9; // TODO: move to input file
 double lastxt, lastyt, lastzt;
 
 //bool simulation_is_going = false; //probably don't need this

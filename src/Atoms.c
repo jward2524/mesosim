@@ -14,7 +14,10 @@ double rmat[3][3]; // visualization?
 double centroid[3]={(double)0.,(double)0.,(double)0.}; // coordinates for center of gravity
 crystal_offset jump_offset[MAXIMUM_NUMBER_OF_NEIGHBORS]; // possible atom jumps in simulation
 int opposite_offset[MAXIMUM_NUMBER_OF_NEIGHBORS]; // index in jump_offset that has the jump in the opposite direction in simulation; opposite_offset[0]=11 means the opposite direction of jump_offset[0] is jump_offset[11]
-double primitive_basis[3][3], invert_primitive_basis[3][3]; // primitive unit cell basis vectors + inverted; primitive_basis[*][0] = basis1, primitive_basis[0][*] = x component of basises
+
+// primitive unit cell basis vectors + inverted; primitive_basis[*][0] = basis1, primitive_basis[0][*] = x component of basises
+// is also transformation matrix for [lattice to cartesian coordinates] [cartesian to lattice coordinates] respectively
+double primitive_basis[3][3], invert_primitive_basis[3][3]; 
 double ucell_params[6]={1.,1.,1.,90.,90.,90.}; // unit cell parameters; a b c alpha beta gamma
 double dax, day, daz;
 crystal_offset lattice_first_offset[24];
