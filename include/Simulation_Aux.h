@@ -21,7 +21,7 @@ void do_initialize_simulation(int simulation_index);
 void general_simulation_initialization(void); //will probably need to change arguments
 
 void initialize_flat_sheet_1(int z);
-void initialize_spherical_cluster_1(int radius_of_sphere);
+void initialize_spherical_cluster(int radius_of_sphere);
 void initialize_from_file(char* filename);
 
 //void initialize_vacancies_1(void); //might be good to have

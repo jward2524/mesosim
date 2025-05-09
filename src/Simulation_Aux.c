@@ -181,7 +181,7 @@ void do_initialize_simulation(int simulation_index) // index represents simulati
 			break;
 
 		case 2:
-			initialize_spherical_cluster_1(cluster_radius);
+			initialize_spherical_cluster(cluster_radius);
 			break;
 		case 3:
 			initialize_from_file(atoms_filename); //TODO! THIS IS BIG!
@@ -660,10 +660,8 @@ void initialize_flat_sheet_1(int z)
 /********************************************************************************/
 /********************************************************************************/
 
-void initialize_spherical_cluster_1(int radius_lattice) // radius of cluster in number of atoms
+void initialize_spherical_cluster(int radius_lattice) // radius of cluster in number of atoms
 {
-	int i,j,k;
-
 	double center_cart[3]; // cartesian/orthogonal coordinates of center point
 	double center_lattice[3]; // lattice coordinates of center point
 	double atom_pos_lattice[3], atom_pos_cart[3]; // atom position in lattice coords (atom_pos_lattice), cartesian/orthogonal coords (atom_pos_cart)
@@ -672,10 +670,6 @@ void initialize_spherical_cluster_1(int radius_lattice) // radius of cluster in 
 	
 	double radius_cart; // radius of cluster, in cartesian units
 
-	int sa; // substrate atom? the atom created // XXX: unused
-
-	double min_xyz[3], max_xyz[3];
-	double min_lattice[3], max_lattice[3];
 	double dist;
 
 	//center of the cluster is the halfway point - center_lattice=lattice/atom coordinate of cluster center
@@ -685,54 +679,91 @@ void initialize_spherical_cluster_1(int radius_lattice) // radius of cluster in 
 	// # of atoms * translation vector -> cartesian
 	vecmul(center_lattice, primitive_basis, center_cart);	// center_cart is the cartesian coordinates of the central point
 	// BUG: center_cart is twice what I think it should be - primitive_basis isn't normalized (not unit vectors)
-	radius_cart = (double)radius_lattice; // BUG: no shot this is right; max_lattice - center_lattice neq radius_lattice
-	// TODO: change from min/max in xyz to equation of a sphere; radial coordinates?
-	// find the min/max x, y, z points (cartesian coords)
-	for (i = 0; i < 3; ++i) {
-		min_xyz[i] = center_cart[i] - radius_cart;
-		max_xyz[i] = center_cart[i] + radius_cart;
+	radius_cart = (double)radius_lattice; // BUG: no shot this is right; max_lattice - center_lattice neq radius_lattice; should be radius_lattice * mag([largest?] lattice vector)
+
+	// lattice sphere from cartesian sphere - algorithm
+	// equation: x^2 + y^2 + z^2 <= radius_cart^2
+	// convert the 8 corners of the bounding cube into lattice coordinates
+	// pick the min and max lattice coordintes from the 6 for each lattice direction
+	// loop over lattice coordinates from min to max
+	// check if they are in sphere
+
+	// bounding box (bb) limits in cartesian coordinates
+	int bblimits_cart[3][2] = {
+		{center_cart[0] - radius_cart, center_cart[0] + radius_cart}, // x limits
+		{center_cart[1] - radius_cart, center_cart[1] + radius_cart}, // y limits
+		{center_cart[2] - radius_cart, center_cart[2] + radius_cart}  // z limits
+	};
+
+	// bounding box corners in cartesian coordinates
+	double bbcorners_cart[8][3] = {
+		{bblimits_cart[0][0], bblimits_cart[1][0], bblimits_cart[2][0]},
+		{bblimits_cart[0][0], bblimits_cart[1][0], bblimits_cart[2][1]},
+		{bblimits_cart[0][0], bblimits_cart[1][1], bblimits_cart[2][0]},
+		{bblimits_cart[0][0], bblimits_cart[1][1], bblimits_cart[2][1]},
+		{bblimits_cart[0][1], bblimits_cart[1][0], bblimits_cart[2][0]},
+		{bblimits_cart[0][1], bblimits_cart[1][0], bblimits_cart[2][1]},
+		{bblimits_cart[0][1], bblimits_cart[1][1], bblimits_cart[2][0]},
+		{bblimits_cart[0][1], bblimits_cart[1][1], bblimits_cart[2][1]}
+	};
+
+	// convert corners from cartesian coords into atom/lattice coords
+	// and find limits in each dimension
+	double bbcorners_lattice[8][3];
+	double bblimits_lattice[3][2] = {
+		{0.0, 0.0},
+		{0.0, 0.0},
+		{0.0, 0.0}
+	};
+	// TODO: make data types of cart and lattice coordinates make more sense, and thus the conversion functions
+	for (int corner_idx = 0; corner_idx < 8; corner_idx++){
+		vecmul(bbcorners_cart[corner_idx], invert_primitive_basis, bbcorners_lattice[corner_idx]);
+
+		// check if value exceeds limits for every dimension
+		for (int dim_idx = 0; dim_idx < 3; dim_idx++){
+			if (bbcorners_lattice[corner_idx][dim_idx] < bblimits_lattice[dim_idx][0])
+				bblimits_lattice[dim_idx][0] = bbcorners_lattice[corner_idx][dim_idx];
+			else if (bbcorners_lattice[corner_idx][dim_idx] > bblimits_lattice[dim_idx][1])
+				bblimits_lattice[dim_idx][1] = bbcorners_lattice[corner_idx][dim_idx];
+		}
 	}
-	// turn min/max from cartesian coords into atom/lattice coords
-	vecmul(min_xyz, invert_primitive_basis, min_lattice);
-	vecmul(max_xyz, invert_primitive_basis, max_lattice);
-	// define circle in lattice coorinates
-	// cartesian: x^2 + y^2 + z^2 < r^2
-	// [x; y; z] = [dot(x,u), dot(x,v), dot(x,w);...] [u; v; w]
-	// x = _u + _v + _w; y = ...; z = ...
-	// cart = primitive basis * lattice
-	// x = primitive
-	for (i = 0; i < 3; ++i) {
-		min_lattice[i] = (int)min_lattice[i];
-		if (min_lattice[i] < 0) {
+
+	for (int dim_idx = 0; dim_idx < 3; dim_idx++) {
+		if (bblimits_lattice[dim_idx][0] < 0) {
 			printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
 			return;
 		}
-		max_lattice[i] = (int)max_lattice[i];
-		if (max_lattice[i] > (int)(2*center_lattice[i])) {
+		if ((int)bblimits_lattice[dim_idx][1] > (int)(2*center_lattice[dim_idx])) {
 			printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
 			return;
 		}
 	}
+
 	// iterates through the bounding box of the sphere to identify positions in cluster // ENHANCE: only 52% of loops will be successful - make it more efficient
-	for (i = min_lattice[0]; i <= max_lattice[0]; ++i) {
-		for (j = min_lattice[1]; j <= max_lattice[1]; ++j) {
-			for (k = min_lattice[2]; k <= max_lattice[2]; ++k) {
+	for (int u = bblimits_lattice[0][0]; u <= bblimits_lattice[0][1]; u++) {
+		for (int v = bblimits_lattice[1][0]; v <= bblimits_lattice[1][1]; v++) {
+			for (int w = bblimits_lattice[2][0]; w <= bblimits_lattice[2][1]; w++) {
 				//convert i, j, k to cartesian coordinates
-				atom_pos_lattice[0] = i;
-				atom_pos_lattice[1] = j;
-				atom_pos_lattice[2] = k;
+				atom_pos_lattice[0] = u;
+				atom_pos_lattice[1] = v;
+				atom_pos_lattice[2] = w;
+				
 				vecmul(atom_pos_lattice, primitive_basis, atom_pos_cart); // to cartesian coordinates
-				dist = (atom_pos_cart[0] - center_cart[0]) * (atom_pos_cart[0] - center_cart[0]) + (atom_pos_cart[1] - center_cart[1]) * (atom_pos_cart[1] - center_cart[1]) + (atom_pos_cart[2] - center_cart[2]) * (atom_pos_cart[2] - center_cart[2]); // distance to center
+				dist = 
+					(atom_pos_cart[0] - center_cart[0]) * (atom_pos_cart[0] - center_cart[0])
+				 	+ (atom_pos_cart[1] - center_cart[1]) * (atom_pos_cart[1] - center_cart[1]) 
+					+ (atom_pos_cart[2] - center_cart[2]) * (atom_pos_cart[2] - center_cart[2]); // distance to center
+
 				if (dist <= (radius_cart*radius_cart)) {
 					//particle is in bounds
  					random_num = drandj(&rand_seed);
 					// determining composition of atom to be placed
 					if (random_num < substrate_percent_a)
-						sa = add_atom(i, j, k, 1, NORMAL);
+						add_atom(u, v, w, 1, NORMAL);
 					else if (random_num < substrate_percent_a + substrate_percent_b)
-						sa = add_atom(i, j, k, 2, NORMAL);
+						add_atom(u, v, w, 2, NORMAL);
 					else
-						sa = add_atom(i, j, k, 3, NORMAL);
+						add_atom(u, v, w, 3, NORMAL);
 				}	
 			}
 		}

@@ -156,7 +156,7 @@ void create_default_atom(int n) // n = position on atom list
 
 /*******************************************************************************
 *******************************************************************************/
-// updates [atom_arr], atom_arr[i]->lattice, [atom_arr[n]->cart_coord], atom_cnt, zone_arr[xzone][yzone][zzone].offset, atom_arr[pos]->next_atom/prev_atom, atom_arr[pos]->transition_indices
+// updates [atom_arr], atom_arr[i]->lattice, [atom_arr[n]->cart_coord], atom_cnt, zone_arr[xzone][yzone][zzone].offset, atom_arr[pos]->next_atom/prev_atom, atom_arr[pos]->transition_indices; returns index in atom_arr
 int add_atom(double x, double y, double z, int type, int special) // lattice coordinates xyz, atom type, special atom conditions (unused)
 { // XXX: special isn't really used
 	/*if (x > 60)
