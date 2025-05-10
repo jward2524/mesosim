@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include <assert.h>
 #include "Defs.h"
 #include "Geometry.h"
 #include "Vector.h"
@@ -1085,3 +1086,36 @@ void primitive_basis2ucell_params(double primitive_basis[3][3], double ucell_par
 	return;
 }
 
+const double DEFAULT_EPSILON = 1e-3;
+
+// checks if double is within range of an integer - returns 1 for true, 0 for false
+int int_check(double fvalue, int ireference, double epsilon){
+	return fabs(fvalue - (double) ireference) < epsilon;
+}
+
+void lattice2int(double fcoords[3], int coords[3], double epsilon){
+	for (int dim_idx = 0; dim_idx < 3; dim_idx++){
+		double x = fcoords[dim_idx];
+		int comp = round(x);
+		int res = int_check(x, comp, epsilon);
+		assert(res == 1);
+		coords[dim_idx] = comp;
+	}
+}
+
+// convert cartesian coordinates to lattice coordinates
+void cartesian2lattice(double ccart[3], double invert_primitive_basis[3][3], int clattice[3]){
+	double fclattice[3];
+	vecmul(ccart, invert_primitive_basis, fclattice);
+	lattice2int(fclattice, clattice, DEFAULT_EPSILON);
+}
+
+// convert lattice coordinates to cartesian coordinates
+void lattice2cartesian(int clattice[3], double primitive_basis[3][3], double ccart[3]){
+	for (int dim_idx = 0; dim_idx < 3; dim_idx++){ // vecmul
+		ccart[dim_idx] = 
+			primitive_basis[dim_idx][0] * (double)clattice[0]
+			+ primitive_basis[dim_idx][1] * (double)clattice[1]
+			+ primitive_basis[dim_idx][2] * (double)clattice[2];
+	}
+}
