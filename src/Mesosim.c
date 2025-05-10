@@ -14,14 +14,28 @@
 time_t starttime = 0;
 time_t endtime = 0;
 
+void usage(){
+    printf(
+        "Usage: mesosim [FILE]\n"
+        "Execute the mesosim KMC simulation program, with FILE as the input file\n"
+        "\n"
+        "Options:\n"
+        "  -h, --help\tDisplay this message\n"
+    );
+    exit(0);
+}
+// TODO: create full/safe exit function that closes files somewhere (closes files + deletes temp)
+
 //use main function to run everything
 int main(int argc, char* argv[]) {
 
-    printf("main entered\n");
-    // TODO: check if argc<=1 and print a usage blub and exit/return
+    if ((argc <= 1) || (strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "--help") == 0)){
+        usage();
+    }
+
     //start the time
     time(&starttime);
-
+    // TODO: multiple instances of program will be overwriting temp files
     //write to a temporary file until a logfile is identified
     char* temp_name = "temp.log";
     temp_log = fopen(temp_name, "w");
@@ -34,7 +48,6 @@ int main(int argc, char* argv[]) {
     initialize_lattice_geometry(); //this gets overwritten by info from the input file
 
     simulation_type = -1; //TODO: need to define in globals!!
-    // TODO: check length of argv with argc
     fprintf(temp_log, "Attempting to read in file %s\n", argv[1]);
     // get_input_file also initializes atom list
     if (get_input_file(argv[1]) == false) {
