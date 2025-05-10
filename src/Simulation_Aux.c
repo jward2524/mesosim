@@ -36,11 +36,11 @@ double maxoverpotential = DEFAULT_OVERPOTENTIAL;
 double substrate_percent_a = DEFAULT_COMPOSITION_A;
 double substrate_percent_b = DEFAULT_COMPOSITION_B;
 
-double initial_logtime = 1.0e-4;
+double initial_log_lnstime = 1.0e-4;
 
 int analysis_type = REGULAR_TIME_INTERVALS;
 
-double logtime_multiplier;
+double log_lnstime_multiplier;
 
 //double vacancy_density = 0.01; //can always add back in
 
@@ -125,7 +125,7 @@ void get_system_normal(void) // XXX: supposedly only for vizualization
 
 /******************************************************************************/
 /******************************************************************************/
-// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; rmat; normal_x, normal_y, normal_z; number_of_possible_neighbors, jump_offset, opposite_offset; zi*, zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_time, overpotential, time_interval_end
+// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; rmat; normal_x, normal_y, normal_z; number_of_possible_neighbors, jump_offset, opposite_offset; zi*, zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_stime, overpotential, next_log_stime
 void general_simulation_initialization(void)
 {
 	// first, remove any atoms that may exist
@@ -158,14 +158,15 @@ void general_simulation_initialization(void)
 	//current_iteration = 0; //not needed if only running 1 simulation at a time // XXX: commented code, never used
 	frequency_sum = 0.0;
 
-	elapsed_time = 0.0;
+	elapsed_stime = 0.0;
 
 	overpotential = initialoverpotential;
 	// [ ]: how is this related to logging frequency?
+	// next_log_stime is initialized to one log_interval_step step
 	if (analysis_type == REGULAR_TIME_INTERVALS)
-		time_interval_end = data_time_interval;	//do we want this to be true?
-	else if (analysis_type == LOG_TIME_INTERVALS)
-		time_interval_end = initial_logtime;
+		next_log_stime = log_stime_interval;	//do we want this to be true?
+	else if (analysis_type == LN_TIME_INTERVALS)
+		next_log_stime = initial_log_lnstime;
 		
 	return;
 }
@@ -783,6 +784,6 @@ void initialize_spherical_cluster(int radius_lattice) // radius of cluster in nu
 
 void initialize_from_file(char* filename) {
 	//does this need more to it?
-	get_input_file(filename);
+	simulation_parameters_from_file(filename);
 	return;
 }

@@ -32,7 +32,7 @@ extern Bond bond[MAXIMUM_NUMBER_OF_BONDS];
 extern int atom_cnt;
 extern double overpotential;
 extern int num_sims;
-extern double elapsed_time;
+extern double elapsed_stime;
 extern Atom temp_atom;
 extern double default_color[3];
 extern bool simulation_should_kill_itself;
@@ -45,14 +45,14 @@ extern int atom_cnt;
 extern Atom temp_atom;
 extern bool simulation_should_kill_itself;
 extern Atom* atom_arr[];
-extern double elapsed_time;
+extern double elapsed_stime;
  
 extern bool evaporation_flag;
 extern char coordinate_log_prefix[256];
  
-extern double run_time; //default (in seconds)
-extern double data_time_interval;
-extern double time_interval_end;
+extern double run_stime; //default (in seconds)
+extern double log_stime_interval;
+extern double next_log_stime;
  
 extern int rate_cnt;
 extern int transition_cnt;

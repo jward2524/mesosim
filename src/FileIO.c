@@ -17,7 +17,7 @@ FILE *sim_log_file = NULL;
 // char return_message[512] = "";
 // updates a lot of shit
 
-bool get_input_file(char* filename)
+bool simulation_parameters_from_file(char* filename)
 {
 	char extension[4] = "";
 
@@ -31,11 +31,11 @@ bool get_input_file(char* filename)
         exit(errno);
     }
 
-	char* file_ender = strrchr(filename, '.'); //everything after the final '.' in the filename
-	// [ ]: what is happening here
-	if (file_ender == NULL)
+	char* file_ender = strrchr(filename, '.'); // everything after the final '.' in the filename
+	// [ ]: what is happening here?
+	if (file_ender == NULL) // when is this null?
 	{
-		if (sim_log_file == NULL)
+		if (sim_log_file == NULL) // when is this not null?
 			fprintf(temp_log, "ERROR! extension not found in file: %s\n", filename); //for reading arguments
 		else
 			fprintf(sim_log_file, "ERROR! extension not found in file: %s\n", filename); //should only happen when restarting/checkpointing
@@ -83,7 +83,7 @@ bool get_input_file(char* filename)
 bool process_in_file(FILE* temp_log, FILE* input_file) {
 	char parameter_line[200];
 	int errnum;
-	
+	// ENHANCE: line length should be a const that is used to pull lines and create buffer sizes
 	while (fgets(parameter_line, 200, input_file) != NULL) {
 		if (strncmp(parameter_line, "restart", 7) == 0) {
 			//TODO: restart the simulation from a log file and don't do the rest of the loop
@@ -251,15 +251,15 @@ int parse_input(char* line)
 		if (strncmp(params, "linear", 6) == 0)
 		{
 			//read parameters for linear data recording
-			argsread = sscanf(params, "%*s %lf %lf %lf", &time_interval_end, &data_time_interval, &run_time);
+			argsread = sscanf(params, "%*s %lf %lf %lf", &next_log_stime, &log_stime_interval, &run_stime);
 			analysis_type = REGULAR_TIME_INTERVALS;
 		}
 		else if (strncmp(params, "log", 3) == 0)
 		{
 			//read parameters for logarithmic data recording
-			argsread = sscanf(params, "%*s %lf %lf %lf", &initial_logtime, &logtime_multiplier, &run_time);
-			//initial logtime instead of time_interval_end?
-			analysis_type = LOG_TIME_INTERVALS;
+			argsread = sscanf(params, "%*s %lf %lf %lf", &initial_log_lnstime, &log_lnstime_multiplier, &run_stime);
+			//initial logtime instead of next_log_stime?
+			analysis_type = LN_TIME_INTERVALS;
 		}
 		else {
 			fprintf(temp_log, "ERROR! Invalid frequency found for data recording %s\n", params);
@@ -758,7 +758,7 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file) {
 bool output_log_file(FILE* sim_log_file, int frame_num)
 {
 	fprintf(sim_log_file, "![%d]\t", frame_num);
-	fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t", elapsed_time, temperature, overpotential);
+	fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t", elapsed_stime, temperature, overpotential);
 	fprintf(sim_log_file, "atoms = %d\tinternal energy = %lf [eV]\n", atom_cnt, total_internal_energy);
 	fflush(sim_log_file);
 	return true;
@@ -775,7 +775,7 @@ bool write_xyz_file(char* xyz_filename, int frame_num)
 		return false;
 	}
 	fprintf(fileid, "%d\n", atom_cnt); //start with number of atoms
-	fprintf(fileid, "time = %lf, temperature = %lf, potential = %lf, energy = %lf\n", elapsed_time, temperature, overpotential, total_internal_energy); //need to compute energy here!
+	fprintf(fileid, "time = %lf, temperature = %lf, potential = %lf, energy = %lf\n", elapsed_stime, temperature, overpotential, total_internal_energy); //need to compute energy here!
 
 	for (int i = 0; i < atom_cnt; ++i)
 		fprintf(fileid, "%s %lf %lf %lf %lf\n", atom_arr[i]->name, atom_arr[i]->cart_coord[0], atom_arr[i]->cart_coord[1], atom_arr[i]->cart_coord[2], atom_arr[i]->bsradius); //name is now element type

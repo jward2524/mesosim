@@ -25,14 +25,14 @@ int atom_cnt = 0;
 Atom temp_atom;
 bool simulation_should_kill_itself;
 Atom* atom_arr[]; // array containing all atoms in the simulation
-double elapsed_time = 0;
+double elapsed_stime = 0;
 
 bool evaporation_flag = true;
 char coordinate_log_prefix[256] = "default_simulation_analysis.dat";
 
-double run_time = 1.e8; //default (in seconds) // TODO: move to input file
-double data_time_interval = 0.1;
-double time_interval_end;
+double run_stime = 1.e8; //default (in seconds) // TODO: move to input file
+double log_stime_interval = 0.1; // logging rate in simulation time
+double next_log_stime; // simulation time when next log will be output
 
 int rate_cnt; // number of rates in rate_arr list (filled indices)
 int transition_cnt; // size of filled portion of transition list
@@ -98,7 +98,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 
 	int framenum = 0;
 
-	elapsed_time = 0.0;
+	elapsed_stime = 0.0;
 	//writes data time intervals and run time in original code
 
 	//simulation_is_going = true;
@@ -108,7 +108,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 	/*if (num_sims > 0) //this probably will not happen
 	{
 		do_initialize_simulation(simulation_type);
-		elapsed_time = 0.0;
+		elapsed_stime = 0.0;
 	}*/ 
 
 	// initialize simulation kinetics, and draw a picture
@@ -123,6 +123,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 
 	total_volume_dissolved = 0; //do i care
 
+	// initial state
 	calculate_internal_energy(atom_cnt);
 	//printf("energy calculated\n");
 	output_log_file(sim_log_file, framenum);
@@ -135,10 +136,10 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 	ot = 0.0; //needs to happen outside of loop
 	//printf("about to start the loop\n");
 			
-	while (elapsed_time < run_time && iter < final_iteration) //adjusted this condition, included sanity check
+	while (elapsed_stime < run_stime && iter < final_iteration) //adjusted this condition, included sanity check
 	{
 		if (iter % 100 == 0)
-			printf("iteration %ld, time %lf\n", iter, elapsed_time);
+			printf("iteration %ld, time %lf\n", iter, elapsed_stime);
 		if (simulation_should_kill_itself)							// abort simulation (only happens if atoms overlap)
 		{
 			//find_average_curvature(); //no longer valid
@@ -162,12 +163,12 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 		// increment the elapsed time
 
 		compute_transition_array();
-		elapsed_time -= log(drandj(&rand_seed))/frequency_sum;
+		elapsed_stime -= log(drandj(&rand_seed)) / frequency_sum;
 
-		if (elapsed_time >= time_interval_end) // [ ]: time interval for what???
+		if (elapsed_stime >= next_log_stime)
 		{
 			organize(atom_arr, atom_cnt); //replaced but do i really need it
-			printf("writing file %d: elapsed_time = %lf\n", framenum, elapsed_time);
+			printf("writing file %d: elapsed_stime = %lf\n", framenum, elapsed_stime);
 			if (analysis_type == REGULAR_TIME_INTERVALS)
 			{
 				//record the elapsed time in a file here
@@ -176,34 +177,35 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 				output_log_file(sim_log_file, framenum);
 				write_xyz_file(coordinate_log_prefix, framenum);
 
-				while (time_interval_end <= elapsed_time)
-					time_interval_end += data_time_interval;
+				// bring next_log_stime up to and one step beyond elapsed_stime
+				while (next_log_stime <= elapsed_stime)
+					next_log_stime += log_stime_interval;
 
-				//write something with data_time_interval here?
+				//write something with log_stime_interval here?
 
 				if (overpotential_ramp_rate != 0.0)
 				{
-					nt = elapsed_time;
+					nt = elapsed_stime;
 					overpotential += (nt-ot)*overpotential_ramp_rate;
-					ot = elapsed_time;
+					ot = elapsed_stime;
 					for (j=0;j<atom_cnt;++j)	
 						refresh_transitions(j);			// resets all kinetic paramters
 	
 				}
 			}
-			else if (analysis_type == LOG_TIME_INTERVALS)
+			else if (analysis_type == LN_TIME_INTERVALS)
 			{
 				calculate_internal_energy(atom_cnt);
 				output_log_file(sim_log_file, framenum);
 				write_xyz_file(coordinate_log_prefix, framenum);
 
-				while (time_interval_end <= elapsed_time)
-					time_interval_end *= logtime_multiplier;
+				while (next_log_stime <= elapsed_stime)
+					next_log_stime *= log_lnstime_multiplier;
 			}
 			++framenum;
 		}
 
-		if (elapsed_time >= run_time) // simulation has gone past time
+		if (elapsed_stime >= run_stime) // simulation has gone past time
 			break; //get outta here before I make a new transition
 
 		// pick the type of transition to occur
@@ -341,7 +343,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 	}
 		if (iter == final_iteration)
 			fprintf(sim_log_file, "reached final iteration and terminated\n");
-		//write elapsed_time to mark finish
+		//write elapsed_stime to mark finish
 
 
 		//TODO: finish IO

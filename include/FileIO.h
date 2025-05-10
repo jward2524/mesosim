@@ -1,5 +1,5 @@
 // IO
-bool get_input_file(char *filename); //need to modify!
+bool simulation_parameters_from_file(char *filename); //need to modify!
 bool process_xyz_file(FILE* temp_log, FILE* input_file); //need to modify
 bool process_kmc_file(FILE* temp_log, FILE* input_file); //need to modify
 bool process_in_file(FILE* temp_log, FILE* input_file);
