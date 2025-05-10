@@ -4,5 +4,7 @@ build/
 bin/
 .vscode/
 
+temp.log
+
 # timestamp tracker for make print
 print 
