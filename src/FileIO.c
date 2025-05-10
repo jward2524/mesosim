@@ -16,11 +16,23 @@ char command_string[1024] = "";
 FILE *sim_log_file = NULL;
 // char return_message[512] = "";
 // updates a lot of shit
+
 bool get_input_file(char* filename)
 {
-	char extension[4];
-	char* file_ender = strrchr(filename, '.'); //everything after the final '.' in the filename
+	char extension[4] = "";
 
+	FILE* input_file = fopen(filename, "r");
+	if (input_file == NULL) {
+		char* base_msg = "Failed to open input file, ";
+		int msg_size = 1 + strlen(base_msg) + strlen(filename);
+		char error_msg[msg_size];
+		snprintf(error_msg, msg_size, "%s%s", base_msg, filename);
+        perror(error_msg);
+        exit(errno);
+    }
+
+	char* file_ender = strrchr(filename, '.'); //everything after the final '.' in the filename
+	// [ ]: what is happening here
 	if (file_ender == NULL)
 	{
 		if (sim_log_file == NULL)
@@ -28,29 +40,31 @@ bool get_input_file(char* filename)
 		else
 			fprintf(sim_log_file, "ERROR! extension not found in file: %s\n", filename); //should only happen when restarting/checkpointing
 	}
-	file_ender++;
-	extension[3] = '\0';
-	strncpy(extension, file_ender,3);
+	else {
+		file_ender++;
+		strncpy(extension, file_ender, 3); // copy only extension into extension array
+		fprintf(temp_log, "Reading input from .%s file, %s\n", extension, filename);
+	}
 
 	if (strncmp(extension, "xyz", 3) == 0)
 	{
 		// open simple x,y,z,type coordinate file
-		return process_xyz_file(temp_log, filename);
+		return process_xyz_file(temp_log, input_file);
 	}
 	else if (strncmp(extension, "kmc", 3) == 0)
 	{
 		// open kmc type file
-		return process_kmc_file(temp_log, filename);
+		return process_kmc_file(temp_log, input_file);
 	}
 	else if (strncmp(extension, "in", 2) == 0)
 	{
 		//open and process parameter input file
-		return process_in_file(temp_log, filename);
+		return process_in_file(temp_log, input_file);
     }
 	else if (strncmp(extension, "kmx", 3) == 0)
 	{
 		//open and process new kmc input type that removes fluff (does this need to happen)
-		return process_kmx_file(temp_log, filename);
+		return process_kmx_file(temp_log, input_file);
     }
 	else
 	{
@@ -66,17 +80,11 @@ bool get_input_file(char* filename)
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_in_file(FILE* temp_log, char* in_filename) {
-	FILE* fileid;
+bool process_in_file(FILE* temp_log, FILE* input_file) {
 	char parameter_line[200];
 	int errnum;
-	if ((fileid = fopen(in_filename, "r")) == NULL)
-	{
-		fprintf(temp_log, "ERROR! Couldn't read .in file %s\n", in_filename);
-		return false;
-	}
 	
-	while (fgets(parameter_line, 200, fileid) != NULL) {
+	while (fgets(parameter_line, 200, input_file) != NULL) {
 		if (strncmp(parameter_line, "restart", 7) == 0) {
 			//TODO: restart the simulation from a log file and don't do the rest of the loop
 		}
@@ -85,11 +93,11 @@ bool process_in_file(FILE* temp_log, char* in_filename) {
 		{
 			//should write to the temp
 			fprintf(temp_log, "ERROR! Had issue reading the following line: \"%s\"\n", parameter_line);
-			fclose(fileid);
+			fclose(input_file);
 			return false;
 		}
 	}
-	fclose(fileid);
+	fclose(input_file);
 	return true;
 }
 
@@ -440,109 +448,101 @@ int parse_boolean(char *str) {
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_kmc_file(FILE* temp_log, char *kmc_filename)
-	{
-		FILE *view_command_file;
-		int newnat;
+bool process_kmc_file(FILE* temp_log, FILE* input_file)
+{
+	int newnat;
 
-		int i,j,k;
-		int x,y,z;
+	int i,j,k;
+	int x,y,z;
 
-		// [ ]: What are these?
-		ssx = DSIMSIZE; //is this always true?????
-		ssy = DSIMSIZE;
-		ssz = DSIMSIZE;
-		zix = TTS;
-		ziy = TTS;
-		ziz = TTS;							// zones in x, y, z
+	// [ ]: What are these?
+	ssx = DSIMSIZE; //is this always true?????
+	ssy = DSIMSIZE;
+	ssz = DSIMSIZE;
+	zix = TTS;
+	ziy = TTS;
+	ziz = TTS;							// zones in x, y, z
 
-		if ((view_command_file = fopen(kmc_filename, "r")) == NULL)
-			{
-				fprintf(temp_log, "ERROR! Couldn't read .kmc file %s\n", kmc_filename);
-				return false;
-			}
+	//general_simulation_initialization(); //happens later
 
-		//general_simulation_initialization(); //happens later
-
-		//read in the lattice and rotation matrices
-		fscanf(view_command_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
-			&primitive_basis[0][0], &primitive_basis[0][1], &primitive_basis[0][2], 
-			&primitive_basis[1][0], &primitive_basis[1][1], &primitive_basis[1][2], 
-			&primitive_basis[2][0], &primitive_basis[2][1], &primitive_basis[2][2]); 
-			
-		fscanf(view_command_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
-			&rmat[0][0], &rmat[0][1], &rmat[0][2], 
-			&rmat[1][0], &rmat[1][1], &rmat[1][2], 
-			&rmat[2][0], &rmat[2][1], &rmat[2][2]); 
-
-		fscanf(view_command_file, "%d %d %d", &ssx, &ssy, &ssz);
-
-		fscanf(view_command_file, "%d", &newnat);
-
-		fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", ssx, ssy, ssz, newnat);
+	//read in the lattice and rotation matrices
+	fscanf(input_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
+		&primitive_basis[0][0], &primitive_basis[0][1], &primitive_basis[0][2], 
+		&primitive_basis[1][0], &primitive_basis[1][1], &primitive_basis[1][2], 
+		&primitive_basis[2][0], &primitive_basis[2][1], &primitive_basis[2][2]); 
 		
-		int tempint;
-		double tempdouble[3][3];
+	fscanf(input_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
+		&rmat[0][0], &rmat[0][1], &rmat[0][2], 
+		&rmat[1][0], &rmat[1][1], &rmat[1][2], 
+		&rmat[2][0], &rmat[2][1], &rmat[2][2]); 
 
-		for (i=0;i<newnat;++i)
-		{
-			fscanf(view_command_file, "%s\t",
-				temp_atom.name);
+	fscanf(input_file, "%d %d %d", &ssx, &ssy, &ssz);
 
-			fscanf(view_command_file, "%d\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%*lf\t%*d\t%*d\t%*d\t%*lf\t%*lf\t%*lf\t",
-				&temp_atom.type,
-				&temp_atom.cart_coord[0], &temp_atom.cart_coord[1], &temp_atom.cart_coord[2],
-				&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2],
-				&temp_atom.bsradius);
+	fscanf(input_file, "%d", &newnat);
 
-			for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS+DISSOLUTION;++j) //when do we pick lattice?
-				fscanf(view_command_file, "%d\t", &temp_atom.transition_indices[j]);
-
-			for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS;++j)
-				fscanf(view_command_file, "%d\t", &temp_atom.occupied_neighbor_sites[j]);
-				
-			fscanf(view_command_file, "%d\t%d\t", &temp_atom.next_atom, &temp_atom.previous_atom);
-
-			for (j=0;j<MAXIMUM_NUMBER_OF_COSMETIC_BONDS;++j)
-				fscanf(view_command_file, "%*d\t", &tempint);
-
-			fscanf(view_command_file, "%*d\t", &tempint);
+	fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", ssx, ssy, ssz, newnat);
 	
-			fscanf(view_command_file, "%*lf\t", tempdouble);
+	int tempint;
+	double tempdouble[3][3];
 
-			for (j=0;j<3;++j)
-				for (k=0;k<3;++k)
-					fscanf(view_command_file, "%*lf\t", tempdouble[j][k]);
+	for (i=0;i<newnat;++i)
+	{
+		fscanf(input_file, "%s\t",
+			temp_atom.name);
+
+		fscanf(input_file, "%d\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%*lf\t%*d\t%*d\t%*d\t%*lf\t%*lf\t%*lf\t",
+			&temp_atom.type,
+			&temp_atom.cart_coord[0], &temp_atom.cart_coord[1], &temp_atom.cart_coord[2],
+			&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2],
+			&temp_atom.bsradius);
+
+		for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS+DISSOLUTION;++j) //when do we pick lattice?
+			fscanf(input_file, "%d\t", &temp_atom.transition_indices[j]);
+
+		for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS;++j)
+			fscanf(input_file, "%d\t", &temp_atom.occupied_neighbor_sites[j]);
 			
-			fscanf(view_command_file, "%*lf\t%*lf\t%*lf\n", tempdouble[0], tempdouble[1], tempdouble[2]);
+		fscanf(input_file, "%d\t%d\t", &temp_atom.next_atom, &temp_atom.previous_atom);
 
-			x = temp_atom.lattice[0];
-			y = temp_atom.lattice[1];
-			z = temp_atom.lattice[2];
+		for (j=0;j<MAXIMUM_NUMBER_OF_COSMETIC_BONDS;++j)
+			fscanf(input_file, "%*d\t", &tempint);
 
-			if (atom_at(x, y, z) == -1)
-			{
-				j = add_atom(x,y,z,temp_atom.type, SPECIFIED);
-			}
+		fscanf(input_file, "%*d\t", &tempint);
+
+		fscanf(input_file, "%*lf\t", tempdouble);
+
+		for (j=0;j<3;++j)
+			for (k=0;k<3;++k)
+				fscanf(input_file, "%*lf\t", tempdouble[j][k]);
+		
+		fscanf(input_file, "%*lf\t%*lf\t%*lf\n", tempdouble[0], tempdouble[1], tempdouble[2]);
+
+		x = temp_atom.lattice[0];
+		y = temp_atom.lattice[1];
+		z = temp_atom.lattice[2];
+
+		if (atom_at(x, y, z) == -1)
+		{
+			j = add_atom(x,y,z,temp_atom.type, SPECIFIED);
 		}
-
-		primitive_basis2ucell_params(primitive_basis, ucell_params);
-		organize(atom_arr, atom_cnt);
-
-
-		fclose(view_command_file);
-		return true;
 	}
+
+	primitive_basis2ucell_params(primitive_basis, ucell_params);
+	organize(atom_arr, atom_cnt);
+
+
+	fclose(input_file);
+	return true;
+}
 
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_xyz_file(FILE* temp_log, char *xyz_filename)
+bool process_xyz_file(FILE* temp_log, FILE* input_file)
 {
 	// processes file with .xyz format (number of atoms / comment / type x y z)
 
 	int i;
-	FILE *view_command_file;
 
 	char xyz_type[200];
 	char* typenames[7]; //can have up to 7 atom types
@@ -551,35 +551,29 @@ bool process_xyz_file(FILE* temp_log, char *xyz_filename)
 	double radius;
 	int atype;
 
-	if ((view_command_file = fopen(xyz_filename, "r")) == NULL)
-	{
-		fprintf(temp_log, "ERROR! Couldn't read .xyz file %s\n", xyz_filename);
-		return false;
-	}
-
 	//set_primitive_basis(SC); //is this always true? this should be set somewhere else (beforehand or after?)
 
 	//first line should be the number of atoms
 	int nremain; //number of expected atoms
 
-	if (fgets(command_string, 200, view_command_file) == NULL)	// EOF, bad
+	if (fgets(command_string, 200, input_file) == NULL)	// EOF, bad
     {
-		fclose(view_command_file);
+		fclose(input_file);
 		return false;
 	}
 
 	nremain = atoi(command_string); //first line of a file is the number of expected atoms
 
-	fgets(command_string, 200, view_command_file); //comment line
+	fgets(command_string, 200, input_file); //comment line
 
 	//copy command string here to save comment
 	int argsread;
 
 	for (; nremain > 0; --nremain){
-		if (fgets(command_string, 200, view_command_file) == NULL)	// EOF
+		if (fgets(command_string, 200, input_file) == NULL)	// EOF
       	{
-			fclose(view_command_file);
-			fprintf(temp_log, "ERROR! Ran into EOF for %s, expected %d atoms remaining\n", xyz_filename, nremain);
+			fclose(input_file);
+			fprintf(temp_log, "ERROR! Ran into EOF, expected %d atoms remaining\n", nremain);
 			//organize(atom, atom_cnt); //do I need to call this?
 			return false;
 		}
@@ -591,7 +585,7 @@ bool process_xyz_file(FILE* temp_log, char *xyz_filename)
 		if ((argsread = sscanf(command_string, "%s %lf %lf %lf %lf", xyz_type, xyz_pos, xyz_pos+1, xyz_pos+2, &radius)) != 5)
 		{
 			fprintf(temp_log, "ERROR! Failed to read 4 arguments in .xyz file, only read %d\n", argsread);
-			fclose(view_command_file);
+			fclose(input_file);
 			return false;
         }
 
@@ -666,8 +660,8 @@ bool process_xyz_file(FILE* temp_log, char *xyz_filename)
 	for (int i = 0; i < ntypes; ++i)
 		free(typenames[i]);
 	
-	fprintf(temp_log, "Successfully read %d atoms from .xyz file %s\n", atom_cnt, xyz_filename);
-	fclose(view_command_file);
+	fprintf(temp_log, "Successfully read %d atoms from .xyz file\n", atom_cnt);
+	fclose(input_file);
 	//organize(atom, atom_cnt); //???
 	return true;
 }
@@ -699,54 +693,45 @@ int match_atom_type(char* type, char* types[], int* num_types) {
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_kmx_file(FILE* temp_log, char* kmx_filename) {
-	FILE *view_command_file;
-
+bool process_kmx_file(FILE* temp_log, FILE* input_file) {
 	int newnat;
 	int i,j,k;
 	int x,y,z;
 
-
-	if ((view_command_file = fopen(kmx_filename, "r")) == NULL)
-	{
-		fprintf(temp_log, "ERROR! Couldn't read .kmx file %s\n", kmx_filename);
-		return false;
-	}
-
-	fscanf(view_command_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
+	fscanf(input_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
 		&primitive_basis[0][0], &primitive_basis[0][1], &primitive_basis[0][2], 
 		&primitive_basis[1][0], &primitive_basis[1][1], &primitive_basis[1][2], 
 		&primitive_basis[2][0], &primitive_basis[2][1], &primitive_basis[2][2]); 
 			
-	fscanf(view_command_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
+	fscanf(input_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
 		&rmat[0][0], &rmat[0][1], &rmat[0][2], 
 		&rmat[1][0], &rmat[1][1], &rmat[1][2], 
 		&rmat[2][0], &rmat[2][1], &rmat[2][2]); 
 
-	fscanf(view_command_file, "%d %d %d", &ssx, &ssy, &ssz);
+	fscanf(input_file, "%d %d %d", &ssx, &ssy, &ssz);
 
-	fscanf(view_command_file, "%d", &newnat);
+	fscanf(input_file, "%d", &newnat);
 
 	fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", ssx, ssy, ssz, newnat);
 		
 
 	for (i=0;i<newnat;++i)
 	{
-		fscanf(view_command_file, "%s\t",
+		fscanf(input_file, "%s\t",
 			temp_atom.name);
 
-		fscanf(view_command_file, "%d\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t",
+		fscanf(input_file, "%d\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t",
 			&temp_atom.type,
 			&temp_atom.cart_coord[0], &temp_atom.cart_coord[1], &temp_atom.cart_coord[2],
 			&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2]); //get rid of lattice coords too?
 
 		for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS+DISSOLUTION;++j) //when do we pick lattice?
-			fscanf(view_command_file, "%d\t", &temp_atom.transition_indices[j]);
+			fscanf(input_file, "%d\t", &temp_atom.transition_indices[j]);
 
 		for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS;++j)
-			fscanf(view_command_file, "%d\t", &temp_atom.occupied_neighbor_sites[j]);
+			fscanf(input_file, "%d\t", &temp_atom.occupied_neighbor_sites[j]);
 				
-		fscanf(view_command_file, "%d\t%d\t", &temp_atom.next_atom, &temp_atom.previous_atom);
+		fscanf(input_file, "%d\t%d\t", &temp_atom.next_atom, &temp_atom.previous_atom);
 
 		x = temp_atom.lattice[0];
 		y = temp_atom.lattice[1];
@@ -762,7 +747,7 @@ bool process_kmx_file(FILE* temp_log, char* kmx_filename) {
 	organize(atom_arr, atom_cnt);
 
 
-	fclose(view_command_file);
+	fclose(input_file);
 		
 	return true;
 }

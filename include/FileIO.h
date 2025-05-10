@@ -1,9 +1,9 @@
 // IO
 bool get_input_file(char *filename); //need to modify!
-bool process_xyz_file(FILE* temp_log, char *xyz_filename); //need to modify
-bool process_kmc_file(FILE* temp_log, char *kmc_filename); //need to modify
-bool process_in_file(FILE* temp_log, char* in_filename);
-bool process_kmx_file(FILE* temp_log, char* kmx_filename); //is this actually relevant?
+bool process_xyz_file(FILE* temp_log, FILE* input_file); //need to modify
+bool process_kmc_file(FILE* temp_log, FILE* input_file); //need to modify
+bool process_in_file(FILE* temp_log, FILE* input_file);
+bool process_kmx_file(FILE* temp_log, FILE* input_file); //is this actually relevant?
 
 int parse_input(char* line);
 int parse_boolean(char* str);
