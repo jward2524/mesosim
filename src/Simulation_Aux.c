@@ -262,16 +262,22 @@ void getshifts(void)
 /******************************************************************************/
 /******************************************************************************/
 
-void adjust_pbc(double *x, double *y, double *z) // lattice coordinates
+void adjust_pbc(int* x, int* y, int* z) // lattice coordinates
 {
-	if (*x < 0.0) *x += (double)ssx;
-	if (*x >= (double)ssx) *x -= (double)ssx;
+	if (*x < 0)
+		*x += ssx;
+	if (*x >= ssx)
+		*x -= ssx;
 
-	if (*y < 0.0) *y += (double)ssy;
-	if (*y >= (double)ssy) *y -= (double)ssy;
+	if (*y < 0)
+		*y += ssy;
+	if (*y >= ssy)
+		*y -= ssy;
 
-	if (*z < 0.0) *z += (double)ssz;
-	if (*z >= (double)ssz) *z -= (double)ssz;
+	if (*z < 0)
+		*z += ssz;
+	if (*z >= ssz)
+		*z -= ssz;
 
 	return;
 }
@@ -279,22 +285,19 @@ void adjust_pbc(double *x, double *y, double *z) // lattice coordinates
 /********************************************************************************/
 /********************************************************************************/
 
-void findzone(int *xz, int *yz, int *zz, double xxx, double yyy, double zzz)
+void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz)
 { // *z are pointers to return indices of the zone, *** are lattice coordinates
-	int x, y, z;
-		
-	x = (int)xxx;
-	y = (int)yyy;
-	z = (int)zzz;
+	int x, y, z; // XXX
+
+	// x = xxx;
+	// y = yyy;
+	// z = zzz;
 	// TODO: there *may* be undesirable results when using signed integer type and right shifting
-	x = x << zixshift;
-	x = x >> ssxshift;
+	x = xxx << zixshift >> ssxshift;
 
-	y = y << ziyshift;
-	y = y >> ssyshift;
+	y = yyy << ziyshift >> ssyshift;
 
-	z = z << zizshift;
-	z = z >> sszshift;
+	z = zzz << zizshift >> sszshift;
 
 	*xz = x;
 	*yz = y;
@@ -581,8 +584,8 @@ int get_initial_configuration2(int atom_idx, int offset_idx, int initial_config[
 int get_final_configuration2(int at, int offset_idx, int final_config[]) // offset_idx is position in offset list
 {
 	int i, j, k;
-	double new_x, new_y, new_z;
-	double neighbor_x, neighbor_y, neighbor_z;
+	int new_x, new_y, new_z;
+	int neighbor_x, neighbor_y, neighbor_z;
 	//int n = 0; // XXX:
 	int nn_cnt = 0; // nearest-neighbors
 	// atom position after jump offset_idx
@@ -663,8 +666,9 @@ void initialize_flat_sheet_1(int z)
 void initialize_spherical_cluster(int radius_lattice) // radius of cluster in number of atoms
 {
 	double center_cart[3]; // cartesian/orthogonal coordinates of center point
-	double center_lattice[3]; // lattice coordinates of center point
-	double atom_pos_lattice[3], atom_pos_cart[3]; // atom position in lattice coords (atom_pos_lattice), cartesian/orthogonal coords (atom_pos_cart)
+	int center_lattice[3]; // lattice coordinates of center point
+	int atom_pos_lattice[3]; // atom position in lattice coords
+	double atom_pos_cart[3];
 	
 	double random_num; // random number
 	
@@ -673,13 +677,13 @@ void initialize_spherical_cluster(int radius_lattice) // radius of cluster in nu
 	double dist;
 
 	//center of the cluster is the halfway point - center_lattice=lattice/atom coordinate of cluster center
-	center_lattice[0] = ssx/2.;
-	center_lattice[1] = ssy/2.;
-	center_lattice[2] = ssz/2.;
-	// # of atoms * translation vector -> cartesian
-	vecmul(center_lattice, primitive_basis, center_cart);	// center_cart is the cartesian coordinates of the central point
+	center_lattice[0] = ssx/2;
+	center_lattice[1] = ssy/2;
+	center_lattice[2] = ssz/2;
+	
+	lattice2cartesian(center_lattice, primitive_basis, center_cart);	// center_cart is the cartesian coordinates of the central point
 	// BUG: center_cart is twice what I think it should be - primitive_basis isn't normalized (not unit vectors)
-	radius_cart = (double)radius_lattice; // BUG: no shot this is right; max_lattice - center_lattice neq radius_lattice; should be radius_lattice * mag([largest?] lattice vector)
+	radius_cart = (double) radius_lattice; // BUG: no shot this is right; max_lattice - center_lattice neq radius_lattice; should be radius_lattice * mag([largest?] lattice vector)
 
 	// lattice sphere from cartesian sphere - algorithm
 	// equation: x^2 + y^2 + z^2 <= radius_cart^2
@@ -709,15 +713,15 @@ void initialize_spherical_cluster(int radius_lattice) // radius of cluster in nu
 
 	// convert corners from cartesian coords into atom/lattice coords
 	// and find limits in each dimension
-	double bbcorners_lattice[8][3];
-	double bblimits_lattice[3][2] = {
-		{0.0, 0.0},
-		{0.0, 0.0},
-		{0.0, 0.0}
+	int bbcorners_lattice[8][3];
+	int bblimits_lattice[3][2] = {
+		{0, 0},
+		{0, 0},
+		{0, 0}
 	};
 	// TODO: make data types of cart and lattice coordinates make more sense, and thus the conversion functions
 	for (int corner_idx = 0; corner_idx < 8; corner_idx++){
-		vecmul(bbcorners_cart[corner_idx], invert_primitive_basis, bbcorners_lattice[corner_idx]);
+		cartesian2lattice(bbcorners_cart[corner_idx], invert_primitive_basis, bbcorners_lattice[corner_idx]);
 
 		// check if value exceeds limits for every dimension
 		for (int dim_idx = 0; dim_idx < 3; dim_idx++){
@@ -748,7 +752,7 @@ void initialize_spherical_cluster(int radius_lattice) // radius of cluster in nu
 				atom_pos_lattice[1] = v;
 				atom_pos_lattice[2] = w;
 				
-				vecmul(atom_pos_lattice, primitive_basis, atom_pos_cart); // to cartesian coordinates
+				lattice2cartesian(atom_pos_lattice, primitive_basis, atom_pos_cart); // to cartesian coordinates
 				dist = 
 					(atom_pos_cart[0] - center_cart[0]) * (atom_pos_cart[0] - center_cart[0])
 				 	+ (atom_pos_cart[1] - center_cart[1]) * (atom_pos_cart[1] - center_cart[1]) 

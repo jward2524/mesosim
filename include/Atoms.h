@@ -1,12 +1,12 @@
-int add_atom(double x, double y, double z, int type, int special);
-int atom_at(double cx, double cy, double cz);
+int add_atom(int x, int y, int z, int type, int special);
+int atom_at(int cx, int cy, int cz);
 void remove_atom(int at);
 void move_atom(int ia, int fa);
 
 // void make_buried_atoms_real(void);
 
-int random_reincarnate_atom(double x, double y, double z, int type, int vc); //feels like it'll never be called
-int reincarnate_atom(double x, double y, double z, int type, int vc); //will not be called
+int random_reincarnate_atom(int x, int y, int z, int type, int vc); //feels like it'll never be called
+int reincarnate_atom(int x, int y, int z, int type, int vc); //will not be called
 void bury_atom(int at, int *pos); //no longer relevant
 
 // rotation and molecule orientation
@@ -23,6 +23,9 @@ void create_default_atom(int na); //can modify this to remove things like color?
 void kill_atom(int atom_number);
 void cell_to_latmat(double c[6], double ltmt[3][3]);
 void primitive_basis2ucell_params(double ltmt[3][3], double c[6]);
+
+void cartesian2lattice(double ccart[3], double invert_primitive_basis[3][3], int clattice[3]);
+void lattice2cartesian(int clattice[3], double primitive_basis[3][3], double ccart[3]);
 
 /* symmetry related variables */
 extern double rmat[3][3];

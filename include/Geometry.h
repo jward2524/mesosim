@@ -7,11 +7,11 @@ typedef struct
 	{
 		char name[24]; 			// name, 24 characters long
 		char type;				// up to 255 atom types
-
+		// TODO: remove - only used for printing, so only calculate when printing
 		double cart_coord[3]; 		// working [cart]esian (orthogonal) [coord]inates
 
 		// [ ]: why is this a double? when is it ever fractional?
-		double lattice[3];		// multiples of unit cell / lattice vectors
+		int lattice[3];		// multiples of unit cell / lattice vectors
 
 		double bsradius;		// atom ball and stick radius // XXX: visualization, and should depend on atom type, not per atom
 		//double sfradius;		// atom spacefilling radius

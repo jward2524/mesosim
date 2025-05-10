@@ -446,7 +446,7 @@ bool process_kmc_file(FILE* temp_log, char *kmc_filename)
 		int newnat;
 
 		int i,j,k;
-		double x,y,z;
+		int x,y,z;
 
 		// [ ]: What are these?
 		ssx = DSIMSIZE; //is this always true?????
@@ -704,7 +704,7 @@ bool process_kmx_file(FILE* temp_log, char* kmx_filename) {
 
 	int newnat;
 	int i,j,k;
-	double x,y,z;
+	int x,y,z;
 
 
 	if ((view_command_file = fopen(kmx_filename, "r")) == NULL)

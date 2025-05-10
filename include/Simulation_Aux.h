@@ -8,8 +8,8 @@ void get_system_normal(void);
 void set_default_orientation(void); //double check if this is used for anything other than graphicsw
 int get_initial_configuration2(int at, int vc, int initial_config[]);
 int get_final_configuration2(int at, int vc, int final_config[]);
-void findzone(int *xz, int *yz, int *zz, double xxx, double yyy, double zzz);
-void adjust_pbc(double *x, double *y, double *z);
+void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz);
+void adjust_pbc(int *x, int *y, int *z);
 void set_primitive_basis(int lt);
 
 void calculate_internal_energy(int atom_cnt);

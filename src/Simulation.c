@@ -69,7 +69,7 @@ Trans_Prob transition_probability;
 
 
 long int final_iteration = 1e9; // TODO: move to input file
-double lastxt, lastyt, lastzt;
+int lastxt, lastyt, lastzt;
 
 //bool simulation_is_going = false; //probably don't need this
 
@@ -409,7 +409,7 @@ int refresh_transitions(int atom_idx) // atom_idx = index on atom list
 	int i, j;
 	int rate_idx; // position of rate rate in rate list rate_arr[]
 	double rate; // rate constant from bond-breaking model
-	double next_x, next_y, next_z;
+	int next_x, next_y, next_z;
 
 	int atom_rates_cnt;	// this is returned as the number of transitions (jump_offsets) this atom can undergo, excluding evaporation
 	// 
@@ -697,9 +697,9 @@ void check_system(void)
 	int i, j, k, m, n, mm;
 	int errors;
 
-	double next_x, next_y, next_z;
+	int next_x, next_y, next_z;
 
-	double nnx, nny, nnz;
+	int nnx, nny, nnz;
 
 	int xzone, yzone, zzone;
 

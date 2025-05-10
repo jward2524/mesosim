@@ -19,7 +19,7 @@ int opposite_offset[MAXIMUM_NUMBER_OF_NEIGHBORS]; // index in jump_offset that h
 // primitive unit cell basis vectors + inverted; primitive_basis[*][0] = basis1, primitive_basis[0][*] = x component of basises
 // is also transformation matrix for [lattice to cartesian coordinates] [cartesian to lattice coordinates] respectively
 double primitive_basis[3][3], invert_primitive_basis[3][3]; 
-double ucell_params[6]={1.,1.,1.,90.,90.,90.}; // unit cell parameters; a b c alpha beta gamma
+double ucell_params[6]={1.,1.,1.,90.,90.,90.}; // unit cell parameters; a b c alpha beta gamma // TODO: this is never used except for printing?
 double dax, day, daz;
 crystal_offset lattice_first_offset[24];
 crystal_offset lattice_second_offset[24];
@@ -158,14 +158,14 @@ void create_default_atom(int n) // n = position on atom list
 /*******************************************************************************
 *******************************************************************************/
 // updates [atom_arr], atom_arr[i]->lattice, [atom_arr[n]->cart_coord], atom_cnt, zone_arr[xzone][yzone][zzone].offset, atom_arr[pos]->next_atom/prev_atom, atom_arr[pos]->transition_indices; returns index in atom_arr
-int add_atom(double x, double y, double z, int type, int special) // lattice coordinates xyz, atom type, special atom conditions (unused)
+int add_atom(int x, int y, int z, int type, int special) // lattice coordinates xyz, atom type, special atom conditions (unused)
 { // XXX: special isn't really used
 	/*if (x > 60)
 		printf("made it in!\n");*/
 	int i, j, k, m, n1;
 
 	int xzone, yzone, zzone;
-	double checkx, checky, checkz; // position of potential move
+	int checkx, checky, checkz; // position of potential move
 
 	int pos, ct, n2; // position in atom array, presumably; // XXX: ct n2 are unused
 
@@ -547,15 +547,15 @@ void remove_atom(int at)
 	int xzone, yzone, zzone;
 
 	int number_of_new_atoms, number_of_new_random_atoms;
-	double x, y, z;
+	int x, y, z;
 	int vc;
 
 	double subv;
 
 	struct {
-			double x;
-			double y;
-			double z;
+			int x;
+			int y;
+			int z;
 			int vc;
 		} new_atom[MAXIMUM_NUMBER_OF_NEIGHBORS], new_random_atom[MAXIMUM_NUMBER_OF_NEIGHBORS];
 
@@ -749,7 +749,7 @@ void remove_atom(int at)
 // checks if there is an atom at point (cx, cy, cz).
 // If so, it returns the index to that atom.  If not, return -1.
 
-int atom_at(double cx, double cy, double cz) // lattice coordinate xyz
+int atom_at(int cx, int cy, int cz) // lattice coordinate xyz
 {
 	int i;
 	int zx, zy, zz;
@@ -772,11 +772,11 @@ int atom_at(double cx, double cy, double cz) // lattice coordinate xyz
 	return -1;	// no atom
 }
 
-int reincarnate(double x, double y, double z, int type, int vc, int buried) {
+int reincarnate(int x, int y, int z, int type, int vc, int buried) {
 	int i,j;
 
 	int xzone, yzone, zzone;
-	double checkx, checky, checkz;
+	int checkx, checky, checkz;
 
 	create_default_atom(atom_cnt);
 
@@ -855,12 +855,12 @@ int reincarnate(double x, double y, double z, int type, int vc, int buried) {
 
 
 /* Maybe want to combine the following 2 methods to just the 1 reincarnate */
-int reincarnate_atom(double x, double y, double z, int type, int vc)
+int reincarnate_atom(int x, int y, int z, int type, int vc)
 {
 	return reincarnate(x, y, z, type, vc, -2);
 }
 
-int random_reincarnate_atom(double x, double y, double z, int type, int vc)
+int random_reincarnate_atom(int x, int y, int z, int type, int vc)
 {
 	return reincarnate(x, y, z, type, vc, -3);
 }
@@ -1025,7 +1025,7 @@ void orthomol(Atom* atom_arr[], int atom_cnt, double basis[3][3])
 	int k;
 
 	for (k=0;k<atom_cnt;++k)
-    	vecmul(atom_arr[k]->lattice, basis, atom_arr[k]->cart_coord);
+    	lattice2cartesian(atom_arr[k]->lattice, basis, atom_arr[k]->cart_coord);
 
 	return;
 }

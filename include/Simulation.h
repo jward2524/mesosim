@@ -82,7 +82,7 @@ extern Trans_Prob transition_probability;
  
  
 extern long int final_iteration;
-extern double lastxt, lastyt, lastzt;
+extern int lastxt, lastyt, lastzt;
  
 //bool simulation_is_going; //probably don't need this
  
