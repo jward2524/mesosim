@@ -31,29 +31,33 @@ extern Atom *atom_arr[MAXIMUM_NUMBER_OF_ATOMS];
 extern Bond bond[MAXIMUM_NUMBER_OF_BONDS];
 extern int atom_cnt;
 extern double overpotential;
-extern int num_sims;
-extern double elapsed_stime;
+extern int num_sims; // XXX
+
 extern Atom temp_atom;
 extern double default_color[3];
-extern bool simulation_should_kill_itself;
 extern char atom_names[3][3];
-
 extern double default_color[3];
 
 extern int simulation_type;
 extern int atom_cnt;
 extern Atom temp_atom;
-extern bool simulation_should_kill_itself;
 extern Atom* atom_arr[];
-extern double elapsed_stime;
- 
+
 extern bool evaporation_flag;
 extern char coordinate_log_prefix[256];
- 
-extern double run_stime; //default (in seconds)
-extern double log_stime_interval;
-extern double next_log_stime;
- 
+
+extern unsigned long final_iteration; // max number of iterations
+extern double run_stime; // simulation max runtime default (in seconds)
+extern bool simulation_should_kill_itself;
+extern double elapsed_stime;
+extern int sim_end_type;
+
+extern int analysis_type;
+extern double log_interval;
+extern double next_log_checkpoint;
+extern double* log_list;
+extern int log_list_len;
+
 extern int rate_cnt;
 extern int transition_cnt;
 extern double frequency_sum;
@@ -80,8 +84,6 @@ extern Transition *transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
  
 extern Trans_Prob transition_probability;
  
- 
-extern long int final_iteration;
 extern int lastxt, lastyt, lastzt;
  
 //bool simulation_is_going; //probably don't need this

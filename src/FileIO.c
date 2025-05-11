@@ -17,6 +17,8 @@ FILE *sim_log_file = NULL;
 // char return_message[512] = "";
 // updates a lot of shit
 
+const int buffer_size = 200;
+
 bool simulation_parameters_from_file(char* filename)
 {
 	char extension[4] = "";
@@ -81,10 +83,10 @@ bool simulation_parameters_from_file(char* filename)
 *******************************************************************************/
 
 bool process_in_file(FILE* temp_log, FILE* input_file) {
-	char parameter_line[200];
+	char parameter_line[buffer_size];
 	int errnum;
 	// ENHANCE: line length should be a const that is used to pull lines and create buffer sizes
-	while (fgets(parameter_line, 200, input_file) != NULL) {
+	while (fgets(parameter_line, buffer_size, input_file) != NULL) {
 		if (strncmp(parameter_line, "restart", 7) == 0) {
 			//TODO: restart the simulation from a log file and don't do the rest of the loop
 		}
@@ -109,8 +111,8 @@ int parse_input(char* line)
 	//TODO: use strtok?
 	//printf("Trying to parse this line! \"%s\"\n", line);
 	char* ptr = line; // line from file
-	char cmd[200]; // 
-	char params[200]; // parameters parsed from line
+	char cmd[buffer_size]; // command - first word in line
+	char params[buffer_size]; // parameters parsed from line
 
 	// line start with command word and is followed by parameters
 	// split command word from parameters
@@ -246,27 +248,28 @@ int parse_input(char* line)
 			return FILE_COMMAND_IGNORED;
 		}
 	}
-	else if (strncmp(cmd, "time", 4) == 0) {
-		//set time increments for data and max simulation time
-		if (strncmp(params, "linear", 6) == 0)
-		{
-			//read parameters for linear data recording
-			argsread = sscanf(params, "%*s %lf %lf %lf", &next_log_stime, &log_stime_interval, &run_stime);
-			analysis_type = REGULAR_TIME_INTERVALS;
+	else if (strncmp(cmd, "datalog", 4) == 0) { // ENHANCE: linear list and ln list do the same thing - improve semantics to eliminate this duplicity
+		// set time increments for data logging
+		int cursor;
+		if (strncmp(params, "linear", 6) == 0) // linear data recording
+		{ // ENHANCE: use cursor variable to step through params
+			cursor = strlen("linear") + 1;
+			int type = parse_datalog_params(params, cursor);
+			analysis_type = (type > 0) ? REGULAR_TIME_INTERVALS : TIME_LIST;
 		}
-		else if (strncmp(params, "log", 3) == 0)
+		else if (strncmp(params, "ln", 2) == 0) // logarithmic data recording
 		{
-			//read parameters for logarithmic data recording
-			argsread = sscanf(params, "%*s %lf %lf %lf", &initial_log_lnstime, &log_lnstime_multiplier, &run_stime);
-			//initial logtime instead of next_log_stime?
-			analysis_type = LN_TIME_INTERVALS;
+			cursor = strlen("ln") + 1;
+			int type = parse_datalog_params(params, cursor);
+			analysis_type = (type > 0) ? LN_TIME_INTERVALS : TIME_LIST;
+		}
+		else if (strncmp(params, "iteration", 9) == 0) {
+			cursor = strlen("iteration") + 1;
+			int type = parse_datalog_params(params, cursor);
+			analysis_type = (type > 0) ? ITERATION_INTERVALS : ITERATION_LIST;
 		}
 		else {
-			fprintf(temp_log, "ERROR! Invalid frequency found for data recording %s\n", params);
-			return FILE_COMMAND_IGNORED;
-		}
-		if (argsread != 3) {
-			fprintf(temp_log, "ERROR! Could not correctly read time parameters %s\n", params);
+			fprintf(temp_log, "ERROR! Unknown argument in 'datalog' command: %s\n", params);
 			return FILE_COMMAND_IGNORED;
 		}
 	}
@@ -428,8 +431,30 @@ int parse_input(char* line)
 			return FILE_COMMAND_IGNORED;
 		}
 	}
-	else
-	{
+	else if (strncmp(cmd, "run", 3) == 0) {
+		int cursor;
+		if (strncmp(params, "time", 4) == 0) {
+			cursor = 5;
+			sim_end_type = SIM_END_BY_STIME;
+		}
+		else if (strncmp(params, "iteration", 9) == 0) {
+			cursor = 10;
+			sim_end_type = SIM_END_BY_ITERATIONS;
+		}
+		else {
+			fprintf(temp_log, "ERROR! Unknown argument in 'run' command: %s\n", params);
+			return FILE_COMMAND_IGNORED;
+		}
+
+		if (sim_end_type == SIM_END_BY_STIME) {
+			run_stime = strtod(&params[cursor], NULL);
+		}
+		else if (sim_end_type == SIM_END_BY_ITERATIONS) {
+			final_iteration = strtol(&params[cursor], NULL, 10);
+		}
+
+	}
+	else {
 		fprintf(temp_log, "ERROR! keyword %s not recognized\n", cmd);
 		return FILE_COMMAND_IGNORED;
 	}
@@ -443,6 +468,40 @@ int parse_boolean(char *str) {
 		return 0;
 	else
 		return -1;
+}
+
+void parse_log_list(char* input_str, double* list, int* len){
+	char delim[] = " ";
+	char* token = strtok(input_str, delim);
+	while (token) {
+		list[*len] = strtod(token, NULL);
+		(*len)++;
+		token = strtok(NULL, delim);
+	}
+}
+
+// within datalog command, parsing interval and list keywords
+// counter is 1 for simulation time, -1 for iterations (as per the macros)
+// returns 1 if intervals, -1 if list
+// ENHANCE: return values aren't conventional - make more conventional
+int parse_datalog_params(char* params, int cursor){
+	int argsread;
+	if (strncmp(&params[cursor], "interval", 8) == 0) {
+		argsread = sscanf(params + cursor + 9, "%lf %lf", &next_log_checkpoint, &log_interval);
+		if (argsread < 2){
+			log_interval = next_log_checkpoint;
+		}
+		return 1;
+	}
+	else if (strncmp(params + cursor, "list", 4) == 0){
+		log_list = (double*) malloc(buffer_size * sizeof(double));
+		parse_log_list(params + cursor + 5, log_list, &log_list_len);
+		return -1;
+	}
+	else {
+		fprintf(temp_log, "ERROR! Unknown argument in 'datalog' command: %s\n", params);
+		return FILE_COMMAND_IGNORED;
+	}
 }
 
 /*******************************************************************************
@@ -544,7 +603,7 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file)
 
 	int i;
 
-	char xyz_type[200];
+	char xyz_type[buffer_size];
 	char* typenames[7]; //can have up to 7 atom types
 	int ntypes = 0;
 	double xyz_pos[3] = {0.0, 0.0, 0.0};
@@ -556,7 +615,7 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file)
 	//first line should be the number of atoms
 	int nremain; //number of expected atoms
 
-	if (fgets(command_string, 200, input_file) == NULL)	// EOF, bad
+	if (fgets(command_string, buffer_size, input_file) == NULL)	// EOF, bad
     {
 		fclose(input_file);
 		return false;
@@ -564,13 +623,13 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file)
 
 	nremain = atoi(command_string); //first line of a file is the number of expected atoms
 
-	fgets(command_string, 200, input_file); //comment line
+	fgets(command_string, buffer_size, input_file); //comment line
 
 	//copy command string here to save comment
 	int argsread;
 
 	for (; nremain > 0; --nremain){
-		if (fgets(command_string, 200, input_file) == NULL)	// EOF
+		if (fgets(command_string, buffer_size, input_file) == NULL)	// EOF
       	{
 			fclose(input_file);
 			fprintf(temp_log, "ERROR! Ran into EOF, expected %d atoms remaining\n", nremain);
@@ -758,7 +817,7 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file) {
 bool output_log_file(FILE* sim_log_file, int frame_num)
 {
 	fprintf(sim_log_file, "![%d]\t", frame_num);
-	fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t", elapsed_stime, temperature, overpotential);
+	fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t", elapsed_stime, temperature, overpotential); // TODO: add iteration number to this
 	fprintf(sim_log_file, "atoms = %d\tinternal energy = %lf [eV]\n", atom_cnt, total_internal_energy);
 	fflush(sim_log_file);
 	return true;
@@ -767,7 +826,7 @@ bool output_log_file(FILE* sim_log_file, int frame_num)
 bool write_xyz_file(char* xyz_filename, int frame_num)
 {
 	FILE* fileid;
-	char filename_full[200];
+	char filename_full[buffer_size];
 	sprintf(filename_full, "%s_%d.xyz", xyz_filename, frame_num);
 	if ((fileid = fopen(filename_full, "w+")) == NULL)
 	{

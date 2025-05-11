@@ -25,14 +25,25 @@ int atom_cnt = 0;
 Atom temp_atom;
 bool simulation_should_kill_itself;
 Atom* atom_arr[]; // array containing all atoms in the simulation
-double elapsed_stime = 0;
+double elapsed_stime = 0; 
 
 bool evaporation_flag = true;
 char coordinate_log_prefix[256] = "default_simulation_analysis.dat";
 
-double run_stime = 1.e8; //default (in seconds) // TODO: move to input file
-double log_stime_interval = 0.1; // logging rate in simulation time
-double next_log_stime; // simulation time when next log will be output
+unsigned long final_iteration = 1e9; // TODO: move to input file
+double run_stime = 1.e8; //default simulation runtime (in seconds) // TODO: move to input file
+double log_interval = 0.1; // logging rate in simulation time
+double next_log_checkpoint; // simulation time when next log will be output
+double* log_list = NULL; // pointer to list of points at which to log data
+int log_list_len = 0; // length of log_list (number of times to log data)
+int sim_end_type = 0;
+
+// double next_log_checkpoint = 1.0e-4;
+
+int analysis_type = REGULAR_TIME_INTERVALS;
+
+// double log_interval;
+
 
 int rate_cnt; // number of rates in rate_arr list (filled indices)
 int transition_cnt; // size of filled portion of transition list
@@ -68,13 +79,13 @@ Transition *transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS]; // array o
 Trans_Prob transition_probability;
 
 
-long int final_iteration = 1e9; // TODO: move to input file
 int lastxt, lastyt, lastzt;
 
 //bool simulation_is_going = false; //probably don't need this
 
 double sum_of_rate_populations;
 double current_probability;
+bool checkpoint_reached = false;
 
 // ENHANCE: pass struct with all simulation parameters as argument
 unsigned long perform_simulation(void) //potentially FILE* as arguments
@@ -96,7 +107,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 
 	int moved_flag = true;
 
-	int framenum = 0;
+	int framenum = 0; // [ ]: what is this? it isn't iteration count
 
 	elapsed_stime = 0.0;
 	//writes data time intervals and run time in original code
@@ -131,16 +142,18 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 	//printf("files written\n");
 	++framenum;
 
-	long int iter = 0;
+	unsigned long int iter = 1; // iteration count
 
 	ot = 0.0; //needs to happen outside of loop
 	//printf("about to start the loop\n");
-			
-	while (elapsed_stime < run_stime && iter < final_iteration) //adjusted this condition, included sanity check
+	
+	bool simulation_end = false;
+
+	while (!simulation_end)
 	{
 		if (iter % 100 == 0)
 			printf("iteration %ld, time %lf\n", iter, elapsed_stime);
-		if (simulation_should_kill_itself)							// abort simulation (only happens if atoms overlap)
+		if (simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
 		{
 			//find_average_curvature(); //no longer valid
 
@@ -164,46 +177,6 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 
 		compute_transition_array();
 		elapsed_stime -= log(drandj(&rand_seed)) / frequency_sum;
-
-		if (elapsed_stime >= next_log_stime)
-		{
-			organize(atom_arr, atom_cnt); //replaced but do i really need it
-			printf("writing file %d: elapsed_stime = %lf\n", framenum, elapsed_stime);
-			if (analysis_type == REGULAR_TIME_INTERVALS)
-			{
-				//record the elapsed time in a file here
-
-				calculate_internal_energy(atom_cnt);
-				output_log_file(sim_log_file, framenum);
-				write_xyz_file(coordinate_log_prefix, framenum);
-
-				// bring next_log_stime up to and one step beyond elapsed_stime
-				while (next_log_stime <= elapsed_stime)
-					next_log_stime += log_stime_interval;
-
-				//write something with log_stime_interval here?
-
-				if (overpotential_ramp_rate != 0.0)
-				{
-					nt = elapsed_stime;
-					overpotential += (nt-ot)*overpotential_ramp_rate;
-					ot = elapsed_stime;
-					for (j=0;j<atom_cnt;++j)	
-						refresh_transitions(j);			// resets all kinetic paramters
-	
-				}
-			}
-			else if (analysis_type == LN_TIME_INTERVALS)
-			{
-				calculate_internal_energy(atom_cnt);
-				output_log_file(sim_log_file, framenum);
-				write_xyz_file(coordinate_log_prefix, framenum);
-
-				while (next_log_stime <= elapsed_stime)
-					next_log_stime *= log_lnstime_multiplier;
-			}
-			++framenum;
-		}
 
 		if (elapsed_stime >= run_stime) // simulation has gone past time
 			break; //get outta here before I make a new transition
@@ -338,18 +311,74 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 				natn = add_atom(rwx, rwy, rwz, atype, NORMAL);
 			}*/
 		}
+		 
+		// after iteration, log if necessary
+		// TODO: implement the checkpoint lists
+		if ((analysis_type == REGULAR_TIME_INTERVALS) || (analysis_type == LN_TIME_INTERVALS))
+			checkpoint_reached = (elapsed_stime >= next_log_checkpoint);
+		else if (analysis_type == ITERATION_INTERVALS)
+			checkpoint_reached = (iter >= next_log_checkpoint);
 
-		++iter; //sanity check to avoid ending in an infinite cycle
+		if (checkpoint_reached)
+		{
+			organize(atom_arr, atom_cnt); //replaced but do i really need it
+			
+			//record the elapsed time in a file here
+			printf("writing file %d: elapsed_stime = %lf\n", framenum, elapsed_stime);
+			
+			calculate_internal_energy(atom_cnt);
+			output_log_file(sim_log_file, framenum);
+			write_xyz_file(coordinate_log_prefix, framenum);
+			
+			if (analysis_type == REGULAR_TIME_INTERVALS)
+			{
+				// bring next_log_checkpoint up to and one step beyond elapsed_stime
+				while (next_log_checkpoint <= elapsed_stime)
+					next_log_checkpoint += log_interval;
+
+			}
+			else if (analysis_type == LN_TIME_INTERVALS)
+			{
+				while (next_log_checkpoint <= elapsed_stime)
+					next_log_checkpoint *= log_interval;
+			}
+			else if (analysis_type == ITERATION_INTERVALS)
+			{
+				next_log_checkpoint += log_interval;
+			}
+
+			if (overpotential_ramp_rate != 0.0)
+			{
+				nt = elapsed_stime;
+				overpotential += (nt-ot)*overpotential_ramp_rate;
+				ot = elapsed_stime;
+				for (j=0;j<atom_cnt;++j)	
+					refresh_transitions(j);			// resets all kinetic paramters
+
+			}
+			
+			++framenum;
+		}
+
+		++iter; //sanity check to avoid ending in an infinite cycle // [ ]: what?
+
+		// check if simulation is over
+		if (sim_end_type == SIM_END_BY_STIME){
+			simulation_end = (elapsed_stime >= run_stime);
+		}
+		else if (sim_end_type == SIM_END_BY_ITERATIONS) {
+			simulation_end = (iter >= final_iteration);
+		}
 	}
-		if (iter == final_iteration)
-			fprintf(sim_log_file, "reached final iteration and terminated\n");
-		//write elapsed_stime to mark finish
 
-
-		//TODO: finish IO
-		calculate_internal_energy(atom_cnt);
-		output_log_file(sim_log_file, framenum);
-		write_xyz_file(coordinate_log_prefix, framenum);	
+	if (iter == final_iteration)
+		fprintf(sim_log_file, "reached final iteration and terminated\n");
+	
+	//write elapsed_stime to mark finish
+	//TODO: finish IO
+	calculate_internal_energy(atom_cnt);
+	output_log_file(sim_log_file, framenum);
+	write_xyz_file(coordinate_log_prefix, framenum);	
 
 	printf("Finished simulation\n"); //move this to the log file
 		
@@ -1047,6 +1076,7 @@ int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial con
 	}
 
 	// ENHANCE: replace calculating the exp with memoizing up the value (uhash?) -> speedup?
+	// BUG: why was overpotential removed? Isn't it necessary for linear sweep stuff?
 	//*rate = 1e13*exp(-energy/(kBoltz*temperature)) //+ 1e-4*exp(-(energy-overpotential)/(kBoltz*temperature));
 	*rate = 1e13*exp(-energy/(kBoltz*temperature));
 	//printf("rate = %le\n", *rate);

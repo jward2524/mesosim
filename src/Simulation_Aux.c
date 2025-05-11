@@ -15,7 +15,7 @@ int ssxshift, ssyshift, sszshift; // used with zi*shift
 int zsh, ysh, xsh;	// total bit shifts, zi*shift - ss*shift
 
 // [ ]: what are the units for this? how does it relate to atomic spacing?
-int ssx = DSIMSIZE, ssy = DSIMSIZE, ssz = DSIMSIZE;	// system size x, y, z in lattice coordinates
+int ssx = DSIMSIZE, ssy = DSIMSIZE, ssz = DSIMSIZE;	// system size x, y, z in lattice coordinates // TODO: lattice coordinates but not along lattice vectors?
 double ssr;
 int zix = TTS, ziy = TTS, ziz = TTS;
 // defaults are fcc
@@ -35,12 +35,6 @@ double maxoverpotential = DEFAULT_OVERPOTENTIAL;
 
 double substrate_percent_a = DEFAULT_COMPOSITION_A;
 double substrate_percent_b = DEFAULT_COMPOSITION_B;
-
-double initial_log_lnstime = 1.0e-4;
-
-int analysis_type = REGULAR_TIME_INTERVALS;
-
-double log_lnstime_multiplier;
 
 //double vacancy_density = 0.01; //can always add back in
 
@@ -125,7 +119,7 @@ void get_system_normal(void) // XXX: supposedly only for vizualization
 
 /******************************************************************************/
 /******************************************************************************/
-// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; rmat; normal_x, normal_y, normal_z; number_of_possible_neighbors, jump_offset, opposite_offset; zi*, zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_stime, overpotential, next_log_stime
+// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; rmat; normal_x, normal_y, normal_z; number_of_possible_neighbors, jump_offset, opposite_offset; zi*, zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_stime, overpotential, next_log_checkpoint
 void general_simulation_initialization(void)
 {
 	// first, remove any atoms that may exist
@@ -161,12 +155,12 @@ void general_simulation_initialization(void)
 	elapsed_stime = 0.0;
 
 	overpotential = initialoverpotential;
-	// [ ]: how is this related to logging frequency?
-	// next_log_stime is initialized to one log_interval_step step
-	if (analysis_type == REGULAR_TIME_INTERVALS)
-		next_log_stime = log_stime_interval;	//do we want this to be true?
+
+	// next_log_checkpoint is initialized to one log_interval_step step
+	if (analysis_type == REGULAR_TIME_INTERVALS) // TODO: reconsider what is happening here
+		next_log_checkpoint = next_log_checkpoint;	//do we want this to be true? - overwrites what was in the input file
 	else if (analysis_type == LN_TIME_INTERVALS)
-		next_log_stime = initial_log_lnstime;
+		next_log_checkpoint = next_log_checkpoint;
 		
 	return;
 }

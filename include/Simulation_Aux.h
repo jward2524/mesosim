@@ -55,11 +55,7 @@ extern double maxoverpotential;
 extern double substrate_percent_a;
 extern double substrate_percent_b;
 
-extern double initial_log_lnstime;
-
-extern int analysis_type;
-
-extern double log_lnstime_multiplier;
+// extern double log_interval;
 
 //double vacancy_density = 0.01; //can always add back in
 

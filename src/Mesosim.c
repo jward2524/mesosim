@@ -48,6 +48,7 @@ int main(int argc, char* argv[]) {
     initialize_lattice_geometry(); //this gets overwritten by info from the input file
 
     simulation_type = -1; //TODO: need to define in globals!!
+    fprintf(temp_log, "Start time: %lld", starttime);
     fprintf(temp_log, "Attempting to read in file %s\n", argv[1]);
     // simulation_parameters_from_file also initializes atom list
     if (simulation_parameters_from_file(argv[1]) == false) {
@@ -137,9 +138,10 @@ int main(int argc, char* argv[]) {
         fprintf(sim_log_file, "Potential constant [eV] at %lf\n", overpotential);
 
     if (analysis_type == REGULAR_TIME_INTERVALS)
-        fprintf(sim_log_file, "Recording data at linear intervals [s] from %lf to %lf at %lf increments\n", next_log_stime, log_stime_interval, run_stime);
+        fprintf(sim_log_file, "Recording data at linear intervals [s] from %lf to %lf at %lf increments\n", next_log_checkpoint, log_interval, run_stime);
     else if (analysis_type == LN_TIME_INTERVALS)
-        fprintf(sim_log_file, "Recording data at log intervals [s] from %lf to %lf at %lf multiples\n", initial_log_lnstime, log_lnstime_multiplier, run_stime);
+        fprintf(sim_log_file, "Recording data at log intervals [s] from %lf to %lf at %lf multiples\n", next_log_checkpoint, log_interval, run_stime);
+    // TODO: fill out for other analysis_types
 
     fprintf(sim_log_file, "Random seed is %ld\n", rand_seed);
 
