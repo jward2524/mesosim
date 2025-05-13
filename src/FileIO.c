@@ -835,9 +835,10 @@ bool write_xyz_file(char* xyz_filename, int frame_num)
 	}
 	fprintf(fileid, "%d\n", atom_cnt); //start with number of atoms
 	fprintf(fileid, "time = %lf, temperature = %lf, potential = %lf, energy = %lf\n", elapsed_stime, temperature, overpotential, total_internal_energy); //need to compute energy here!
+	// fprintf(fileid, "idx type x y z radius\n");
 
 	for (int i = 0; i < atom_cnt; ++i)
-		fprintf(fileid, "%s %lf %lf %lf %lf\n", atom_arr[i]->name, atom_arr[i]->cart_coord[0], atom_arr[i]->cart_coord[1], atom_arr[i]->cart_coord[2], atom_arr[i]->bsradius); //name is now element type
+		fprintf(fileid, "%d %s %lf %lf %lf %lf\n", i, atom_arr[i]->name, atom_arr[i]->cart_coord[0], atom_arr[i]->cart_coord[1], atom_arr[i]->cart_coord[2], atom_arr[i]->bsradius); //name is now element type
 	//ball and stick or space filling?
 	fclose(fileid);
 	return true;
