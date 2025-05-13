@@ -199,7 +199,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 				// pick the lucky atom
 				// [ ]: third random number?
 				// picks a type of transition and then which atom that has that transition will it act on?
-				which_one = rate_arr[k].offset + (int)(drandj(&rand_seed)*(double)rate_arr[k].count);
+				which_one = rate_arr[k].transition_start_idx + (int)(drandj(&rand_seed)*(double)rate_arr[k].transition_count);
 
 				// which_one gives the location of the transition_arr, which gives
 				// the info about the specific atom
@@ -388,7 +388,7 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 
 /******************************************************************************/
 /******************************************************************************/
-
+// updates transition_probabilty (weighted rate list, used to choose event)
 void compute_transition_array(void)
 {
 	int i;
@@ -401,11 +401,11 @@ void compute_transition_array(void)
 
 	for (i=0;i<rate_cnt;++i)
 	{
-		if (rate_arr[i].count != 0)
+		if (rate_arr[i].transition_count != 0)
 		{
-			rate_arr[i].frequency = rate_arr[i].k*(double)rate_arr[i].count;
+			rate_arr[i].frequency = rate_arr[i].k*(double)rate_arr[i].transition_count;
 			frequency_sum += rate_arr[i].frequency;
-			sum_of_rate_populations += rate_arr[i].count;
+			sum_of_rate_populations += rate_arr[i].transition_count;
 
 			transition_probability.listnum[total_lists] = i;
 			++total_lists;
@@ -434,7 +434,7 @@ void compute_transition_array(void)
 
 /******************************************************************************/
 /******************************************************************************/
-// updates [atom_arr[atom_idx], transition_arr[i], rate_arr[i].offset]
+// updates [atom_arr[atom_idx], transition_arr[i], rate_arr[i].transition_start_idx], initializes rate_arr
 int refresh_transitions(int atom_idx) // atom_idx = index on atom list
 {
 	int i, j;
@@ -572,8 +572,8 @@ int is_on_transition_list(double rate)
 int create_new_transition(double rate)
 {
 	rate_arr[rate_cnt].k = rate;
-	rate_arr[rate_cnt].offset = transition_cnt;
-	rate_arr[rate_cnt].count = 0;
+	rate_arr[rate_cnt].transition_start_idx = transition_cnt;
+	rate_arr[rate_cnt].transition_count = 0;
 
 	++rate_cnt;
 
@@ -584,7 +584,7 @@ int create_new_transition(double rate)
 /******************************************************************************/
 
 // add to rate_arr[rate_idx] the atom atom_idx going in direction offset_idx
-// updates transition_arr, rate_arr[rate_idx].count, atom_arr[atom_idx]->transition_indices[offset_idx]
+// updates transition_arr, rate_arr[rate_idx].transition_count, atom_arr[atom_idx]->transition_indices[offset_idx]
 void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx) // rate_arr index, atom_arr index, jump_offset index
 {
 	int i; // loop variable
@@ -596,13 +596,13 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx) // rate_
 	transition_arr[transition_cnt] = (Transition *)malloc(sizeof(Transition));	// adds entry to the end of the list
 
 	// what is this
-	//		final_transition_index = rate_arr[rate_cnt-1].offset + rate_arr[rate_cnt-1].number;	
+	//		final_transition_index = rate_arr[rate_cnt-1].transition_start_idx + rate_arr[rate_cnt-1].number;	
 	//		transition_arr[final_transition_index] = (Transition *)malloc(sizeof(Transition));
 
 	for (i = rate_cnt-1;i>rate_idx;--i)
 		{ // [ ]: what does this do? is this the same as in remove_transition?
-			initial_transition_index = rate_arr[i].offset;
-			final_transition_index = initial_transition_index + rate_arr[i].count;
+			initial_transition_index = rate_arr[i].transition_start_idx;
+			final_transition_index = initial_transition_index + rate_arr[i].transition_count;
 
 			transition_arr[final_transition_index]->atom_idx = transition_arr[initial_transition_index]->atom_idx;
 			transition_arr[final_transition_index]->offset_idx = transition_arr[initial_transition_index]->offset_idx;
@@ -610,14 +610,14 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx) // rate_
 			if (initial_transition_index != final_transition_index)
 				atom_arr[transition_arr[final_transition_index]->atom_idx]->transition_indices[transition_arr[final_transition_index]->offset_idx] = final_transition_index;
 
-			++rate_arr[i].offset;
+			++rate_arr[i].transition_start_idx;
 		}
 
 	// add new arrival
 
-	n = rate_arr[rate_idx].offset + rate_arr[rate_idx].count;
+	n = rate_arr[rate_idx].transition_start_idx + rate_arr[rate_idx].transition_count;
 
-	++rate_arr[rate_idx].count;
+	++rate_arr[rate_idx].transition_count;
 
 	transition_arr[n]->atom_idx = atom_idx;
 	transition_arr[n]->offset_idx = offset_idx;
@@ -631,18 +631,18 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx) // rate_
 
 /******************************************************************************/
 /******************************************************************************/
-// updates atom_arr[atom_idx], transition_arr[i], rate_arr[i].offset
+// updates atom_arr[atom_idx], transition_arr[i], rate_arr[i].transition_start_idx
 void take_off_transition_list(int atom_idx, int offset_idx)	// removes atom jumping in the jump_offset[offset_idx] direction
 {
 	int i;
-	int rate_idx, transition_start_idx, transition_end_idx;
+	int rate_idx, transition_idx, transition_end_idx;
 
 	// find out what Rate in rate_arr this is
 
-	transition_start_idx = atom_arr[atom_idx]->transition_indices[offset_idx];
+	transition_idx = atom_arr[atom_idx]->transition_indices[offset_idx]; // old position on transition list, to be removed
 
 	for (i=0;i<rate_cnt;++i)
-		if (transition_start_idx < (rate_arr[i].offset + rate_arr[i].count))
+		if (transition_idx < (rate_arr[i].transition_start_idx + rate_arr[i].transition_count))
 		{
 			rate_idx = i;
 			break;
@@ -657,29 +657,29 @@ void take_off_transition_list(int atom_idx, int offset_idx)	// removes atom jump
 	// rate_idx points to the current rate list it's on.  decrement the number of atoms in that list
 	// and clean up.  If the list is empty, remove it.
 
-	--rate_arr[rate_idx].count;
+	--rate_arr[rate_idx].transition_count;
 	// [ ]: wtf is going on here 
-	if (rate_arr[rate_idx].count == 0) // if list is empty
+	if (rate_arr[rate_idx].transition_count == 0) // if list is empty
 	{
 		for (i = rate_idx + 1; i < rate_cnt; ++i)
 		{
-			--rate_arr[i].offset; // move rate_arr offsets of larger indicies down one
+			--rate_arr[i].transition_start_idx; // move rate_arr offsets of larger indicies down one
 			// make transition at new start index (which is of different Rate than old start index) have same atom and offset as new end index (which is of same Rate as old end index)
-			transition_start_idx = rate_arr[i].offset;
-			transition_end_idx = rate_arr[i].offset+rate_arr[i].count;		// count is always at least 1
+			transition_idx = rate_arr[i].transition_start_idx;
+			transition_end_idx = rate_arr[i].transition_start_idx+rate_arr[i].transition_count;		// count is always at least 1
 
-			transition_arr[transition_start_idx]->atom_idx = transition_arr[transition_end_idx]->atom_idx;
-			transition_arr[transition_start_idx]->offset_idx = transition_arr[transition_end_idx]->offset_idx;
-			
-			atom_arr[transition_arr[transition_start_idx]->atom_idx]->transition_indices[transition_arr[transition_start_idx]->offset_idx] = transition_start_idx;
+			transition_arr[transition_idx]->atom_idx = transition_arr[transition_end_idx]->atom_idx;
+			transition_arr[transition_idx]->offset_idx = transition_arr[transition_end_idx]->offset_idx;
+			// update the transition index in the corresponding atom in atom_arr to have the new (lower) transition index 
+			atom_arr[transition_arr[transition_idx]->atom_idx]->transition_indices[transition_arr[transition_idx]->offset_idx] = transition_idx;
 		}
 
 		free(transition_arr[transition_cnt]);			// free up the very last member of the last transition_arr
 
 		for (i=rate_idx+1;i<rate_cnt;++i)
 		{
-			rate_arr[i-1].offset = rate_arr[i].offset;
-			rate_arr[i-1].count = rate_arr[i].count;
+			rate_arr[i-1].transition_start_idx = rate_arr[i].transition_start_idx;
+			rate_arr[i-1].transition_count = rate_arr[i].transition_count;
 			rate_arr[i-1].k = rate_arr[i].k;
 			rate_arr[i-1].frequency = rate_arr[i].frequency;
 		}
@@ -689,30 +689,30 @@ void take_off_transition_list(int atom_idx, int offset_idx)	// removes atom jump
 		return;
 	}
 
-	transition_end_idx = rate_arr[rate_idx].offset + rate_arr[rate_idx].count; // points to what was last element
+	transition_end_idx = rate_arr[rate_idx].transition_start_idx + rate_arr[rate_idx].transition_count; // last transition of same rate type
 
 	// swap transition_end_idx into the position atom_idx:offset_idx occupied
 	// ENHANCE: this is the same shit that happens when count==0
-	transition_arr[transition_start_idx]->atom_idx = transition_arr[transition_end_idx]->atom_idx;
-	transition_arr[transition_start_idx]->offset_idx = transition_arr[transition_end_idx]->offset_idx;
+	transition_arr[transition_idx]->atom_idx = transition_arr[transition_end_idx]->atom_idx;
+	transition_arr[transition_idx]->offset_idx = transition_arr[transition_end_idx]->offset_idx;
 
-	if (transition_start_idx != transition_end_idx) 
-		atom_arr[transition_arr[transition_start_idx]->atom_idx]->transition_indices[transition_arr[transition_start_idx]->offset_idx] = transition_start_idx;
+	if (transition_idx != transition_end_idx) 
+		atom_arr[transition_arr[transition_idx]->atom_idx]->transition_indices[transition_arr[transition_idx]->offset_idx] = transition_idx;
 
 	// shift all other transition lists
 
 	for (i=rate_idx+1;i < rate_cnt;++i)
-		{ // ENHANCE: again, looks like the same shit that happens when count==0
-			--rate_arr[i].offset;
+	{ // ENHANCE: again, looks like the same shit that happens when count==0
+		--rate_arr[i].transition_start_idx;
 
-			transition_start_idx = rate_arr[i].offset;
-			transition_end_idx = rate_arr[i].offset+rate_arr[i].count;
+		transition_idx = rate_arr[i].transition_start_idx;
+		transition_end_idx = rate_arr[i].transition_start_idx+rate_arr[i].transition_count;
 
-			transition_arr[transition_start_idx]->atom_idx = transition_arr[transition_end_idx]->atom_idx;
-			transition_arr[transition_start_idx]->offset_idx = transition_arr[transition_end_idx]->offset_idx;
+		transition_arr[transition_idx]->atom_idx = transition_arr[transition_end_idx]->atom_idx;
+		transition_arr[transition_idx]->offset_idx = transition_arr[transition_end_idx]->offset_idx;
 
-			atom_arr[transition_arr[transition_start_idx]->atom_idx]->transition_indices[transition_arr[transition_start_idx]->offset_idx] = transition_start_idx;
-		}
+		atom_arr[transition_arr[transition_idx]->atom_idx]->transition_indices[transition_arr[transition_idx]->offset_idx] = transition_idx;
+	}
 
 	free(transition_arr[transition_cnt]);			// free up the very last member of the last transition_arr
 
