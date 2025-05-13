@@ -497,6 +497,7 @@ void move_atom(int ia, int fa)
 		atom_arr[fa]->bsradius = atom_arr[ia]->bsradius;
 
 		atom_arr[fa]->type = atom_arr[ia]->type;
+		strcpy(atom_arr[fa]->name, atom_arr[ia]->name);
 
 		//atom[fa]->biso = atom[ia]->biso;
 
@@ -579,7 +580,7 @@ void remove_atom(int at)
 	{
 		j = atom_arr[at]->occupied_neighbor_sites[i];
 
-		switch(j) //might be irrelevant if burial removed
+		switch(j) //might be irrelevant if burial removed // [ ]: burried
 		{
 			case -2:
 				// re-incarnate the buried atom.  this atom will be of type "type"
@@ -1012,7 +1013,7 @@ void copy_atom(int i, int j)
 
 void organize(Atom* atom_arr[], int atom_cnt) // atom_cnt=number of atoms
 {
-	// like copy_xyz_to_coord, but adjusts center of gravity, too
+	// like copy_xyz_to_coord, [but adjusts center of gravity, too, if not commented out]
 
 	orthomol(atom_arr, atom_cnt, primitive_basis);	// use the cell dimensions to orthogonalize
 	//centerg(a, atom_cnt); //don't do this!
