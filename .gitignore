@@ -4,6 +4,8 @@ build/
 bin/
 .vscode/
 
+input/
+output/
 temp.log
 
 # timestamp tracker for make print
