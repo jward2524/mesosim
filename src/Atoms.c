@@ -27,7 +27,7 @@ crystal_offset lattice_second_offset[24];
 Atom_Color atom_color[10];
 // direction of possible atom jumps for each crystal lattice type
 crystal_offset bcc_offset[8] = 
-		{ // not normalized, in orthogonal? composite cell? cubic? coordinates
+		{ // not normalized, in lattice coordinates
 		{-1, -1, -1},
 		{0, 0, -1},
 		{1, 0, 0},
@@ -749,7 +749,7 @@ void remove_atom(int at)
 
 // checks if there is an atom at point (cx, cy, cz).
 // If so, it returns the index to that atom.  If not, return -1.
-
+// TODO: change to work 
 int atom_at(int cx, int cy, int cz) // lattice coordinate xyz
 {
 	int i;
@@ -1104,11 +1104,16 @@ void lattice2int(double fcoords[3], int coords[3], double epsilon){
 	}
 }
 
-// convert cartesian coordinates to lattice coordinates
-void cartesian2lattice(double ccart[3], double invert_primitive_basis[3][3], int clattice[3]){
+// convert a site from cartesian coordinates to lattice coordinates
+void cartesian2lattice_site(double ccart[3], double invert_primitive_basis[3][3], int clattice[3]){
 	double fclattice[3];
 	vecmul(ccart, invert_primitive_basis, fclattice);
 	lattice2int(fclattice, clattice, DEFAULT_EPSILON);
+}
+
+
+void cartesian2lattice(double ccart[3], double invert_primitive_basis[3][3], double clattice[3]){
+	vecmul(ccart, invert_primitive_basis, clattice);
 }
 
 // convert lattice coordinates to cartesian coordinates
@@ -1119,4 +1124,14 @@ void lattice2cartesian(int clattice[3], double primitive_basis[3][3], double cca
 			+ primitive_basis[dim_idx][1] * (double)clattice[1]
 			+ primitive_basis[dim_idx][2] * (double)clattice[2];
 	}
+}
+
+// round floating-point val towards nearest integer in direction of target
+int round_towards(double val, int target)
+{
+	// ENHANCE: do using math.h rounding modes
+	if (target >= val)
+		return (int) ceil(val);
+	else
+		return (int) floor(val);
 }

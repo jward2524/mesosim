@@ -15,7 +15,7 @@ int ssxshift, ssyshift, sszshift; // used with zi*shift
 int zsh, ysh, xsh;	// total bit shifts, zi*shift - ss*shift
 
 // [ ]: what are the units for this? how does it relate to atomic spacing?
-int ssx = DSIMSIZE, ssy = DSIMSIZE, ssz = DSIMSIZE;	// system size x, y, z in lattice coordinates // TODO: lattice coordinates but not along lattice vectors?
+int ssx = DSIMSIZE, ssy = DSIMSIZE, ssz = DSIMSIZE;	// system size x, y, z in lattice coordinates // TODO: lattice coordinates but not along lattice vectors? // XXX: overwritten by input file
 double ssr;
 int zix = TTS, ziy = TTS, ziz = TTS;
 // defaults are fcc
@@ -45,6 +45,10 @@ double overpotential_ramp_rate = 0.0;
 int total_volume_dissolved;
 
 double normal_x, normal_y, normal_z;
+
+double lhs[6];
+double normal_lat[6][3];
+int translation_vector[6][3];
 
 /******************************************************************************/
 /******************************************************************************/
@@ -130,7 +134,7 @@ void general_simulation_initialization(void)
 	if (rand_seed > 0) rand_seed = -rand_seed;
 	srandj(&rand_seed);
 	// atom_cnt=0 for the initialization functions, so some of them end up doing nothing
-	getshifts();	// bit shifts for periodic boundary conditions
+	get_shifts();	// bit shifts for periodic boundary conditions
 
 	// system geometry initialization
 
@@ -195,7 +199,7 @@ void do_initialize_simulation(int simulation_index) // index represents simulati
 /********************************************************************************/
 /********************************************************************************/
 // zi* are the number of zones in that dimension, zi*shift is for bit shifting to find which zone a lattice coordinate corresponds to?
-void getshifts(void)
+void get_shifts(void)
 { // updates zi*, zi*shift, *sh
 	int temp1;
 
@@ -257,22 +261,9 @@ void getshifts(void)
 /******************************************************************************/
 /******************************************************************************/
 
-void adjust_pbc(int* x, int* y, int* z) // lattice coordinates
+void adjust_pbc(int* x, int* y, int* z) // should be lattice coordinates
 {
-	if (*x < 0)
-		*x += ssx;
-	if (*x >= ssx)
-		*x -= ssx;
-
-	if (*y < 0)
-		*y += ssy;
-	if (*y >= ssy)
-		*y -= ssy;
-
-	if (*z < 0)
-		*z += ssz;
-	if (*z >= ssz)
-		*z -= ssz;
+	check_pbc(x, y, z);
 
 	return;
 }
@@ -545,7 +536,7 @@ void set_primitive_basis(int lattice_type) // lattice_type = crystal structure t
 	inver(primitive_basis, invert_primitive_basis);
 	primitive_basis2ucell_params(primitive_basis, ucell_params);
 
-	organize(atom_arr, atom_cnt); // ENHACNE: likely unnecessary bc at this point atom_cnt=0
+	organize(atom_arr, atom_cnt); // ENHANCE: likely unnecessary bc at this point atom_cnt=0
 	return;
 }
 
@@ -780,4 +771,180 @@ void initialize_from_file(char* filename) {
 	//does this need more to it?
 	simulation_parameters_from_file(filename);
 	return;
+}
+
+// six sides of box
+double normal_cart[6][3] = 
+{
+	{1, 0, 0},
+	{0, 1, 0},
+	{0, 0, 1},
+	{-1, 0, 0},
+	{0, -1, 0},
+	{0, 0, -1},
+};
+
+int sblimits_lat[3][2]; // lattice limits of simulation box in each dimension - for zones
+void initialize_simulation_box(double system_size_x, double system_size_y, double system_size_z)
+{
+	// assuming simulation box/prism
+	// system size in cartesian units [nearest-neighbor (or some other lattice-based) units in cartesian grid]
+	// system size of 128 -> 0 to 127, 128th->0
+	// need to define box in terms of lattice vectors
+	// 6 planes, of form dot(normal, point on plane) = dot(normal, [x,y,z of point to test])
+	// normal=(1,0,0); point on plane=(128,0,0) -> 128 = x
+	// normal of family (1,0,0) (-1,0,0)
+	// point on plane of family  (ssx,0,0) (0,0,0)
+	// x=0 y=0 z=0 x=ssx y=ssy z=ssz
+	// to define a region: x>=0 y>=0 z>=0 x<ssx y<ssy z<ssz
+	// normals point towards inside of region (keeps the inequality the same)
+
+	// convert into lattice vector form
+	// dot(cart2lattice(normal), cart2lattice(point on plane)) {fixed} = dot(cart2lattice(normal), [point to test])
+	// [6 planes x 1] vector = [6 normals x 3 coords] @ [3 x 1] = [6 x 1] vector
+	// ([6] vector * [6] sign for comparison + [0 or -1] for counting on the boundary) >= 0
+	
+	// each plane also has associated translation vector, cart2lattice(system size * normal)
+	// if outside region, translate by translation vector
+
+	double point_cart[6][3] = 
+	{
+		{0, 0, 0}, // x
+		{0, 0, 0}, // y
+		{0, 0, 0}, // z 
+		{system_size_x, 0, 0}, // x
+		{0, system_size_y, 0}, // y
+		{0, 0, system_size_z}, // z
+	};
+	
+	double center_cart[] = {
+		system_size_x / 2,
+		system_size_y / 2,
+		system_size_z / 2,
+	};
+	int center_lattice[3];
+	// TODO: check that the center is at a lattice site
+	cartesian2lattice_site(center_cart, invert_primitive_basis, center_lattice);
+
+	double sbcorners_cart[8][3] = {
+		{0, 0, 0},
+		{system_size_x, 0, 0},
+		{0, system_size_y, 0},
+		{0, 0, system_size_z},
+		{system_size_x, system_size_y, 0},
+		{system_size_x, 0, system_size_z},
+		{0, system_size_y, system_size_z},
+		{system_size_x, system_size_y, system_size_z},
+	};
+
+	for (int i = 0; i < 3; i++)
+	{
+		sblimits_lat[i][0] = center_lattice[0];
+		sblimits_lat[i][1] = center_lattice[0];
+	}
+	corners2limits(sbcorners_cart, sblimits_lat);
+
+	// double point_lat[6][3];
+	double translation_dist;
+	double scaled_normal_cart[3];
+	for (int side = 0; side < 6; side++)
+	{
+		vecmul(normal_cart[side], invert_primitive_basis, normal_lat[side]); // doesn't contribute; only for sake of seeing normal in lat coordinates
+		// negative normal gives negative dot product
+		lhs[side] = fdot(normal_cart[side], point_cart[side]);
+
+		switch (side % 3) {
+			case 0:
+				translation_dist = system_size_x;
+				break;
+			case 1:
+				translation_dist = system_size_y;
+				break;
+			case 2:
+				translation_dist = system_size_z;
+				break;
+		}
+		// TODO: handle system sizes that don't result in even translation vectors
+		// divide scaled_normal_lat by whole number normal_lat (least-common multiple)
+		// smallest_translation()
+		fconmul(normal_cart[side], translation_dist, scaled_normal_cart, 3);
+		cartesian2lattice_site(scaled_normal_cart, invert_primitive_basis, translation_vector[side]);
+	}
+}
+
+// converts cartesian corners to lattice limits along each dimension
+void corners2limits(double corners_cart[8][3], int limits_lat[3][2])
+{
+	// convert corners from cartesian coords into atom/lattice coords
+	// and find limits in each dimension
+	double bbcorners_lattice[8][3];
+	// TODO: make data types of cart and lattice coordinates make more sense, and thus the conversion functions
+	// find the loop limits from min and max coordinates of corners
+	for (int corner_idx = 0; corner_idx < 8; corner_idx++){
+		cartesian2lattice(corners_cart[corner_idx], invert_primitive_basis, bbcorners_lattice[corner_idx]);
+
+		for (int dim_idx = 0; dim_idx < 3; dim_idx++){
+			// if coordinate is smaller than lower limit, change limit (round towards center)
+			if (bbcorners_lattice[corner_idx][dim_idx] < (double) limits_lat[dim_idx][0])
+				limits_lat[dim_idx][0] = round_towards(bbcorners_lattice[corner_idx][dim_idx], limits_lat[dim_idx][0]);
+			
+				// if coordinate is largger than upper limit, change limit (round towards center)
+			else if (bbcorners_lattice[corner_idx][dim_idx] > (double) limits_lat[dim_idx][1])
+				limits_lat[dim_idx][1] = round_towards(bbcorners_lattice[corner_idx][dim_idx], limits_lat[dim_idx][1]);
+		}
+	}
+}
+
+// check if coordinate passed periodic boundary conditions, and translate if it did
+void check_pbc(int* x, int* y, int* z)
+{
+	int coords_lat[3] = {*x, *y, *z};
+	// double fcoords_lat[3] = {(double) *x, (double) *y, (double) *z};
+	int rhs;
+	double coords_cart[3];
+	lattice2cartesian(coords_lat, primitive_basis, coords_cart);
+	for (int side = 0; side < 6; side++)
+	{
+		// rhs contains the point being tested (xyz)
+		// negative normal gives negative rhs
+		rhs = fdot(normal_cart[side], coords_cart);
+
+		// example conditions to be in region
+		// positive normal: 0 (plane) < 2 (coord)
+		// negative normal: -128 (plane) < -127 (coord)
+		// non-origin sides (3-5) should reroute to 0
+		bool cond; 
+		if (side >= 3)
+			cond = lhs[side] > rhs;
+		else
+			cond = lhs[side] >= rhs;
+		
+		if (cond)
+		{
+			pbc_translate(coords_lat, translation_vector[side]);
+			*x = coords_lat[0];
+			*y = coords_lat[1];
+			*z = coords_lat[2];
+		}
+	}
+}
+
+// translate a point according to boundary conditions
+void pbc_translate(int coords_lat[3], int translation_vector[3])
+{
+	ivecsum(coords_lat, translation_vector, coords_lat);
+}
+
+// TODO:
+void smallest_translation(double normal_cart[3])
+{
+	// first, get base conversion
+	double normal_lat[3];
+	vecmul(normal_cart, invert_primitive_basis, normal_lat);
+
+	// if conversion has decimals, invert them and try to convert to integers
+	// if conversion fails, remove whole number from inversion and try to invert again
+	// repeat, multiplying whole numbers together as you go
+	// if all integers are the same, multiply normal_lat by integer
+	// if not all the same integers, find Least Common Multiple and multipy normal_lat by LCM
 }

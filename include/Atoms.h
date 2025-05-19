@@ -24,8 +24,11 @@ void kill_atom(int atom_number);
 void cell_to_latmat(double c[6], double ltmt[3][3]);
 void primitive_basis2ucell_params(double ltmt[3][3], double c[6]);
 
-void cartesian2lattice(double ccart[3], double invert_primitive_basis[3][3], int clattice[3]);
+void cartesian2lattice_site(double ccart[3], double invert_primitive_basis[3][3], int clattice[3]);
+void cartesian2lattice(double ccart[3], double invert_primitive_basis[3][3], double clattice[3]);
 void lattice2cartesian(int clattice[3], double primitive_basis[3][3], double ccart[3]);
+
+int round_towards(double val, int target);
 
 /* symmetry related variables */
 extern double rmat[3][3];

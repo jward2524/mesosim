@@ -514,7 +514,7 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file)
 	int i,j,k;
 	int x,y,z;
 
-	// [ ]: What are these?
+	// system and zone size
 	ssx = DSIMSIZE; //is this always true?????
 	ssy = DSIMSIZE;
 	ssz = DSIMSIZE;

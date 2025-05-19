@@ -1,5 +1,5 @@
 void get_system_rw_radius(void);
-void getshifts(void);
+void get_shifts(void);
 void initialize_neighbor_offsets(void);
 // void write_initial_information(FILE *datfil); //defined in Simulation Aux for some reason?
 void initialize_jump_offsets(int l_t);
@@ -23,6 +23,12 @@ void general_simulation_initialization(void); //will probably need to change arg
 void initialize_flat_sheet_1(int z);
 void initialize_spherical_cluster(int radius_of_sphere);
 void initialize_from_file(char* filename);
+
+void initialize_simulation_box(double system_size_x, double system_size_y, double system_size_z);
+void check_pbc(int* x, int* y, int* z);
+
+void pbc_translate(int coords_lat[3], int translation_vector[3]);
+void corners2limits(double corners_cart[8][3], int limits_lat[3][2]);
 
 //void initialize_vacancies_1(void); //might be good to have
 
@@ -66,3 +72,5 @@ extern double overpotential_ramp_rate;
 extern int total_volume_dissolved;
 
 extern double normal_x, normal_y, normal_z; // XXX: likely vistigal
+
+extern int sblimits_lat[3][2];

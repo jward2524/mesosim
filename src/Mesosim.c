@@ -72,6 +72,10 @@ int main(int argc, char* argv[]) {
     //finish_preprocessing();   //only called when deposition matters
 
     general_simulation_initialization();
+    
+    initialize_simulation_box(ssx, ssy, ssz);
+    // get_shifts()
+    // initialize_zones()
 
     do_initialize_simulation(simulation_type);
 
@@ -188,7 +192,7 @@ int main(int argc, char* argv[]) {
     fclose(sim_log_file);
     return 0;
 }
-// initializes primitve_basis, ucell_params
+// initializes primitve_basis, ucell_params, ss*
 void initialize_lattice_geometry(void)
 {
 	// Initializes the generic lattice geometry to be simple cubic (i.e., a=1, b=1, c=1, alpha = 90, beta = 90, gamma = 90)
