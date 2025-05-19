@@ -26,16 +26,21 @@ void rotmata(double v[3], double angle, double amat[3][3])
 	}
 
 /******************************************************************
-a = dot(x,y):  a equals dot product of vectors x,y.
+a = fdot(x,y):  a equals dot product of vectors x,y.
 ******************************************************************/
 
-double dot(double x[3], double y[3])
+double fdot(double x[3], double y[3])
 	{
-    	double temp;
+		double temp;
 
-    	temp = x[0]*y[0] + x[1]*y[1] + x[2]*y[2];
+		temp = x[0]*y[0] + x[1]*y[1] + x[2]*y[2];
 
 		return temp;
+	}
+
+int idot(int x[3], int y[3])
+	{
+		return x[0]*y[0] + x[1]*y[1] + x[2]*y[2];
 	}
 
 /******************************************************************
@@ -52,13 +57,13 @@ void subrot(double v[3], double axis[3], double sinang, double cosang, double ro
 				cross(x,v,y);
 	    		conmul(x, sinang, x);
 	    		conmul(y, cosang, y);
-	    		vecsum(x,y,x);
+	    		fvecsum(x,y,x);
 
-				f = dot(v, axis);
+				f = fdot(v, axis);
 
 	    		conmul(v,f,y);
 	    		unit(row, row);
-	    		vecsum (x,y,row);
+	    		fvecsum (x,y,row);
 	    		return;
 			}
     	else
@@ -146,7 +151,7 @@ double vangle(double a[3], double b[3], double c[3])
 
     	if (q == 0.) return 0.;
 
-    	q2 = dot(x,y)/q;
+    	q2 = fdot(x,y)/q;
 
 		q3 = 57.29578*acos(q2);
 
@@ -171,10 +176,20 @@ void unit(double x[3], double y[3])
 	}
 
 /******************************************************************
-vecsum(x,y,z):	z = x + y.  x,y,z are vectors.
+fvecsum(x,y,z):	z = x + y.  x,y,z are vectors.
 ******************************************************************/
 
-void vecsum(double x[3], double y[3], double z[3])
+void fvecsum(double x[3], double y[3], double z[3])
+	{
+		int i;
+	
+   		for (i=0;i<3;++i)
+			z[i] = x[i] + y[i];
+
+  		return;
+	}
+
+void ivecsum(int x[3], int y[3], int z[3])
 	{
 		int i;
 	
@@ -234,7 +249,7 @@ double inver (double a[3][3], double b[3][3])
 
 		for (i=0;i<3;++i)
 			{
-				x[3][2] = dot(a[i], x[i]);
+				x[3][2] = fdot(a[i], x[i]);
 				if (fabs(x[3][2])<1.0e-20) x[3][2]=1.0e-20;
 				x[3][2] = 1./x[3][2];
 				conmul (x[i],x[3][2],x[i]);
@@ -377,4 +392,11 @@ void transpose(double a[3][3])
 				a[i][j] = b[i][j];
 
       return;
+	}
+
+// multiplies vector a by a constant, stores in b
+void fconmul(double* a, double factor, double* b, double a_len)
+	{
+		for (int i = 0; i < a_len; i++)
+			b[i] = factor * a[i];
 	}

@@ -379,7 +379,7 @@ int add_atom(int x, int y, int z, int type, int special) // lattice coordinates 
 				vecmul(sp, primitive_basis, spo);
 				unit(spo, spo);
 
-				if (dot(spo, a_pn) > 0.5)
+				if (fdot(spo, a_pn) > 0.5)
 				{
 					// normal points inward, make buried
 
@@ -408,7 +408,7 @@ int add_atom(int x, int y, int z, int type, int special) // lattice coordinates 
 				vecmul(sp, primitive_basis, spo);
 				unit(spo, spo);
 
-				if (dot(spo, a_pn) > 0.5)
+				if (fdot(spo, a_pn) > 0.5)
 				{
 					// normal points inward, make buried
 
@@ -1066,12 +1066,12 @@ void primitive_basis2ucell_params(double primitive_basis[3][3], double ucell_par
 {
 	double rad2deg = 180.0/PI; // radians to degrees conversion factor
 	// a b c - magnitude of basis0 basis1 basis2 vectors
-	// ENHANCE: if a vector was primitive_basis[0][*], then this could be done with dot(x,x) and mag(x)
+	// ENHANCE: if a vector was primitive_basis[0][*], then this could be done with fdot(x,x) and mag(x)
 	// TODO: flip indices of primitive_basis
 	ucell_params[0] = sqrt(primitive_basis[0][0]*primitive_basis[0][0] + primitive_basis[1][0]*primitive_basis[1][0] + primitive_basis[2][0]*primitive_basis[2][0]);
 	ucell_params[1] = sqrt(primitive_basis[0][1]*primitive_basis[0][1] + primitive_basis[1][1]*primitive_basis[1][1] + primitive_basis[2][1]*primitive_basis[2][1]);
 	ucell_params[2] = sqrt(primitive_basis[0][2]*primitive_basis[0][2] + primitive_basis[1][2]*primitive_basis[1][2] + primitive_basis[2][2]*primitive_basis[2][2]);
-	// gamma - angle between basis0 and basis1 = arccos(dot(basis0, basis1) / (mag(basis0) * mag(basis1))); from cos(theta) = dot(a,b) / (mag(a)*mag(b))
+	// gamma - angle between basis0 and basis1 = arccos(fdot(basis0, basis1) / (mag(basis0) * mag(basis1))); from cos(theta) = fdot(a,b) / (mag(a)*mag(b))
 	ucell_params[5] = primitive_basis[0][0]*primitive_basis[0][1] + primitive_basis[1][0]*primitive_basis[1][1] + primitive_basis[2][0]*primitive_basis[2][1];
 	ucell_params[5] = ucell_params[5]/(ucell_params[0]*ucell_params[1]);
 	ucell_params[5] = rad2deg*acos(ucell_params[5]);
