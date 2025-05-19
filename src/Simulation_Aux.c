@@ -648,8 +648,8 @@ void initialize_flat_sheet_1(int z)
 
 /********************************************************************************/
 /********************************************************************************/
-
-void initialize_spherical_cluster(int radius_lattice) // radius of cluster in number of atoms
+// ENHANCE: currently adds one extra atom to radius - remove it
+void initialize_spherical_cluster(int radius_lattice) // radius of cluster in number of atoms (nearest-neighbor distances)
 {
 	double center_cart[3]; // cartesian/orthogonal coordinates of center point
 	int center_lattice[3]; // lattice coordinates of center point
@@ -662,16 +662,25 @@ void initialize_spherical_cluster(int radius_lattice) // radius of cluster in nu
 
 	double dist;
 
-	//center of the cluster is the halfway point - center_lattice=lattice/atom coordinate of cluster center
-	center_lattice[0] = ssx/2;
-	center_lattice[1] = ssy/2;
-	center_lattice[2] = ssz/2;
-	
-	lattice2cartesian(center_lattice, primitive_basis, center_cart);	// center_cart is the cartesian coordinates of the central point
-	// BUG: center_cart is twice what I think it should be - primitive_basis isn't normalized (not unit vectors)
-	radius_cart = (double) radius_lattice; // BUG: no shot this is right; max_lattice - center_lattice neq radius_lattice; should be radius_lattice * mag([largest?] lattice vector)
+	//center of the cluster is the halfway point
+	center_cart[0] = ssx / 2;
+	center_cart[1] = ssy / 2;
+	center_cart[2] = ssz / 2;
+	// TODO: check that the center is at a lattice site?
+	cartesian2lattice_site(center_cart, invert_primitive_basis, center_lattice);
 
-	// lattice sphere from cartesian sphere - algorithm
+	// convert lattice distance to cartesian distance using largest (smallest?) lattice vector
+	double max_mag = -1; 
+	double mag;
+	for (int dim = 0; dim < 3; dim++)
+	{
+		mag = magnitude(primitive_basis[dim]);
+		if (mag > max_mag)
+			max_mag = mag;
+	}
+	radius_cart = radius_lattice * max_mag;
+
+	// algorithm: lattice sphere from cartesian sphere
 	// equation: x^2 + y^2 + z^2 <= radius_cart^2
 	// convert the 8 corners of the bounding cube into lattice coordinates
 	// pick the min and max lattice coordintes from the 6 for each lattice direction
@@ -679,7 +688,7 @@ void initialize_spherical_cluster(int radius_lattice) // radius of cluster in nu
 	// check if they are in sphere
 
 	// bounding box (bb) limits in cartesian coordinates
-	int bblimits_cart[3][2] = {
+	double bblimits_cart[3][2] = {
 		{center_cart[0] - radius_cart, center_cart[0] + radius_cart}, // x limits
 		{center_cart[1] - radius_cart, center_cart[1] + radius_cart}, // y limits
 		{center_cart[2] - radius_cart, center_cart[2] + radius_cart}  // z limits
@@ -699,31 +708,20 @@ void initialize_spherical_cluster(int radius_lattice) // radius of cluster in nu
 
 	// convert corners from cartesian coords into atom/lattice coords
 	// and find limits in each dimension
-	int bbcorners_lattice[8][3];
 	int bblimits_lattice[3][2] = {
-		{0, 0},
-		{0, 0},
-		{0, 0}
+		{center_lattice[0], center_lattice[0]}, // u min and max
+		{center_lattice[1], center_lattice[1]}, // v min and max
+		{center_lattice[2], center_lattice[2]}, // w min and max
 	};
-	// TODO: make data types of cart and lattice coordinates make more sense, and thus the conversion functions
-	for (int corner_idx = 0; corner_idx < 8; corner_idx++){
-		cartesian2lattice(bbcorners_cart[corner_idx], invert_primitive_basis, bbcorners_lattice[corner_idx]);
-
-		// check if value exceeds limits for every dimension
-		for (int dim_idx = 0; dim_idx < 3; dim_idx++){
-			if (bbcorners_lattice[corner_idx][dim_idx] < bblimits_lattice[dim_idx][0])
-				bblimits_lattice[dim_idx][0] = bbcorners_lattice[corner_idx][dim_idx];
-			else if (bbcorners_lattice[corner_idx][dim_idx] > bblimits_lattice[dim_idx][1])
-				bblimits_lattice[dim_idx][1] = bbcorners_lattice[corner_idx][dim_idx];
-		}
-	}
-
+	corners2limits(bbcorners_cart, bblimits_lattice);
+	
+	// check if value exceeds limits for every dimension
 	for (int dim_idx = 0; dim_idx < 3; dim_idx++) {
-		if (bblimits_lattice[dim_idx][0] < 0) {
+		if (bblimits_cart[dim_idx][0] < 0) {
 			printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
 			return;
 		}
-		if ((int)bblimits_lattice[dim_idx][1] > (int)(2*center_lattice[dim_idx])) {
+		if (bblimits_cart[dim_idx][1] > (int)(2*center_cart[dim_idx])) {
 			printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
 			return;
 		}
