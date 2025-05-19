@@ -26,7 +26,8 @@ int sheet_thickness = -1;
 int cluster_radius = -1;
 char atoms_filename[256] = "";
 
-// [ ]: what is this for?
+// splits cell into zones to facilitate finding atoms by coordinate/spatial position
+// each zone contains a linked list of atoms that is iterated over
 Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
 
 double initialoverpotential = DEFAULT_OVERPOTENTIAL;
@@ -52,22 +53,22 @@ int translation_vector[6][3];
 
 /******************************************************************************/
 /******************************************************************************/
-
+// XXX: only used for re-deposition
 void get_system_rw_radius(void)
-	{
-		int ss;
+{
+	int ss;
 
-		// find minimum axial distance to system edge
+	// find minimum axial distance to system edge
 
-		ss = ssx;
-		if (ssy < ss) ss = ssy;
-		if (ssz < ss) ss = ssz;
+	ss = ssx;
+	if (ssy < ss) ss = ssy;
+	if (ssz < ss) ss = ssz;
 
-		ssr = (double)ss/2.;
-		ssr = ssr - 5.;
-		
-		return;
-	}
+	ssr = (double)ss/2.;
+	ssr = ssr - 5.;
+	
+	return;
+}
 
 /******************************************************************************/
 /******************************************************************************/
@@ -270,24 +271,15 @@ void adjust_pbc(int* x, int* y, int* z) // should be lattice coordinates
 
 /********************************************************************************/
 /********************************************************************************/
-
+// finds the zone indices xy yz zz that correspond to the lattice coordinates xxx yyy zzz
 void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz)
-{ // *z are pointers to return indices of the zone, *** are lattice coordinates
-	int x, y, z; // XXX
-
-	// x = xxx;
-	// y = yyy;
-	// z = zzz;
-	// TODO: there *may* be undesirable results when using signed integer type and right shifting
-	x = xxx << zixshift >> ssxshift;
-
-	y = yyy << ziyshift >> ssyshift;
-
-	z = zzz << zizshift >> sszshift;
-
-	*xz = x;
-	*yz = y;
-	*zz = z;
+{ 
+	// *z are pointers to return indices of the zone, *** are lattice coordinates
+	// normalize coordinates to the sblimits, then find which zone
+	// (zones / extent) * adjusted_coordinate
+	*xz = (int) (((double) zix / (sblimits_lat[0][1] - sblimits_lat[0][0])) * (xxx - sblimits_lat[0][0]));
+	*yz = (int) (((double) ziy / (sblimits_lat[1][1] - sblimits_lat[1][0])) * (yyy - sblimits_lat[1][0]));
+	*zz = (int) (((double) ziz / (sblimits_lat[2][1] - sblimits_lat[2][0])) * (zzz - sblimits_lat[2][0]));
 
 	return;
 }
