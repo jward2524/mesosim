@@ -8,6 +8,7 @@
 #include "Simulation.h"
 #include "Simulation_Aux.h"
 #include "Mesosim.h"
+#include <errno.h>
 
 char outFile[260] = ""; //MAX_PATH variable Windows related, default 260
 char default_extension[] = "out";
