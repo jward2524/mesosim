@@ -15,7 +15,7 @@ int rwx, rwy, rwz;
 double rw[3], rrp[3];
 double ta1, ta2;
 int adatom_before;
-char g_atom_names[3][3]={"1", "2", "3"};
+// char g_atom_names[3][3]={"1", "2", "3"};
 double g_default_color[3] = {0., 0., 0.};
 // int ss->simulation_type = SIMULATION_TYPE_UNDEFINED;
 // int ss->atom_cnt = 0;
@@ -37,17 +37,17 @@ int g_analysis_type = REGULAR_TIME_INTERVALS;
 // int ss->transition_cnt; // size of filled portion of transition list
 // double ss->frequency_sum;
 // double ss->overpotential = 0.0;
-double g_nnE[6] = {
-	DEFAULT_BOND_ENERGY_AA,
-	DEFAULT_BOND_ENERGY_AB,
-	DEFAULT_BOND_ENERGY_AC,
-	DEFAULT_BOND_ENERGY_BB,
-	DEFAULT_BOND_ENERGY_BC,
-	DEFAULT_BOND_ENERGY_CC};
-double g_nnnE[6] = {0., 0., 0., 0., 0., 0.};
-bool g_solubility[3] = {false, false, false}; // whether ABC-type atoms can be dissolved/evaporated - all elements cannot dissolve by default
+// double se->nnE[6] = {
+// 	DEFAULT_BOND_ENERGY_AA,
+// 	DEFAULT_BOND_ENERGY_AB,
+// 	DEFAULT_BOND_ENERGY_AC,
+// 	DEFAULT_BOND_ENERGY_BB,
+// 	DEFAULT_BOND_ENERGY_BC,
+// 	DEFAULT_BOND_ENERGY_CC};
+// double se->nnnE[6] = {0., 0., 0., 0., 0., 0.};
+// bool se->solubility[3] = {false, false, false}; // whether ABC-type atoms can be dissolved/evaporated - all elements cannot dissolve by default
 // double ss->temperature = DEFAULT_TEMPERATURE;
-int g_dissolution = DISSOLUTION;
+// int g_dissolution = DISSOLUTION;
 int g_final_config_neighbor_cnt;
 int g_intial_config_neighbor_cnt;
 // ENHANCE: malloc?
@@ -79,13 +79,13 @@ bool checkpoint_reached = false;
 // int se->cluster_radius = -1;
 // char se->atoms_filename[256] = "";
 // Zone g_zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
-double g_initial_overpotential = DEFAULT_OVERPOTENTIAL;
-double g_overpotential_ramp_rate = 0.0;
-double g_max_overpotential = DEFAULT_OVERPOTENTIAL;
-double g_substrate_percent_a = DEFAULT_COMPOSITION_A;
-double g_substrate_percent_b = DEFAULT_COMPOSITION_B;
+// double se->initial_overpotential = DEFAULT_OVERPOTENTIAL;
+// double se->overpotential_ramp_rate = 0.0;
+// double se->max_overpotential = DEFAULT_OVERPOTENTIAL;
+// double se->substrate_percent_a = DEFAULT_COMPOSITION_A;
+// double se->substrate_percent_b = DEFAULT_COMPOSITION_B;
 // int ss->total_volume_dissolved;
-double g_normal_x, g_normal_y, g_normal_z;
+// double se->normal_x, se->normal_y, se->normal_z;
 double lhs[6];
 double normal_lat[6][3];
 int translation_vector[6][3];
@@ -233,7 +233,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 				}
 				else				// dissolution
 				{
-					if (g_solubility[ss->atom_arr[atom_number]->type - 1] == true)	// atoms are dissolved based on input specs!
+					if (se->solubility[ss->atom_arr[atom_number]->type - 1] == true)	// atoms are dissolved based on input specs!
 					{
 						++ss->total_volume_dissolved;
 						remove_atom(atom_number, ss, se);	// evaporate the atom
@@ -350,10 +350,10 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 				g_next_log_checkpoint += g_log_interval;
 			}
 
-			if (g_overpotential_ramp_rate != 0.0)
+			if (se->overpotential_ramp_rate != 0.0)
 			{
 				nt = ss->elapsed_stime;
-				ss->overpotential += (nt-ot)*g_overpotential_ramp_rate;
+				ss->overpotential += (nt-ot)*se->overpotential_ramp_rate;
 				ot = ss->elapsed_stime;
 				for (j=0;j<ss->atom_cnt;++j)	
 					refresh_transitions(j, ss, se);			// resets all kinetic paramters
@@ -454,7 +454,7 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss, struct Simulat
 
 	//printf("removing\n"); // XXX: commented print
 	// first, remove all mention of this atom from transition list
-	for (i=0; i<se->max_neighbors + g_dissolution; ++i) // extra 1 for evaporation
+	for (i=0; i<se->max_neighbors + se->dissolution; ++i) // extra 1 for evaporation
 	{
 		if (ss->atom_arr[atom_idx]->transition_indices[i] != -1) // something can happen in the "i" direction
 			take_off_transition_list(atom_idx, i, ss);
@@ -501,7 +501,7 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss, struct Simulat
 												end_config,
 												se->max_neighbors,
 												ss->atom_arr[atom_idx]->type,
-												g_nnE,
+												se->nnE,
 												ss->temperature,
 												ss->overpotential,
 												&rate);
@@ -526,10 +526,11 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss, struct Simulat
 	calculate_evaporation_rate(	start_config,
 								se->max_neighbors,
 								ss->atom_arr[atom_idx]->type,
-								g_nnE,
+								se->nnE,
 								ss->temperature,
 								ss->overpotential,
-								&rate);								
+								&rate,
+								se->solubility);								
 
 	//replace with the lines below because it's more obvious
 	/*if ((rate_idx = is_on_transition_list(rate, ss)) != -1)
@@ -1095,7 +1096,8 @@ int calculate_evaporation_rate(	int initial_configuration[],			// initial config
 									double nnE[6],							// bond energy (type 2)-(type 2)
 									double temperature,						// system temperature
 									double overpotential,					// system overpotential
-									double *rate)							// return value
+									double *rate,							// return value
+									bool solubility[3])
 {
 	int i;
 	double energy;
@@ -1123,7 +1125,7 @@ int calculate_evaporation_rate(	int initial_configuration[],			// initial config
 	switch(atom_type)
 	{ // [ ]: how much of this is duplicated with calculate_surf_diffusion_rate
 		case 1:
-			if (g_solubility[0]) {
+			if (solubility[0]) {
 				//A can evaporate
 				for (i=0;i<number_of_neighbors;++i)
 				{ // calculate energy of initial state before evaporation
@@ -1138,7 +1140,7 @@ int calculate_evaporation_rate(	int initial_configuration[],			// initial config
 			break;
 
 		case 2:
-			if (g_solubility[1]) {
+			if (solubility[1]) {
 				//B can evaporate
 				for (i=0;i<number_of_neighbors;++i)
 				{
@@ -1153,7 +1155,7 @@ int calculate_evaporation_rate(	int initial_configuration[],			// initial config
 			break;
 
 		case 3:
-			if (g_solubility[2]) {
+			if (solubility[2]) {
 				//C can evaporate
 				for (i=0;i<number_of_neighbors;++i)
 				{

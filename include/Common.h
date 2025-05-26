@@ -18,7 +18,7 @@
 // extern int g_simulation_type;
 extern int g_num_sims; // XXX
 extern Atom g_temp_atom;
-extern char g_atom_names[3][3];
+// extern char g_atom_names[3][3];
 extern double g_default_color[3];
 // extern bool g_evaporation_flag;
 extern char g_coordinate_log_prefix[256];
@@ -34,11 +34,11 @@ extern double* g_log_list;
 extern int g_log_list_len;
 // extern double ss->frequency_sum;
 // extern double ss->overpotential;
-extern double g_nnE[6];
-extern double g_nnnE[6];
-extern bool g_solubility[3]; //all elements cannot dissolve by default
+// extern double g_nnE[6];
+// extern double g_nnnE[6];
+// extern bool g_solubility[3]; //all elements cannot dissolve by default
 // extern double ss->temperature;
-extern int g_dissolution;
+// extern int g_dissolution;
 extern int g_final_config_neighbor_cnt;
 extern int g_intial_config_neighbor_cnt;
 extern int g_lastxt, g_lastyt, g_lastzt;
@@ -59,15 +59,14 @@ extern double g_current_probability;
 // extern int g_cluster_radius;
 // extern char g_atoms_filename[256];
 // extern Zone g_zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
-extern double g_initial_overpotential;
-extern double g_overpotential_ramp_rate;
-extern double g_max_overpotential;
-extern double g_substrate_percent_a;
-extern double g_substrate_percent_b;
-extern double g_overpotential_ramp_rate;
+// extern double g_initial_overpotential;
+// extern double g_overpotential_ramp_rate;
+// extern double g_max_overpotential;
+// extern double g_substrate_percent_a;
+// extern double g_substrate_percent_b;
 // extern int ss->total_volume_dissolved;
-extern double g_normal_x, g_normal_y, g_normal_z; // XXX: likely vistigal
-extern int g_sblimits_lat[3][2];
+// extern double g_normal_x, g_normal_y, g_normal_z; // XXX: likely vistigal
+// extern int g_sblimits_lat[3][2];
 
 extern double lhs[6];
 extern double normal_lat[6][3];
@@ -104,27 +103,27 @@ struct SimulationEnv
     int cluster_radius;
     char atoms_filename[256];
 
-    // double initial_overpotential;
-    // double overpotential_ramp_rate;
-    // double max_overpotential;
+    double initial_overpotential;
+    double overpotential_ramp_rate;
+    double max_overpotential;
 
-    // double substrate_percent_a;
-    // double substrate_percent_b;
+    double substrate_percent_a;
+    double substrate_percent_b;
 
-    // double g_normal_x, g_normal_y, g_normal_z; // XXX: likely vistigal
+    double normal_x, normal_y, normal_z; // XXX: likely vistigal
 
-    // int simbox_limits_lat[3][2];
+    int simbox_limits_lat[3][2];
 
-    // double nnE[6];
-    // double nnnE[6];
+    double nnE[6];
+    double nnnE[6];
     
-    // bool solubility[3]; //all elements cannot dissolve by default
+    bool solubility[3]; //all elements cannot dissolve by default
     
     // double temperature;
     // double ss->overpotential;
 
-    // int dissolution; // flag for whether dissolution events can occur
-    // char g_atom_names[3][3];
+    int dissolution; // flag for whether dissolution events can occur
+    char atom_names[3][3];
 
 };
 

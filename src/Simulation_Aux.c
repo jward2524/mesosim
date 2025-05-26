@@ -30,12 +30,12 @@
 // // each zone contains a linked list of atoms that is iterated over
 // Zone g_zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
 
-// double g_initial_overpotential = DEFAULT_OVERPOTENTIAL;
-// double g_overpotential_ramp_rate = 0.0;
-// double g_max_overpotential = DEFAULT_OVERPOTENTIAL;
+// double se->initial_overpotential = DEFAULT_OVERPOTENTIAL;
+// double se->overpotential_ramp_rate = 0.0;
+// double se->max_overpotential = DEFAULT_OVERPOTENTIAL;
 
-// double g_substrate_percent_a = DEFAULT_COMPOSITION_A;
-// double g_substrate_percent_b = DEFAULT_COMPOSITION_B;
+// double se->substrate_percent_a = DEFAULT_COMPOSITION_A;
+// double se->substrate_percent_b = DEFAULT_COMPOSITION_B;
 
 // //double vacancy_density = 0.01; //can always add back in
 
@@ -43,7 +43,7 @@
 
 // int ss->total_volume_dissolved;
 
-// double g_normal_x, g_normal_y, g_normal_z;
+// double se->normal_x, se->normal_y, se->normal_z;
 
 // double lhs[6];
 // double normal_lat[6][3];
@@ -70,8 +70,8 @@ void get_system_rw_radius(struct SimulationEnv *se)
 
 /******************************************************************************/
 /******************************************************************************/
-// updates g_normal_x, g_normal_y, g_normal_z
-void get_system_normal(void) // XXX: supposedly only for vizualization
+// updates se->normal_x, se->normal_y, se->normal_z
+void get_system_normal(struct SimulationEnv *se) // XXX: supposedly only for vizualization
 {
 	double nmag;
 	double a[3], b[3];
@@ -89,21 +89,21 @@ void get_system_normal(void) // XXX: supposedly only for vizualization
 
 	cross(a,b,n);
 
-	g_normal_x = n[0];
-	g_normal_y = n[1];
-	g_normal_z = n[2];
+	se->normal_x = n[0];
+	se->normal_y = n[1];
+	se->normal_z = n[2];
 
-	nmag = sqrt(g_normal_x*g_normal_x + g_normal_y*g_normal_y + g_normal_z*g_normal_z);
+	nmag = sqrt(se->normal_x*se->normal_x + se->normal_y*se->normal_y + se->normal_z*se->normal_z);
 
-	g_normal_x = g_normal_x/nmag;
-	g_normal_y = g_normal_y/nmag;
-	g_normal_z = g_normal_z/nmag;
+	se->normal_x = se->normal_x/nmag;
+	se->normal_y = se->normal_y/nmag;
+	se->normal_z = se->normal_z/nmag;
 
-	if (g_normal_z < 0)
+	if (se->normal_z < 0)
 	{
-		g_normal_x *= -1.0;
-		g_normal_y *= -1.0;
-		g_normal_z *= -1.0;
+		se->normal_x *= -1.0;
+		se->normal_y *= -1.0;
+		se->normal_z *= -1.0;
 	}
 
 	return;
@@ -122,7 +122,7 @@ void get_system_normal(void) // XXX: supposedly only for vizualization
 
 /******************************************************************************/
 /******************************************************************************/
-// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; rmat; g_normal_x, g_normal_y, g_normal_z; se->max_neighbors, jump_offset, opposite_offset; zi*, zi*shift, *sh], ss->rate_cnt, ss->transition_cnt, ss->atom_cnt, ss->frequency_sum, ss->elapsed_stime, ss->overpotential, g_next_log_checkpoint
+// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; rmat; se->normal_x, se->normal_y, se->normal_z; se->max_neighbors, jump_offset, opposite_offset; zi*, zi*shift, *sh], ss->rate_cnt, ss->transition_cnt, ss->atom_cnt, ss->frequency_sum, ss->elapsed_stime, ss->overpotential, g_next_log_checkpoint
 void general_simulation_initialization(struct SimulationState *ss, struct SimulationEnv *se)
 {
 	// first, remove any atoms that may exist
@@ -139,7 +139,7 @@ void general_simulation_initialization(struct SimulationState *ss, struct Simula
 
 	set_primitive_basis(se->lattice_type, ss);
 	set_default_orientation(ss, se); // supposedly was only for visualization
-	get_system_normal();	// maybe only for visualization
+	get_system_normal(se);	// maybe only for visualization
 
 	// initialize data structures that help figure out which atoms are next to which other atoms
 
@@ -157,7 +157,7 @@ void general_simulation_initialization(struct SimulationState *ss, struct Simula
 
 	ss->elapsed_stime = 0.0;
 
-	ss->overpotential = g_initial_overpotential;
+	ss->overpotential = se->initial_overpotential;
 
 	// g_next_log_checkpoint is initialized to one log_interval_step step
 	if (g_analysis_type == REGULAR_TIME_INTERVALS) // TODO: reconsider what is happening here
@@ -275,9 +275,9 @@ void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz, struct Simul
 	// *z are pointers to return indices of the zone, *** are lattice coordinates
 	// normalize coordinates to the sblimits, then find which zone
 	// (zones / extent) * adjusted_coordinate
-	*xz = (int) (((double) se->zix / (g_sblimits_lat[0][1] - g_sblimits_lat[0][0])) * (xxx - g_sblimits_lat[0][0]));
-	*yz = (int) (((double) se->ziy / (g_sblimits_lat[1][1] - g_sblimits_lat[1][0])) * (yyy - g_sblimits_lat[1][0]));
-	*zz = (int) (((double) se->ziz / (g_sblimits_lat[2][1] - g_sblimits_lat[2][0])) * (zzz - g_sblimits_lat[2][0]));
+	*xz = (int) (((double) se->zix / (se->simbox_limits_lat[0][1] - se->simbox_limits_lat[0][0])) * (xxx - se->simbox_limits_lat[0][0]));
+	*yz = (int) (((double) se->ziy / (se->simbox_limits_lat[1][1] - se->simbox_limits_lat[1][0])) * (yyy - se->simbox_limits_lat[1][0]));
+	*zz = (int) (((double) se->ziz / (se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0])) * (zzz - se->simbox_limits_lat[2][0]));
 
 	return;
 }
@@ -455,13 +455,13 @@ void calculate_internal_energy(int atom_cnt, struct SimulationState *ss, struct 
 				//bonds are assumed to be isotropic
 				switch (ss->atom_arr[i]->type) {
 					case 1:
-						ss->total_internal_energy += g_nnE[nneA_index[type - 1]];
+						ss->total_internal_energy += se->nnE[nneA_index[type - 1]];
 						break;
 					case 2:
-						ss->total_internal_energy += g_nnE[nneB_index[type - 1]];
+						ss->total_internal_energy += se->nnE[nneB_index[type - 1]];
 						break;
 					case 3:
-						ss->total_internal_energy += g_nnE[nneC_index[type - 1]];
+						ss->total_internal_energy += se->nnE[nneC_index[type - 1]];
 						break;
 					default:
 						break;
@@ -624,9 +624,9 @@ void initialize_flat_sheet_1(int z, struct SimulationState *ss, struct Simulatio
 			{
 				nz = drandj(&rand_seed);
 				//printf("i, j, k = %d, %d, %d\n", i, j, k);
-				if (nz <= g_substrate_percent_a)
+				if (nz <= se->substrate_percent_a)
 					add_atom(i, j, k, 1, NORMAL, ss, se);
-				else if (nz <= g_substrate_percent_a + g_substrate_percent_b)
+				else if (nz <= se->substrate_percent_a + se->substrate_percent_b)
 					add_atom(i, j, k, 2, NORMAL, ss, se);
 				else
 					add_atom(i, j, k, 3, NORMAL, ss, se);
@@ -736,9 +736,9 @@ void initialize_spherical_cluster(int radius_lattice, struct SimulationState *ss
 					//particle is in bounds
  					random_num = drandj(&rand_seed);
 					// determining composition of atom to be placed
-					if (random_num < g_substrate_percent_a)
+					if (random_num < se->substrate_percent_a)
 						add_atom(u, v, w, 1, NORMAL, ss, se);
-					else if (random_num < g_substrate_percent_a + g_substrate_percent_b)
+					else if (random_num < se->substrate_percent_a + se->substrate_percent_b)
 						add_atom(u, v, w, 2, NORMAL, ss, se);
 					else
 						add_atom(u, v, w, 3, NORMAL, ss, se);
@@ -772,8 +772,8 @@ double normal_cart[6][3] =
 	{0, 0, -1},
 };
 
-int g_sblimits_lat[3][2]; // lattice limits of simulation box in each dimension - for zones
-void initialize_simulation_box(double system_size_x, double system_size_y, double system_size_z)
+// int se->simbox_limits_lat[3][2]; // lattice limits of simulation box in each dimension - for zones
+void initialize_simulation_box(double system_size_x, double system_size_y, double system_size_z, struct SimulationEnv *se)
 {
 	// assuming simulation box/prism
 	// system size in cartesian units [nearest-neighbor (or some other lattice-based) units in cartesian grid]
@@ -827,10 +827,10 @@ void initialize_simulation_box(double system_size_x, double system_size_y, doubl
 
 	for (int i = 0; i < 3; i++)
 	{
-		g_sblimits_lat[i][0] = center_lattice[0];
-		g_sblimits_lat[i][1] = center_lattice[0];
+		se->simbox_limits_lat[i][0] = center_lattice[0];
+		se->simbox_limits_lat[i][1] = center_lattice[0];
 	}
-	corners2limits(sbcorners_cart, g_sblimits_lat);
+	corners2limits(sbcorners_cart, se->simbox_limits_lat);
 
 	// double point_lat[6][3];
 	double translation_dist;

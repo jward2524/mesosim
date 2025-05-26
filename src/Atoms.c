@@ -243,7 +243,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState 
 	ss->atom_arr[pos]->lattice[2] = z;
 
 	ss->atom_arr[pos]->type = type;
-	strcpy(ss->atom_arr[ss->atom_cnt-1]->name, g_atom_names[type-1]); // TODO: use pos instead of ss->atom_cnt-1
+	strcpy(ss->atom_arr[ss->atom_cnt-1]->name, se->atom_names[type-1]); // TODO: use pos instead of ss->atom_cnt-1
 
 	/*if (x > 60) // XXX: commented prints
 		printf("copied the name: atom is type %s\n", atom[ss->atom_cnt-1]->name);*/
@@ -712,17 +712,17 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
 
 		subv = drandj(&rand_seed);
 
-        /*if (subv < g_substrate_percent_a)
+        /*if (subv < se->substrate_percent_a)
 			nr[nnr] = random_reincarnate_atom(x,y,z,1,vc, ss, se);
-		else if (subv < (g_substrate_percent_a + IMPURITY_CONCENTRATION))
+		else if (subv < (se->substrate_percent_a + IMPURITY_CONCENTRATION))
             nr[nnr] = random_reincarnate_atom(x,y,z,3,vc, ss, se);
 		else
 			nr[nnr]= random_reincarnate_atom(x,y,z,2,vc, ss, se);
 		*/
 
-		if (subv < g_substrate_percent_a)
+		if (subv < se->substrate_percent_a)
 	        nr[nnr] = random_reincarnate_atom(x,y,z,1,vc, ss, se);
-		else if (subv < (g_substrate_percent_a + g_substrate_percent_b))
+		else if (subv < (se->substrate_percent_a + se->substrate_percent_b))
             nr[nnr] = random_reincarnate_atom(x,y,z,2,vc, ss, se);
 		else
 			nr[nnr]= random_reincarnate_atom(x,y,z,3,vc, ss, se);
@@ -812,7 +812,7 @@ int reincarnate(int x, int y, int z, int type, int vc, int buried, struct Simula
 	ss->atom_arr[ss->atom_cnt]->lattice[2] = z;
 
 	ss->atom_arr[ss->atom_cnt]->type = type;
-	strcpy(ss->atom_arr[ss->atom_cnt]->name, g_atom_names[type-1]);
+	strcpy(ss->atom_arr[ss->atom_cnt]->name, se->atom_names[type-1]);
 
 	/*atom[ss->atom_cnt]->color[0] = atom_color[type].r; //TODO: might not need this part
 	atom[ss->atom_cnt]->color[1] = atom_color[type].g;

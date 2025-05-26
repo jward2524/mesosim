@@ -43,6 +43,7 @@ int main(int argc, char* argv[]) {
     sim_env->zix = TTS;
     sim_env->ziy = TTS;
     sim_env->ziz = TTS;
+    sim_env->dissolution = DISSOLUTION;
 
     // Atom *arr[];
     // sim_state->atom_arr = &arr;
@@ -86,7 +87,7 @@ int main(int argc, char* argv[]) {
 
     general_simulation_initialization(sim_state, sim_env);
     
-    initialize_simulation_box(sim_env->ssx, sim_env->ssy, sim_env->ssz);
+    initialize_simulation_box(sim_env->ssx, sim_env->ssy, sim_env->ssz, sim_env);
     // get_shifts()
     // initialize_zones(, ss)
 
@@ -128,29 +129,29 @@ int main(int argc, char* argv[]) {
             break;
     }
 
-    if (g_substrate_percent_a >= 1.) {
+    if (sim_env->substrate_percent_a >= 1.) {
         //unary system
-        fprintf(g_sim_log_file, "Initializing atom type %s\n", g_atom_names[0]);
-        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d;\tnearest neighbor energy [eV] %lf\n", g_atom_names[0], g_solubility[0], g_nnE[0]);
+        fprintf(g_sim_log_file, "Initializing atom type %s\n", sim_env->atom_names[0]);
+        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d;\tnearest neighbor energy [eV] %lf\n", sim_env->atom_names[0], sim_env->solubility[0], sim_env->nnE[0]);
     }
-    else if (g_substrate_percent_a + g_substrate_percent_b >= 1.-1e-4) {
+    else if (sim_env->substrate_percent_a + sim_env->substrate_percent_b >= 1.-1e-4) {
         //binary system
-        fprintf(g_sim_log_file, "Initializing atom types %s %s\n", g_atom_names[0], g_atom_names[1]);
-        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf\n", g_atom_names[0], g_solubility[0], g_nnE[0], g_nnE[1]);
-        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf\n", g_atom_names[1], g_solubility[1], g_nnE[1], g_nnE[3]);
+        fprintf(g_sim_log_file, "Initializing atom types %s %s\n", sim_env->atom_names[0], sim_env->atom_names[1]);
+        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf\n", sim_env->atom_names[0], sim_env->solubility[0], sim_env->nnE[0], sim_env->nnE[1]);
+        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf\n", sim_env->atom_names[1], sim_env->solubility[1], sim_env->nnE[1], sim_env->nnE[3]);
     }
     else {
         //ternary system
-        fprintf(g_sim_log_file, "Initializing atom types %s %s %s\n", g_atom_names[0], g_atom_names[1], g_atom_names[2]);
-        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf %lf\n", g_atom_names[0], g_solubility[0], g_nnE[0], g_nnE[1], g_nnE[2]);
-        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf %lf\n", g_atom_names[1], g_solubility[1], g_nnE[1], g_nnE[3], g_nnE[4]);
-        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf %lf\n", g_atom_names[2], g_solubility[2], g_nnE[2], g_nnE[4], g_nnE[5]);
+        fprintf(g_sim_log_file, "Initializing atom types %s %s %s\n", sim_env->atom_names[0], sim_env->atom_names[1], sim_env->atom_names[2]);
+        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf %lf\n", sim_env->atom_names[0], sim_env->solubility[0], sim_env->nnE[0], sim_env->nnE[1], sim_env->nnE[2]);
+        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf %lf\n", sim_env->atom_names[1], sim_env->solubility[1], sim_env->nnE[1], sim_env->nnE[3], sim_env->nnE[4]);
+        fprintf(g_sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf %lf\n", sim_env->atom_names[2], sim_env->solubility[2], sim_env->nnE[2], sim_env->nnE[4], sim_env->nnE[5]);
     }
 
     fprintf(g_sim_log_file, "Temperature is %lf K\n", sim_state->temperature);
 
-    if (g_overpotential_ramp_rate > 0.)
-        fprintf(g_sim_log_file, "Potential sweep [eV/s] from %lf to %lf at %lf\n", sim_state->overpotential, g_overpotential_ramp_rate, g_max_overpotential);
+    if (sim_env->overpotential_ramp_rate > 0.)
+        fprintf(g_sim_log_file, "Potential sweep [eV/s] from %lf to %lf at %lf\n", sim_state->overpotential, sim_env->overpotential_ramp_rate, sim_env->max_overpotential);
     else
         fprintf(g_sim_log_file, "Potential constant [eV] at %lf\n", sim_state->overpotential);
 

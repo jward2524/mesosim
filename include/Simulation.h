@@ -24,5 +24,6 @@ int	calculate_evaporation_rate( int initial_configuration[],
     double nnE[6],
     double temperature,
     double overpotential,
-    double *rate
+    double *rate,
+    bool solubility[3]
 );

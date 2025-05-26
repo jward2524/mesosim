@@ -183,12 +183,12 @@ int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se
 	}
 	else if (strncmp(cmd, "potential", 9) == 0) {
 		//set the potential sweep
-		argsread = sscanf(params, "%lf %lf %lf", &g_initial_overpotential, &g_overpotential_ramp_rate, &g_max_overpotential);
+		argsread = sscanf(params, "%lf %lf %lf", &se->initial_overpotential, &se->overpotential_ramp_rate, &se->max_overpotential);
 		if (argsread == 1) {
 			//constant overpotential
-			g_overpotential_ramp_rate = 0.0;
-			g_max_overpotential = g_initial_overpotential;
-			fprintf(g_temp_log, "Using constant potential %lf\n", g_initial_overpotential);
+			se->overpotential_ramp_rate = 0.0;
+			se->max_overpotential = se->initial_overpotential;
+			fprintf(g_temp_log, "Using constant potential %lf\n", se->initial_overpotential);
 		}
 		else if (argsread != 3) //
 		{
@@ -199,20 +199,20 @@ int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se
 	else if (strncmp(cmd, "nne", 3) == 0) {
 		// TODO: generalize - refer to spparks?
 		//set the nearest neighbor energies - returns number of formats read?
-		argsread = sscanf(params, "%lf %lf %lf %lf %lf %lf", g_nnE, g_nnE+1 ,g_nnE+2, g_nnE+3, g_nnE+4, g_nnE+5);
+		argsread = sscanf(params, "%lf %lf %lf %lf %lf %lf", se->nnE, se->nnE+1 ,se->nnE+2, se->nnE+3, se->nnE+4, se->nnE+5);
 		if (argsread == 1) {
 			//something with only A atoms!
 			fprintf(g_temp_log, "Read nearest-neighbor energies for unary system\n");
 			for (int i = 1; i <= 5; ++i)
-				g_nnE[i] = 0.;
+				se->nnE[i] = 0.;
 		}
 		if (argsread == 3) {
 			//something with only A and B atoms!
 			fprintf(g_temp_log, "Read nearest-neighbor energies for binary system\n");
-			g_nnE[3] = g_nnE[2];
-			g_nnE[2] = 0.; //ordering for nearest neighbor energies
-			g_nnE[4] = 0.;
-			g_nnE[5] = 0.;
+			se->nnE[3] = se->nnE[2];
+			se->nnE[2] = 0.; //ordering for nearest neighbor energies
+			se->nnE[4] = 0.;
+			se->nnE[5] = 0.;
 		}
 		else if (argsread == 6) {
 			//something with A, B, and C atoms!
@@ -225,20 +225,20 @@ int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se
 	}
 	else if (strncmp(cmd, "2nne", 4) == 0) {
 		//set the nearest neighbor energies
-		argsread = sscanf(params, "%lf %lf %lf %lf %lf %lf", g_nnnE, g_nnnE+1 ,g_nnnE+2, g_nnnE+3, g_nnnE+4, g_nnnE+5);
+		argsread = sscanf(params, "%lf %lf %lf %lf %lf %lf", se->nnnE, se->nnnE+1 ,se->nnnE+2, se->nnnE+3, se->nnnE+4, se->nnnE+5);
 		if (argsread == 1) {
 			//something with only A atoms!
 			fprintf(g_temp_log, "Read 2nd nearest-neighbor energies for unary system\n");
 			for (int i = 1; i <= 5; ++i)
-				g_nnnE[i] = 0.;
+				se->nnnE[i] = 0.;
 		}
 		if (argsread == 3) {
 			//something with only A and B atoms!
 			fprintf(g_temp_log, "Read 2nd nearest-neighbor energies for binary system\n");
-			g_nnnE[3] = g_nnnE[2];
-			g_nnnE[2] = 0.; //ordering for nearest neighbor energies
-			g_nnnE[4] = 0.;
-			g_nnnE[5] = 0.;
+			se->nnnE[3] = se->nnnE[2];
+			se->nnnE[2] = 0.; //ordering for nearest neighbor energies
+			se->nnnE[4] = 0.;
+			se->nnnE[5] = 0.;
 		}
 		else if (argsread == 6) {
 			//something with A, B, and C atoms!
@@ -344,16 +344,16 @@ int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se
 		argsread = sscanf(params, "%s %s %s", type1, type2, type3);
 		switch(argsread) {
 			case 1:
-				strcpy(g_atom_names[0], type1);
+				strcpy(se->atom_names[0], type1);
 				break;
 			case 2:
-				strcpy(g_atom_names[0], type1);
-				strcpy(g_atom_names[1], type2);
+				strcpy(se->atom_names[0], type1);
+				strcpy(se->atom_names[1], type2);
 				break;
 			case 3:
-				strcpy(g_atom_names[0], type1);
-				strcpy(g_atom_names[1], type2);
-				strcpy(g_atom_names[2], type3);
+				strcpy(se->atom_names[0], type1);
+				strcpy(se->atom_names[1], type2);
+				strcpy(se->atom_names[2], type3);
 				break;
 			default:
 				fprintf(g_temp_log, "ERROR! Couldn't read any atom type names %s\n", params);
@@ -377,7 +377,7 @@ int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se
 			fprintf(g_temp_log, "ERROR! Could not correctly read solubility %s\n", type1);
 			return FILE_COMMAND_IGNORED;
 		}
-		g_solubility[0] = soluble[0];
+		se->solubility[0] = soluble[0];
 
 		if (argsread > 1) {
 			//only for 2ary and 3ary systems
@@ -386,7 +386,7 @@ int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se
 				fprintf(g_temp_log, "ERROR! Could not correctly read solubility %s\n", type2);
 				return FILE_COMMAND_IGNORED;	
 			}
-			g_solubility[1] = soluble[1];
+			se->solubility[1] = soluble[1];
 		}
 		if (argsread == 3) {
 			soluble[2] = parse_boolean(type3);
@@ -394,7 +394,7 @@ int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se
 				fprintf(g_temp_log, "ERROR! Could not correctly read solubility %s\n", type3);
 				return FILE_COMMAND_IGNORED;
 			}
-			g_solubility[2] = soluble[2];
+			se->solubility[2] = soluble[2];
 		}
 	}
 	else if (strncmp(cmd, "composition", 11) == 0) {
@@ -407,16 +407,16 @@ int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se
 				fprintf(g_temp_log, "ERROR! Compositions don't sum to 1 (%lf + %lf + %lf = %lf)\n", comps[0], comps[1], comps[2], comps[0] + comps[1] + comps[2]);
 				return FILE_COMMAND_IGNORED;
 			}
-			g_substrate_percent_a = comps[0];
-			g_substrate_percent_b = comps[1];
+			se->substrate_percent_a = comps[0];
+			se->substrate_percent_b = comps[1];
 		}
 		else if (argsread == 2) {
 			if (comps[0] + comps[1] > 1. + 1e-4 || comps[0] + comps[1] < 1. - 1e-4) {
 				fprintf(g_temp_log, "ERROR! Compositions don't sum to 1 (%lf + %lf = %lf)\n", comps[0], comps[1], comps[0] + comps[1]);
 				return FILE_COMMAND_IGNORED;
 			}
-			g_substrate_percent_a = comps[0];
-			g_substrate_percent_b = comps[1];
+			se->substrate_percent_a = comps[0];
+			se->substrate_percent_b = comps[1];
 		}
 		else if (argsread == 1) {
 			//if this isn't the number 1 I will be worried
@@ -424,8 +424,8 @@ int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se
 				fprintf(g_temp_log, "ERROR! Unary system does not have composition 1 (%lf)\n", comps[0]);
 				return FILE_COMMAND_IGNORED;
 			}
-			g_substrate_percent_a = 1.;
-			g_substrate_percent_b = 0.;
+			se->substrate_percent_a = 1.;
+			se->substrate_percent_b = 0.;
 		}
 		else {
 			fprintf(g_temp_log, "ERROR! Could not correctly read composition %s\n", params);
