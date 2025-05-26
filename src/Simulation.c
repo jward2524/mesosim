@@ -8,87 +8,90 @@
 #include "Atoms.h"
 #include "FileIO.h"
 
+// Simulation
 int rate_skip;
-
 double xr, yr, zr;
 int rwx, rwy, rwz;
 double rw[3], rrp[3];
 double ta1, ta2;
-
 int adatom_before;
-
-char atom_names[3][3]={"1", "2", "3"};
-double default_color[3] = {0., 0., 0.};
-
-int simulation_type = SIMULATION_TYPE_UNDEFINED;
-int atom_cnt = 0;
-Atom temp_atom;
-bool simulation_should_kill_itself;
-Atom* atom_arr[]; // array containing all atoms in the simulation
-double elapsed_stime = 0; 
-
-bool evaporation_flag = true;
-char coordinate_log_prefix[256] = "default_simulation_analysis.dat";
-
-unsigned long final_iteration = 1e9; // TODO: move to input file
-double run_stime = 1.e8; //default simulation runtime (in seconds) // TODO: move to input file
-double log_interval = 0.1; // logging rate in simulation time
-double next_log_checkpoint; // simulation time when next log will be output
-double* log_list = NULL; // pointer to list of points at which to log data
-int log_list_len = 0; // length of log_list (number of times to log data)
-int sim_end_type = 0;
-
-// double next_log_checkpoint = 1.0e-4;
-
-int analysis_type = REGULAR_TIME_INTERVALS;
-
-// double log_interval;
-
-
-int rate_cnt; // number of rates in rate_arr list (filled indices)
-int transition_cnt; // size of filled portion of transition list
-double frequency_sum;
-
-double overpotential = 0.0;
-
-double nnE[6] = {
+char g_atom_names[3][3]={"1", "2", "3"};
+double g_default_color[3] = {0., 0., 0.};
+int g_simulation_type = SIMULATION_TYPE_UNDEFINED;
+int g_atom_cnt = 0;
+Atom g_temp_atom;
+// bool ss->simulation_should_kill_itself;
+Atom* g_atom_arr[]; // array containing all atoms in the simulation
+// double ss->elapsed_stime = 0; 
+bool g_evaporation_flag = true;
+char g_coordinate_log_prefix[256] = "default_simulation_analysis.dat";
+// unsigned long ss->final_iteration = 1e9; // TODO: move to input file
+// double ss->run_stime = 1.e8; //default simulation runtime (in seconds) // TODO: move to input file
+double g_log_interval = 0.1; // logging rate in simulation time
+double g_next_log_checkpoint; // simulation time when next log will be output
+double* g_log_list = NULL; // pointer to list of points at which to log data
+int g_log_list_len = 0; // length of g_log_list (number of times to log data)
+// int ss->sim_end_type = 0;
+int g_analysis_type = REGULAR_TIME_INTERVALS;
+int g_rate_cnt; // number of rates in g_rate_arr list (filled indices)
+int g_transition_cnt; // size of filled portion of transition list
+// double ss->frequency_sum;
+// double ss->overpotential = 0.0;
+double g_nnE[6] = {
 	DEFAULT_BOND_ENERGY_AA,
 	DEFAULT_BOND_ENERGY_AB,
 	DEFAULT_BOND_ENERGY_AC,
 	DEFAULT_BOND_ENERGY_BB,
 	DEFAULT_BOND_ENERGY_BC,
 	DEFAULT_BOND_ENERGY_CC};
-
-double nnnE[6] = {0., 0., 0., 0., 0., 0.};
-
-bool solubility[3] = {false, false, false}; // whether ABC-type atoms can be dissolved/evaporated - all elements cannot dissolve by default
-
-double temperature = DEFAULT_TEMPERATURE;
-
-int dissolution = DISSOLUTION;
-
-int final_config_neighbor_cnt;
-int intial_config_neighbor_cnt;
-
+double g_nnnE[6] = {0., 0., 0., 0., 0., 0.};
+bool g_solubility[3] = {false, false, false}; // whether ABC-type atoms can be dissolved/evaporated - all elements cannot dissolve by default
+// double ss->temperature = DEFAULT_TEMPERATURE;
+int g_dissolution = DISSOLUTION;
+int g_final_config_neighbor_cnt;
+int g_intial_config_neighbor_cnt;
 // ENHANCE: malloc?
-Rate rate_arr[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS]; // array containing all the unique rate constants and count of atoms that have that k and indices in transition_arr
+Rate g_rate_arr[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS]; // array containing all the unique rate constants and count of atoms that have that k and indices in g_transition_arr
 // Rates default initalized to all zeros values?
-Transition *transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS]; // array of the possible atom transitions (atom index + jump offset index)
-//Transition transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
-// contains all the same information in atom_arr[i].transition_indices
-Trans_Prob transition_probability;
-
-
-int lastxt, lastyt, lastzt;
-
-//bool simulation_is_going = false; //probably don't need this
-
-double sum_of_rate_populations;
-double current_probability;
+Transition *g_transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS]; // array of the possible atom transitions (atom index + jump offset index)
+//Transition g_transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
+// contains all the same information in g_atom_arr[i].transition_indices
+// Trans_Prob g_transition_probability;
+int g_lastxt, g_lastyt, g_lastzt;
+double g_sum_of_rate_populations;
+double g_current_probability;
 bool checkpoint_reached = false;
 
+
+// Simulation_Aux
+// double ss->total_internal_energy = 0;
+// [ ]: what are these?
+int g_zixshift, g_ziyshift, g_zizshift; // bit shifts for finding zones from coordinates
+int g_ssxshift, g_ssyshift, g_sszshift; // used with zi*shift
+int g_zsh, g_ysh, g_xsh;	// total bit shifts, zi*shift - ss*shift
+// [ ]: what are the units for this? how does it relate to atomic spacing?
+int g_ssx = DSIMSIZE, g_ssy = DSIMSIZE, g_ssz = DSIMSIZE;	// system size x, y, z in lattice coordinates // TODO: lattice coordinates but not along lattice vectors? // XXX: overwritten by input file
+double g_ssr;
+int g_zix = TTS, g_ziy = TTS, g_ziz = TTS;
+int g_lattice_type = FCC;
+int g_max_neighbors = 12; // [ ]: this should be dependent on the crystal structure
+int g_sheet_thickness = -1;
+int g_cluster_radius = -1;
+char g_atoms_filename[256] = "";
+// Zone g_zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
+double g_initial_overpotential = DEFAULT_OVERPOTENTIAL;
+double g_overpotential_ramp_rate = 0.0;
+double g_max_overpotential = DEFAULT_OVERPOTENTIAL;
+double g_substrate_percent_a = DEFAULT_COMPOSITION_A;
+double g_substrate_percent_b = DEFAULT_COMPOSITION_B;
+// int ss->total_volume_dissolved;
+double g_normal_x, g_normal_y, g_normal_z;
+double lhs[6];
+double normal_lat[6][3];
+int translation_vector[6][3];
+
 // ENHANCE: pass struct with all simulation parameters as argument
-unsigned long perform_simulation(void) //potentially FILE* as arguments
+unsigned long perform_simulation(struct SimulationState *ss) //potentially FILE* as arguments
 {
 	//printf("Simulation starting\n");
 	long int i;
@@ -109,36 +112,36 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 
 	int framenum = 0; // [ ]: what is this? it isn't iteration count
 
-	elapsed_stime = 0.0;
+	ss->elapsed_stime = 0.0;
 	//writes data time intervals and run time in original code
 
 	//simulation_is_going = true;
 
 	//print system and zone sizes to the file?
 
-	/*if (num_sims > 0) //this probably will not happen
+	/*if (g_num_sims > 0) //this probably will not happen
 	{
-		do_initialize_simulation(simulation_type);
-		elapsed_stime = 0.0;
+		do_initialize_simulation(g_simulation_type);
+		ss->elapsed_stime = 0.0;
 	}*/ 
 
 	// initialize simulation kinetics, and draw a picture
 
 	//printf("transition time!\n");
-	for (i=0;i<atom_cnt;++i)	
-		refresh_transitions(i);			// resets all kinetic paramters
+	for (i=0;i<g_atom_cnt;++i)	
+		refresh_transitions(i, ss);			// resets all kinetic paramters
 
-	organize(atom_arr, atom_cnt); //replacement for copy_xyz_to_coord but might not be necessary
+	organize(g_atom_arr, g_atom_cnt); //replacement for copy_xyz_to_coord but might not be necessary
 
 	//printf("transitioned and organized\n");
 
-	total_volume_dissolved = 0; //do i care
+	ss->total_volume_dissolved = 0; //do i care
 
 	// initial state
-	calculate_internal_energy(atom_cnt);
+	calculate_internal_energy(g_atom_cnt, ss);
 	//printf("energy calculated\n");
-	output_log_file(sim_log_file, framenum);
-	write_xyz_file(coordinate_log_prefix, framenum);
+	output_log_file(g_sim_log_file, framenum, ss);
+	write_xyz_file(g_coordinate_log_prefix, framenum, ss);
 	//printf("files written\n");
 	++framenum;
 
@@ -152,38 +155,38 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 	while (!simulation_end)
 	{
 		if (iter % 100 == 0)
-			printf("iteration %ld, time %lf\n", iter, elapsed_stime);
-		if (simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
+			printf("iteration %ld, time %lf\n", iter, ss->elapsed_stime);
+		if (ss->simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
 		{
 			//find_average_curvature(); //no longer valid
 
-			calculate_internal_energy(atom_cnt);
-			output_log_file(sim_log_file, framenum);
-			write_xyz_file(coordinate_log_prefix, framenum);
+			calculate_internal_energy(g_atom_cnt, ss);
+			output_log_file(g_sim_log_file, framenum, ss);
+			write_xyz_file(g_coordinate_log_prefix, framenum, ss);
 
-			simulation_should_kill_itself = false;
-			organize(atom_arr, atom_cnt); //replace the copy with draw, maybe not needed
+			ss->simulation_should_kill_itself = false;
+			organize(g_atom_arr, g_atom_cnt); //replace the copy with draw, maybe not needed
 
 			//simulation_is_going = false; //not needed
 			return 1; //return 1 b/c error?
 		}
 
 
-		for (j=0;j<atom_cnt;++j)	
-			refresh_transitions(j);			// resets all kinetic paramters
+		for (j=0;j<g_atom_cnt;++j)	
+			refresh_transitions(j, ss);			// resets all kinetic paramters
 		 //does this need to happen?
 
 		// increment the elapsed time
 
-		compute_transition_array();
-		elapsed_stime -= log(drandj(&rand_seed)) / frequency_sum;
+		compute_transition_array(ss);
+		ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
 
-		if (elapsed_stime >= run_stime) // simulation has gone past time
+		if (ss->sim_end_type == SIM_END_BY_STIME && ss->elapsed_stime >= ss->run_stime) // simulation has gone past time
 			break; //get outta here before I make a new transition
 
 		// pick the type of transition to occur
 		transition_type_probability = drandj(&rand_seed);
-		rate_skip = rate_cnt/2;
+		rate_skip = g_rate_cnt/2;
 		j = rate_skip;
 
 		//change structure to see if the move gets made or not
@@ -191,72 +194,72 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 		// binary search to select transition
 		moved_flag = false; //used to track diffusion/evaporation vs deposition
 		while (moved_flag == false) {
-			if ((transition_type_probability >= transition_probability.lbound[j])
-						&& (transition_type_probability < transition_probability.ubound[j]))
+			if ((transition_type_probability >= ss->transition_probability.lbound[j])
+						&& (transition_type_probability < ss->transition_probability.ubound[j]))
 			{
-				k = transition_probability.listnum[j];
+				k = ss->transition_probability.listnum[j];
 
 				// pick the lucky atom
 				// [ ]: third random number?
 				// picks a type of transition and then which atom that has that transition will it act on?
-				which_one = rate_arr[k].transition_start_idx + (int)(drandj(&rand_seed)*(double)rate_arr[k].transition_count);
+				which_one = g_rate_arr[k].transition_start_idx + (int)(drandj(&rand_seed)*(double)g_rate_arr[k].transition_count);
 
-				// which_one gives the location of the transition_arr, which gives
+				// which_one gives the location of the g_transition_arr, which gives
 				// the info about the specific atom
-				atom_number = transition_arr[which_one]->atom_idx;
-				jump_vector = transition_arr[which_one]->offset_idx;
+				atom_number = g_transition_arr[which_one]->atom_idx;
+				jump_vector = g_transition_arr[which_one]->offset_idx;
 
-				// if jump_vector == number_of_possible_neighbors then the atom is going to evaporate
+				// if jump_vector == g_max_neighbors then the atom is going to evaporate
 				moved_flag = true;
 
 				adatom_before = 0;
 
-				if (jump_vector != number_of_possible_neighbors) //diffusion
+				if (jump_vector != g_max_neighbors) //diffusion
 				{
 					//printf("the transition is diffusion of atom %d, jumping from %lf %lf %lf ", atom_number, atom[atom_number]->lattice[0], atom[atom_number]->lattice[1], atom[atom_number]->lattice[2]);
 					// coordinates atom is jumping to
-					lastxt = atom_arr[atom_number]->lattice[0] + jump_offset[jump_vector].dx;
-					lastyt = atom_arr[atom_number]->lattice[1] + jump_offset[jump_vector].dy;
-					lastzt = atom_arr[atom_number]->lattice[2] + jump_offset[jump_vector].dz;
+					g_lastxt = g_atom_arr[atom_number]->lattice[0] + jump_offset[jump_vector].dx;
+					g_lastyt = g_atom_arr[atom_number]->lattice[1] + jump_offset[jump_vector].dy;
+					g_lastzt = g_atom_arr[atom_number]->lattice[2] + jump_offset[jump_vector].dz;
 
-					adjust_pbc(&lastxt, &lastyt, &lastzt);
+					adjust_pbc(&g_lastxt, &g_lastyt, &g_lastzt);
 
-					atype = atom_arr[atom_number]->type;
+					atype = g_atom_arr[atom_number]->type;
 
 					// moves atom?
-					remove_atom(atom_number);
-					natn = add_atom(lastxt, lastyt, lastzt, atype, NORMAL);
-					//printf("and jumping to %lf %lf %lf\n", lastxt, lastyt, lastzt);
+					remove_atom(atom_number, ss);
+					natn = add_atom(g_lastxt, g_lastyt, g_lastzt, atype, NORMAL, ss);
+					//printf("and jumping to %lf %lf %lf\n", g_lastxt, g_lastyt, g_lastzt);
 				}
 				else				// dissolution
 				{
-					if (solubility[atom_arr[atom_number]->type - 1] == true)	// atoms are dissolved based on input specs!
+					if (g_solubility[g_atom_arr[atom_number]->type - 1] == true)	// atoms are dissolved based on input specs!
 					{
-						++total_volume_dissolved;
-						remove_atom(atom_number);	// evaporate the atom
+						++ss->total_volume_dissolved;
+						remove_atom(atom_number, ss);	// evaporate the atom
 						//printf("the transition was dissolution of atom %d\n", atom_number);
 					}
 				}
 			}
-			else if (transition_type_probability < transition_probability.lbound[j])
+			else if (transition_type_probability < ss->transition_probability.lbound[j])
 			{
 				//search to the left
 				rate_skip = rate_skip/2;
 				if (rate_skip == 0) rate_skip = 1;
 				j -= rate_skip;
 			}
-			else if (transition_type_probability >= transition_probability.ubound[j])
+			else if (transition_type_probability >= ss->transition_probability.ubound[j])
 			{
 				//search to the right
 				rate_skip = rate_skip/2;
 				if (rate_skip == 0) rate_skip = 1;
 				j += rate_skip;
-				if (j == rate_cnt) //no more options!
+				if (j == g_rate_cnt) //no more options!
 					break;
 			}
 		}
 
-		if (moved_flag == false) //only happens iff jump_vector == number_of_possible_neighbors
+		if (moved_flag == false) //only happens iff jump_vector == g_max_neighbors
 		{
 			printf("for some reason I didn't transition\n");
 			//deposition is vestigial and we don't want it!
@@ -292,21 +295,21 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 					ta1 = 2.*PI*drandj(&rand_seed);
 					ta2 = 2.*PI*drandj(&rand_seed);
 
-					rrp[0] = ssr*cos(ta2)*cos(ta1);
-					rrp[1] = ssr*cos(ta2)*sin(ta1);
-					rrp[2] = ssr*sin(ta2);
+					rrp[0] = g_ssr*cos(ta2)*cos(ta1);
+					rrp[1] = g_ssr*cos(ta2)*sin(ta1);
+					rrp[2] = g_ssr*sin(ta2);
 
 					// now invert xr, yr, zr into lattice vectors;
 
 					vecmul(rrp, invert_primitive_basis, rw);
 
-					rwx = (int)rw[0] + ssx/2;
-					rwy = (int)rw[1] + ssy/2;
-					rwz = (int)rw[2] + ssz/2;
+					rwx = (int)rw[0] + g_ssx/2;
+					rwy = (int)rw[1] + g_ssy/2;
+					rwz = (int)rw[2] + g_ssz/2;
 
-				} while (atom_at(rwx, rwy, rwz) >= 0);
+				} while (atom_at(rwx, rwy, rwz, ss) >= 0);
 
-				//if (atom_at(rwx, rwy, rwz) >= 0) goto newt; (made redundant with do while)
+				//if (atom_at(rwx, rwy, rwz, ss) >= 0) goto newt; (made redundant with do while)
 
 				natn = add_atom(rwx, rwy, rwz, atype, NORMAL);
 			}*/
@@ -314,46 +317,46 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 		 
 		// after iteration, log if necessary
 		// TODO: implement the checkpoint lists
-		if ((analysis_type == REGULAR_TIME_INTERVALS) || (analysis_type == LN_TIME_INTERVALS))
-			checkpoint_reached = (elapsed_stime >= next_log_checkpoint);
-		else if (analysis_type == ITERATION_INTERVALS)
-			checkpoint_reached = (iter >= next_log_checkpoint);
+		if ((g_analysis_type == REGULAR_TIME_INTERVALS) || (g_analysis_type == LN_TIME_INTERVALS))
+			checkpoint_reached = (ss->elapsed_stime >= g_next_log_checkpoint);
+		else if (g_analysis_type == ITERATION_INTERVALS)
+			checkpoint_reached = (iter >= g_next_log_checkpoint);
 
 		if (checkpoint_reached)
 		{
-			organize(atom_arr, atom_cnt); //replaced but do i really need it
+			organize(g_atom_arr, g_atom_cnt); //replaced but do i really need it
 			
 			//record the elapsed time in a file here
-			printf("writing file %d: elapsed_stime = %lf\n", framenum, elapsed_stime);
+			printf("writing file %d: elapsed_stime = %lf\n", framenum, ss->elapsed_stime);
 			
-			calculate_internal_energy(atom_cnt);
-			output_log_file(sim_log_file, framenum);
-			write_xyz_file(coordinate_log_prefix, framenum);
+			calculate_internal_energy(g_atom_cnt, ss);
+			output_log_file(g_sim_log_file, framenum, ss);
+			write_xyz_file(g_coordinate_log_prefix, framenum, ss);
 			
-			if (analysis_type == REGULAR_TIME_INTERVALS)
+			if (g_analysis_type == REGULAR_TIME_INTERVALS)
 			{
-				// bring next_log_checkpoint up to and one step beyond elapsed_stime
-				while (next_log_checkpoint <= elapsed_stime)
-					next_log_checkpoint += log_interval;
+				// bring g_next_log_checkpoint up to and one step beyond ss->elapsed_stime
+				while (g_next_log_checkpoint <= ss->elapsed_stime)
+					g_next_log_checkpoint += g_log_interval;
 
 			}
-			else if (analysis_type == LN_TIME_INTERVALS)
+			else if (g_analysis_type == LN_TIME_INTERVALS)
 			{
-				while (next_log_checkpoint <= elapsed_stime)
-					next_log_checkpoint *= log_interval;
+				while (g_next_log_checkpoint <= ss->elapsed_stime)
+					g_next_log_checkpoint *= g_log_interval;
 			}
-			else if (analysis_type == ITERATION_INTERVALS)
+			else if (g_analysis_type == ITERATION_INTERVALS)
 			{
-				next_log_checkpoint += log_interval;
+				g_next_log_checkpoint += g_log_interval;
 			}
 
-			if (overpotential_ramp_rate != 0.0)
+			if (g_overpotential_ramp_rate != 0.0)
 			{
-				nt = elapsed_stime;
-				overpotential += (nt-ot)*overpotential_ramp_rate;
-				ot = elapsed_stime;
-				for (j=0;j<atom_cnt;++j)	
-					refresh_transitions(j);			// resets all kinetic paramters
+				nt = ss->elapsed_stime;
+				ss->overpotential += (nt-ot)*g_overpotential_ramp_rate;
+				ot = ss->elapsed_stime;
+				for (j=0;j<g_atom_cnt;++j)	
+					refresh_transitions(j, ss);			// resets all kinetic paramters
 
 			}
 			
@@ -363,22 +366,22 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 		++iter; //sanity check to avoid ending in an infinite cycle // [ ]: what?
 
 		// check if simulation is over
-		if (sim_end_type == SIM_END_BY_STIME){
-			simulation_end = (elapsed_stime >= run_stime);
+		if (ss->sim_end_type == SIM_END_BY_STIME){
+			simulation_end = (ss->elapsed_stime >= ss->run_stime);
 		}
-		else if (sim_end_type == SIM_END_BY_ITERATIONS) {
-			simulation_end = (iter >= final_iteration);
+		else if (ss->sim_end_type == SIM_END_BY_ITERATIONS) {
+			simulation_end = (iter >= ss->final_iteration);
 		}
 	}
 
-	if (iter == final_iteration)
-		fprintf(sim_log_file, "reached final iteration and terminated\n");
+	if (iter == ss->final_iteration)
+		fprintf(g_sim_log_file, "reached final iteration and terminated\n");
 	
-	//write elapsed_stime to mark finish
+	//write ss->elapsed_stime to mark finish
 	//TODO: finish IO
-	calculate_internal_energy(atom_cnt);
-	output_log_file(sim_log_file, framenum);
-	write_xyz_file(coordinate_log_prefix, framenum);	
+	calculate_internal_energy(g_atom_cnt, ss);
+	output_log_file(g_sim_log_file, framenum, ss);
+	write_xyz_file(g_coordinate_log_prefix, framenum, ss);
 
 	printf("Finished simulation\n"); //move this to the log file
 		
@@ -389,44 +392,44 @@ unsigned long perform_simulation(void) //potentially FILE* as arguments
 /******************************************************************************/
 /******************************************************************************/
 // updates transition_probabilty (weighted rate list, used to choose event)
-void compute_transition_array(void)
+void compute_transition_array(struct SimulationState *ss)
 {
 	int i;
 	int x;
 
 	int total_lists = 0;
 
-	frequency_sum = 0.0;
-	sum_of_rate_populations = 0.0;
+	ss->frequency_sum = 0.0;
+	g_sum_of_rate_populations = 0.0;
 
-	for (i=0;i<rate_cnt;++i)
+	for (i=0;i<g_rate_cnt;++i)
 	{
-		if (rate_arr[i].transition_count != 0)
+		if (g_rate_arr[i].transition_count != 0)
 		{
-			rate_arr[i].frequency = rate_arr[i].k*(double)rate_arr[i].transition_count;
-			frequency_sum += rate_arr[i].frequency;
-			sum_of_rate_populations += rate_arr[i].transition_count;
+			g_rate_arr[i].frequency = g_rate_arr[i].k*(double)g_rate_arr[i].transition_count;
+			ss->frequency_sum += g_rate_arr[i].frequency;
+			g_sum_of_rate_populations += g_rate_arr[i].transition_count;
 
-			transition_probability.listnum[total_lists] = i;
+			ss->transition_probability.listnum[total_lists] = i;
 			++total_lists;
 		}
 	}
 
 	/*if (deposition_type == DEPOSITION_TYPE_RAINFALL)
-		frequency_sum += (double)ssx*(double)ssy*(deposition_rate_of_a + deposition_rate_of_b + deposition_rate_of_c);
+		ss->frequency_sum += (double)g_ssx*(double)g_ssy*(deposition_rate_of_a + deposition_rate_of_b + deposition_rate_of_c);
 	else if (deposition_type == DEPOSITION_TYPE_RANDOM_WALKER)
-		frequency_sum += (4*PI*ssr*ssr)*(deposition_rate_of_a + deposition_rate_of_b + deposition_rate_of_c);*/ //deposition is vestigial
+		ss->frequency_sum += (4*PI*g_ssr*g_ssr)*(deposition_rate_of_a + deposition_rate_of_b + deposition_rate_of_c);*/ //deposition is vestigial
 
 	// now compute bounds for jump probabilities
 
-	current_probability = 0.0;
+	g_current_probability = 0.0;
 
 	for (i=0;i<total_lists;++i)
 	{
-		transition_probability.lbound[i] = current_probability;
-		x = transition_probability.listnum[i];
-		current_probability += rate_arr[x].frequency/frequency_sum;
-		transition_probability.ubound[i] = current_probability;
+		ss->transition_probability.lbound[i] = g_current_probability;
+		x = ss->transition_probability.listnum[i];
+		g_current_probability += g_rate_arr[x].frequency/ss->frequency_sum;
+		ss->transition_probability.ubound[i] = g_current_probability;
 	}
 
 	return;
@@ -434,11 +437,11 @@ void compute_transition_array(void)
 
 /******************************************************************************/
 /******************************************************************************/
-// updates [atom_arr[atom_idx], transition_arr[i], rate_arr[i].transition_start_idx], initializes rate_arr
-int refresh_transitions(int atom_idx) // atom_idx = index on atom list
+// updates [g_atom_arr[atom_idx], g_transition_arr[i], g_rate_arr[i].transition_start_idx], initializes g_rate_arr
+int refresh_transitions(int atom_idx, struct SimulationState *ss) // atom_idx = index on atom list
 {
 	int i, j;
-	int rate_idx; // position of rate rate in rate list rate_arr[]
+	int rate_idx; // position of rate rate in rate list g_rate_arr[]
 	double rate; // rate constant from bond-breaking model
 	int next_x, next_y, next_z;
 
@@ -451,28 +454,28 @@ int refresh_transitions(int atom_idx) // atom_idx = index on atom list
 
 	//printf("removing\n"); // XXX: commented print
 	// first, remove all mention of this atom from transition list
-	for (i=0; i<number_of_possible_neighbors + dissolution; ++i) // extra 1 for evaporation
+	for (i=0; i<g_max_neighbors + g_dissolution; ++i) // extra 1 for evaporation
 	{
-		if (atom_arr[atom_idx]->transition_indices[i] != -1) // something can happen in the "i" direction
+		if (g_atom_arr[atom_idx]->transition_indices[i] != -1) // something can happen in the "i" direction
 			take_off_transition_list(atom_idx, i);
 	}
 
 	//printf("cycling\n"); // XXX: commented print
 	// cycle through neighbor coordinates, and check if there is an atom there
-	for (i=0;i<number_of_possible_neighbors;++i)
+	for (i=0;i<g_max_neighbors;++i)
 	{
-   		next_x = atom_arr[atom_idx]->lattice[0] + jump_offset[i].dx;
-		next_y = atom_arr[atom_idx]->lattice[1] + jump_offset[i].dy;
-        next_z = atom_arr[atom_idx]->lattice[2] + jump_offset[i].dz;
+   		next_x = g_atom_arr[atom_idx]->lattice[0] + jump_offset[i].dx;
+		next_y = g_atom_arr[atom_idx]->lattice[1] + jump_offset[i].dy;
+        next_z = g_atom_arr[atom_idx]->lattice[2] + jump_offset[i].dz;
 
 		adjust_pbc(&next_x, &next_y, &next_z);
 
-        j = atom_at(next_x, next_y, next_z);
+        j = atom_at(next_x, next_y, next_z, ss);
 
-		if (j >= 0) atom_arr[atom_idx]->occupied_neighbor_sites[i] = j;
+		if (j >= 0) g_atom_arr[atom_idx]->occupied_neighbor_sites[i] = j;
 		// if no atom atom_idx that position but occ_neighbor array says there is, fix it
-		if ((j == -1)&&(atom_arr[atom_idx]->occupied_neighbor_sites[i] >= 0))
-			atom_arr[atom_idx]->occupied_neighbor_sites[i] = -1;
+		if ((j == -1)&&(g_atom_arr[atom_idx]->occupied_neighbor_sites[i] >= 0))
+			g_atom_arr[atom_idx]->occupied_neighbor_sites[i] = -1;
 	}
 
 	// cycle through the neighbor sites.  if there's an empty one, calculate the transition rate to it
@@ -481,26 +484,26 @@ int refresh_transitions(int atom_idx) // atom_idx = index on atom list
 	atom_rates_cnt = 0;
 	//ok_to_evaporate = true; //doesn't get used
 
-	intial_config_neighbor_cnt = get_initial_configuration2(atom_idx, 0, start_config);		// k is number of near neighbors
+	g_intial_config_neighbor_cnt = get_initial_configuration2(atom_idx, 0, start_config);		// k is number of near neighbors
 
-	if (intial_config_neighbor_cnt == number_of_possible_neighbors) // skip calculating a rate of a fully coordinated atom
+	if (g_intial_config_neighbor_cnt == g_max_neighbors) // skip calculating a rate of a fully coordinated atom
 		return atom_rates_cnt;			
 
 	//printf("calculating surf diffusion rate\n");
-	for (i=0; i<number_of_possible_neighbors; ++i)
+	for (i=0; i<g_max_neighbors; ++i)
 	{
-		if (atom_arr[atom_idx]->occupied_neighbor_sites[i] == -1)
+		if (g_atom_arr[atom_idx]->occupied_neighbor_sites[i] == -1)
 		{ // if unoccupied, consider transition
 			//printf("final config\n");
-			final_config_neighbor_cnt = get_final_configuration2(atom_idx, i, end_config);
+			g_final_config_neighbor_cnt = get_final_configuration2(atom_idx, i, end_config, ss);
 			//printf("surf diffusion\n");
 			calculate_surf_diffusion_rate(		start_config, // ENHANCE: make this look prettier
 												end_config,
-												number_of_possible_neighbors,
-												atom_arr[atom_idx]->type,
-												nnE,
-												temperature,
-												overpotential,
+												g_max_neighbors,
+												g_atom_arr[atom_idx]->type,
+												g_nnE,
+												ss->temperature,
+												ss->overpotential,
 												&rate);
 					
 			++atom_rates_cnt;
@@ -521,22 +524,22 @@ int refresh_transitions(int atom_idx) // atom_idx = index on atom list
 
 	//printf("calcualte evap\n");
 	calculate_evaporation_rate(	start_config,
-								number_of_possible_neighbors,
-								atom_arr[atom_idx]->type,
-								nnE,
-								temperature,
-								overpotential,
+								g_max_neighbors,
+								g_atom_arr[atom_idx]->type,
+								g_nnE,
+								ss->temperature,
+								ss->overpotential,
 								&rate);								
 
 	//replace with the lines below because it's more obvious
 	/*if ((rate_idx = is_on_transition_list(rate)) != -1)
 	{
-		add_to_transition_list(rate_idx, atom_idx, number_of_possible_neighbors);
+		add_to_transition_list(rate_idx, atom_idx, g_max_neighbors);
 	}
 	else  // the transition rate to that spot turned out to be a new one.
 	{		
 		rate_idx = create_new_transition(rate);
-		add_to_transition_list(rate_idx, atom_idx, number_of_possible_neighbors);
+		add_to_transition_list(rate_idx, atom_idx, g_max_neighbors);
 	}*/
 
 	//printf("end stuff\n");
@@ -545,7 +548,7 @@ int refresh_transitions(int atom_idx) // atom_idx = index on atom list
 	if (rate_idx == -1)
 		rate_idx = create_new_transition(rate); //the transition rate to the spot is a new one!
 
-	add_to_transition_list(rate_idx, atom_idx, number_of_possible_neighbors); // evaporation is considered to be last in jump_offset (not really in array but uses that index number)
+	add_to_transition_list(rate_idx, atom_idx, g_max_neighbors); // evaporation is considered to be last in jump_offset (not really in array but uses that index number)
 	//printf("gonna return %d\n", atom_rates_cnt);
 	return atom_rates_cnt;						// gives number of current transitions for that atom
 }
@@ -559,8 +562,8 @@ int is_on_transition_list(double rate)
 {
 	int i;
 
-	for (i=0;i<rate_cnt;++i)
-		if (rate == rate_arr[i].k) return i;
+	for (i=0;i<g_rate_cnt;++i)
+		if (rate == g_rate_arr[i].k) return i;
 
 	return -1;
 }
@@ -568,81 +571,81 @@ int is_on_transition_list(double rate)
 /******************************************************************************/
 /******************************************************************************/
 // create new Rate struct in rate array
-// updates rate_array[rate_cnt], rate_cnt
+// updates rate_array[g_rate_cnt], g_rate_cnt
 int create_new_transition(double rate)
 {
-	rate_arr[rate_cnt].k = rate;
-	rate_arr[rate_cnt].transition_start_idx = transition_cnt;
-	rate_arr[rate_cnt].transition_count = 0;
+	g_rate_arr[g_rate_cnt].k = rate;
+	g_rate_arr[g_rate_cnt].transition_start_idx = g_transition_cnt;
+	g_rate_arr[g_rate_cnt].transition_count = 0;
 
-	++rate_cnt;
+	++g_rate_cnt;
 
-	return (rate_cnt-1);
+	return (g_rate_cnt-1);
 }
 
 /******************************************************************************/
 /******************************************************************************/
 
-// add to rate_arr[rate_idx] the atom atom_idx going in direction offset_idx
-// updates transition_arr, rate_arr[rate_idx].transition_count, atom_arr[atom_idx]->transition_indices[offset_idx]
-void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx) // rate_arr index, atom_arr index, jump_offset index
+// add to g_rate_arr[rate_idx] the atom atom_idx going in direction offset_idx
+// updates g_transition_arr, g_rate_arr[rate_idx].transition_count, g_atom_arr[atom_idx]->transition_indices[offset_idx]
+void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx) // g_rate_arr index, g_atom_arr index, jump_offset index
 {
 	int i; // loop variable
 	int n;
-	int initial_transition_index, final_transition_index; // initial and final transition_arr index
+	int initial_transition_index, final_transition_index; // initial and final g_transition_arr index
 
 	// make room for the new arrival
 
-	transition_arr[transition_cnt] = (Transition *)malloc(sizeof(Transition));	// adds entry to the end of the list
+	g_transition_arr[g_transition_cnt] = (Transition *)malloc(sizeof(Transition));	// adds entry to the end of the list
 
 	// what is this
-	//		final_transition_index = rate_arr[rate_cnt-1].transition_start_idx + rate_arr[rate_cnt-1].number;	
-	//		transition_arr[final_transition_index] = (Transition *)malloc(sizeof(Transition));
+	//		final_transition_index = g_rate_arr[g_rate_cnt-1].transition_start_idx + g_rate_arr[g_rate_cnt-1].number;	
+	//		g_transition_arr[final_transition_index] = (Transition *)malloc(sizeof(Transition));
 
-	for (i = rate_cnt-1;i>rate_idx;--i)
+	for (i = g_rate_cnt-1;i>rate_idx;--i)
 		{ // [ ]: what does this do? is this the same as in remove_transition?
-			initial_transition_index = rate_arr[i].transition_start_idx;
-			final_transition_index = initial_transition_index + rate_arr[i].transition_count;
+			initial_transition_index = g_rate_arr[i].transition_start_idx;
+			final_transition_index = initial_transition_index + g_rate_arr[i].transition_count;
 
-			transition_arr[final_transition_index]->atom_idx = transition_arr[initial_transition_index]->atom_idx;
-			transition_arr[final_transition_index]->offset_idx = transition_arr[initial_transition_index]->offset_idx;
+			g_transition_arr[final_transition_index]->atom_idx = g_transition_arr[initial_transition_index]->atom_idx;
+			g_transition_arr[final_transition_index]->offset_idx = g_transition_arr[initial_transition_index]->offset_idx;
 
 			if (initial_transition_index != final_transition_index)
-				atom_arr[transition_arr[final_transition_index]->atom_idx]->transition_indices[transition_arr[final_transition_index]->offset_idx] = final_transition_index;
+				g_atom_arr[g_transition_arr[final_transition_index]->atom_idx]->transition_indices[g_transition_arr[final_transition_index]->offset_idx] = final_transition_index;
 
-			++rate_arr[i].transition_start_idx;
+			++g_rate_arr[i].transition_start_idx;
 		}
 
 	// add new arrival
 
-	n = rate_arr[rate_idx].transition_start_idx + rate_arr[rate_idx].transition_count;
+	n = g_rate_arr[rate_idx].transition_start_idx + g_rate_arr[rate_idx].transition_count;
 
-	++rate_arr[rate_idx].transition_count;
+	++g_rate_arr[rate_idx].transition_count;
 
-	transition_arr[n]->atom_idx = atom_idx;
-	transition_arr[n]->offset_idx = offset_idx;
+	g_transition_arr[n]->atom_idx = atom_idx;
+	g_transition_arr[n]->offset_idx = offset_idx;
 
-	atom_arr[atom_idx]->transition_indices[offset_idx] = n;
+	g_atom_arr[atom_idx]->transition_indices[offset_idx] = n;
 
-	++transition_cnt;
+	++g_transition_cnt;
 
 	return;
 }
 
 /******************************************************************************/
 /******************************************************************************/
-// updates atom_arr[atom_idx], transition_arr[i], rate_arr[i].transition_start_idx
+// updates g_atom_arr[atom_idx], g_transition_arr[i], g_rate_arr[i].transition_start_idx
 void take_off_transition_list(int atom_idx, int offset_idx)	// removes atom jumping in the jump_offset[offset_idx] direction
 {
 	int i;
 	int rate_idx, transition_idx, transition_end_idx;
 
-	// find out what Rate in rate_arr this is
+	// find out what Rate in g_rate_arr this is
 
-	transition_idx = atom_arr[atom_idx]->transition_indices[offset_idx]; // old position on transition list, to be removed
+	transition_idx = g_atom_arr[atom_idx]->transition_indices[offset_idx]; // old position on transition list, to be removed
 
-	for (i=0;i<rate_cnt;++i)
-		if (transition_idx < (rate_arr[i].transition_start_idx + rate_arr[i].transition_count))
+	for (i=0;i<g_rate_cnt;++i)
+		if (transition_idx < (g_rate_arr[i].transition_start_idx + g_rate_arr[i].transition_count))
 		{
 			rate_idx = i;
 			break;
@@ -650,71 +653,71 @@ void take_off_transition_list(int atom_idx, int offset_idx)	// removes atom jump
 
 	// remind atom it can no longer jump
 
-	atom_arr[atom_idx]->transition_indices[offset_idx] = -1;
-	// TODO: do these later, after it's been removed and transition_arr has been rearranged
-	--transition_cnt;
+	g_atom_arr[atom_idx]->transition_indices[offset_idx] = -1;
+	// TODO: do these later, after it's been removed and g_transition_arr has been rearranged
+	--g_transition_cnt;
 
 	// rate_idx points to the current rate list it's on.  decrement the number of atoms in that list
 	// and clean up.  If the list is empty, remove it.
 
-	--rate_arr[rate_idx].transition_count;
+	--g_rate_arr[rate_idx].transition_count;
 	// [ ]: wtf is going on here 
-	if (rate_arr[rate_idx].transition_count == 0) // if list is empty
+	if (g_rate_arr[rate_idx].transition_count == 0) // if list is empty
 	{
-		for (i = rate_idx + 1; i < rate_cnt; ++i)
+		for (i = rate_idx + 1; i < g_rate_cnt; ++i)
 		{
-			--rate_arr[i].transition_start_idx; // move rate_arr offsets of larger indicies down one
+			--g_rate_arr[i].transition_start_idx; // move g_rate_arr offsets of larger indicies down one
 			// make transition at new start index (which is of different Rate than old start index) have same atom and offset as new end index (which is of same Rate as old end index)
-			transition_idx = rate_arr[i].transition_start_idx;
-			transition_end_idx = rate_arr[i].transition_start_idx+rate_arr[i].transition_count;		// count is always at least 1
+			transition_idx = g_rate_arr[i].transition_start_idx;
+			transition_end_idx = g_rate_arr[i].transition_start_idx+g_rate_arr[i].transition_count;		// count is always at least 1
 
-			transition_arr[transition_idx]->atom_idx = transition_arr[transition_end_idx]->atom_idx;
-			transition_arr[transition_idx]->offset_idx = transition_arr[transition_end_idx]->offset_idx;
-			// update the transition index in the corresponding atom in atom_arr to have the new (lower) transition index 
-			atom_arr[transition_arr[transition_idx]->atom_idx]->transition_indices[transition_arr[transition_idx]->offset_idx] = transition_idx;
+			g_transition_arr[transition_idx]->atom_idx = g_transition_arr[transition_end_idx]->atom_idx;
+			g_transition_arr[transition_idx]->offset_idx = g_transition_arr[transition_end_idx]->offset_idx;
+			// update the transition index in the corresponding atom in g_atom_arr to have the new (lower) transition index 
+			g_atom_arr[g_transition_arr[transition_idx]->atom_idx]->transition_indices[g_transition_arr[transition_idx]->offset_idx] = transition_idx;
 		}
 
-		free(transition_arr[transition_cnt]);			// free up the very last member of the last transition_arr
+		free(g_transition_arr[g_transition_cnt]);			// free up the very last member of the last g_transition_arr
 
-		for (i=rate_idx+1;i<rate_cnt;++i)
+		for (i=rate_idx+1;i<g_rate_cnt;++i)
 		{
-			rate_arr[i-1].transition_start_idx = rate_arr[i].transition_start_idx;
-			rate_arr[i-1].transition_count = rate_arr[i].transition_count;
-			rate_arr[i-1].k = rate_arr[i].k;
-			rate_arr[i-1].frequency = rate_arr[i].frequency;
+			g_rate_arr[i-1].transition_start_idx = g_rate_arr[i].transition_start_idx;
+			g_rate_arr[i-1].transition_count = g_rate_arr[i].transition_count;
+			g_rate_arr[i-1].k = g_rate_arr[i].k;
+			g_rate_arr[i-1].frequency = g_rate_arr[i].frequency;
 		}
 
-		--rate_cnt;
+		--g_rate_cnt;
 
 		return;
 	}
 
-	transition_end_idx = rate_arr[rate_idx].transition_start_idx + rate_arr[rate_idx].transition_count; // last transition of same rate type
+	transition_end_idx = g_rate_arr[rate_idx].transition_start_idx + g_rate_arr[rate_idx].transition_count; // last transition of same rate type
 
 	// swap transition_end_idx into the position atom_idx:offset_idx occupied
 	// ENHANCE: this is the same shit that happens when count==0
-	transition_arr[transition_idx]->atom_idx = transition_arr[transition_end_idx]->atom_idx;
-	transition_arr[transition_idx]->offset_idx = transition_arr[transition_end_idx]->offset_idx;
+	g_transition_arr[transition_idx]->atom_idx = g_transition_arr[transition_end_idx]->atom_idx;
+	g_transition_arr[transition_idx]->offset_idx = g_transition_arr[transition_end_idx]->offset_idx;
 
 	if (transition_idx != transition_end_idx) 
-		atom_arr[transition_arr[transition_idx]->atom_idx]->transition_indices[transition_arr[transition_idx]->offset_idx] = transition_idx;
+		g_atom_arr[g_transition_arr[transition_idx]->atom_idx]->transition_indices[g_transition_arr[transition_idx]->offset_idx] = transition_idx;
 
 	// shift all other transition lists
 
-	for (i=rate_idx+1;i < rate_cnt;++i)
+	for (i=rate_idx+1;i < g_rate_cnt;++i)
 	{ // ENHANCE: again, looks like the same shit that happens when count==0
-		--rate_arr[i].transition_start_idx;
+		--g_rate_arr[i].transition_start_idx;
 
-		transition_idx = rate_arr[i].transition_start_idx;
-		transition_end_idx = rate_arr[i].transition_start_idx+rate_arr[i].transition_count;
+		transition_idx = g_rate_arr[i].transition_start_idx;
+		transition_end_idx = g_rate_arr[i].transition_start_idx+g_rate_arr[i].transition_count;
 
-		transition_arr[transition_idx]->atom_idx = transition_arr[transition_end_idx]->atom_idx;
-		transition_arr[transition_idx]->offset_idx = transition_arr[transition_end_idx]->offset_idx;
+		g_transition_arr[transition_idx]->atom_idx = g_transition_arr[transition_end_idx]->atom_idx;
+		g_transition_arr[transition_idx]->offset_idx = g_transition_arr[transition_end_idx]->offset_idx;
 
-		atom_arr[transition_arr[transition_idx]->atom_idx]->transition_indices[transition_arr[transition_idx]->offset_idx] = transition_idx;
+		g_atom_arr[g_transition_arr[transition_idx]->atom_idx]->transition_indices[g_transition_arr[transition_idx]->offset_idx] = transition_idx;
 	}
 
-	free(transition_arr[transition_cnt]);			// free up the very last member of the last transition_arr
+	free(g_transition_arr[g_transition_cnt]);			// free up the very last member of the last g_transition_arr
 
 	return;
 }
@@ -723,7 +726,7 @@ void take_off_transition_list(int atom_idx, int offset_idx)	// removes atom jump
 /******************************************************************************/
 /******************************************************************************/
 
-void check_system(void)
+void check_system(struct SimulationState *ss)
 {
 	int i, j, k, m, n, mm;
 	int errors;
@@ -743,32 +746,32 @@ void check_system(void)
 
 	// first, remove all atoms from the transition list.  We'll add them after we check neighbors
 
-	for (j=0;j<atom_cnt;++j)
-		for (i=0;i<number_of_possible_neighbors + 1;++i)				// extra 1 for evaporation
+	for (j=0;j<g_atom_cnt;++j)
+		for (i=0;i<g_max_neighbors + 1;++i)				// extra 1 for evaporation
 			{
-				if (atom_arr[j]->transition_indices[i] != -1)		// something can happen in the "i" direction
+				if (g_atom_arr[j]->transition_indices[i] != -1)		// something can happen in the "i" direction
 					take_off_transition_list(j, i);
 			}
 
 	// for each atom, cycle through neighbor coordinates, and and reconcile occupancy
 
-	for (j=0;j<atom_cnt;++j)
-		for (i=0;i<number_of_possible_neighbors;++i)
+	for (j=0;j<g_atom_cnt;++j)
+		for (i=0;i<g_max_neighbors;++i)
 		{
-   			next_x = atom_arr[j]->lattice[0] + jump_offset[i].dx;
-			next_y = atom_arr[j]->lattice[1] + jump_offset[i].dy;
-	        next_z = atom_arr[j]->lattice[2] + jump_offset[i].dz;
+   			next_x = g_atom_arr[j]->lattice[0] + jump_offset[i].dx;
+			next_y = g_atom_arr[j]->lattice[1] + jump_offset[i].dy;
+	        next_z = g_atom_arr[j]->lattice[2] + jump_offset[i].dz;
 
 			adjust_pbc(&next_x, &next_y, &next_z);
 
-			k = atom_at(next_x, next_y, next_z);
+			k = atom_at(next_x, next_y, next_z, ss);
 
 			if (k >= 0)
 			{
 				// an atom has been found atom_idx this neighbor site.
 
-				atom_arr[j]->occupied_neighbor_sites[i] = k;
-				atom_arr[k]->occupied_neighbor_sites[opposite_offset[i]] = j;
+				g_atom_arr[j]->occupied_neighbor_sites[i] = k;
+				g_atom_arr[k]->occupied_neighbor_sites[opposite_offset[i]] = j;
 			}
 		}
 
@@ -778,20 +781,20 @@ void check_system(void)
 	{
 		errors = 0;
 
-		for (j=0;j<atom_cnt;++j)
-		for (i=0;i<number_of_possible_neighbors;++i)
+		for (j=0;j<g_atom_cnt;++j)
+		for (i=0;i<g_max_neighbors;++i)
 		{
-			if (atom_arr[j]->occupied_neighbor_sites[i] == -2)
+			if (g_atom_arr[j]->occupied_neighbor_sites[i] == -2)
 			{
 				// find coordinate of buried atom
 
-				next_x = atom_arr[j]->lattice[0] + jump_offset[i].dx;
-				next_y = atom_arr[j]->lattice[1] + jump_offset[i].dy;
-		        next_z = atom_arr[j]->lattice[2] + jump_offset[i].dz;
+				next_x = g_atom_arr[j]->lattice[0] + jump_offset[i].dx;
+				next_y = g_atom_arr[j]->lattice[1] + jump_offset[i].dy;
+		        next_z = g_atom_arr[j]->lattice[2] + jump_offset[i].dz;
 
 				adjust_pbc(&next_x, &next_y, &next_z);
 
-				for (k=0;k<number_of_possible_neighbors;++k)
+				for (k=0;k<g_max_neighbors;++k)
 				{
 					nnx = next_x + jump_offset[k].dx;
 					nny = next_y + jump_offset[k].dy;
@@ -799,18 +802,18 @@ void check_system(void)
 
 					adjust_pbc(&nnx, &nny, &nnz);
 
-					m = atom_at(nnx, nny, nnz);
+					m = atom_at(nnx, nny, nnz, ss);
 
 					if ((m >= 0)&&(m!= j))
 					{
 						// another atom (m) is connected to this atom.  If it sees this position as 
 						// a buried atom, great.  Otherwise, reconcile
 
-						n = atom_arr[m]->occupied_neighbor_sites[opposite_offset[k]];
+						n = g_atom_arr[m]->occupied_neighbor_sites[opposite_offset[k]];
 						if (n != -2)
 						{
-							if (n == -1) atom_arr[m]->occupied_neighbor_sites[opposite_offset[k]] = -2;
-							if (n == -3) atom_arr[j]->occupied_neighbor_sites[i] = -3;		// random trumps buried
+							if (n == -1) g_atom_arr[m]->occupied_neighbor_sites[opposite_offset[k]] = -2;
+							if (n == -3) g_atom_arr[j]->occupied_neighbor_sites[i] = -3;		// random trumps buried
 
 							++errors;
 						}
@@ -827,20 +830,20 @@ void check_system(void)
 	{
 		errors = 0;
 
-		for (j=0;j<atom_cnt;++j)
-		for (i=0;i<number_of_possible_neighbors;++i)
+		for (j=0;j<g_atom_cnt;++j)
+		for (i=0;i<g_max_neighbors;++i)
 		{
-			if (atom_arr[j]->occupied_neighbor_sites[i] == -3)
+			if (g_atom_arr[j]->occupied_neighbor_sites[i] == -3)
 			{
 				// find coordinate of buried atom
 
-				next_x = atom_arr[j]->lattice[0] + jump_offset[i].dx;
-				next_y = atom_arr[j]->lattice[1] + jump_offset[i].dy;
-		        next_z = atom_arr[j]->lattice[2] + jump_offset[i].dz;
+				next_x = g_atom_arr[j]->lattice[0] + jump_offset[i].dx;
+				next_y = g_atom_arr[j]->lattice[1] + jump_offset[i].dy;
+		        next_z = g_atom_arr[j]->lattice[2] + jump_offset[i].dz;
 
 				adjust_pbc(&next_x, &next_y, &next_z);
 
-				for (k=0;k<number_of_possible_neighbors;++k)
+				for (k=0;k<g_max_neighbors;++k)
 				{
 					nnx = next_x + jump_offset[k].dx;
 					nny = next_y + jump_offset[k].dy;
@@ -848,17 +851,17 @@ void check_system(void)
 
 					adjust_pbc(&nnx, &nny, &nnz);
 
-					m = atom_at(nnx, nny, nnz);
+					m = atom_at(nnx, nny, nnz, ss);
 
 					if ((m >= 0)&&(m!= j))
 					{
 						// another atom (m) is connected to this atom.  If it sees this position as 
 						// a buried atom, great.  Otherwise, reconcile
 
-						n = atom_arr[m]->occupied_neighbor_sites[opposite_offset[k]];
+						n = g_atom_arr[m]->occupied_neighbor_sites[opposite_offset[k]];
 						if (n != -3)
 						{
-							atom_arr[m]->occupied_neighbor_sites[opposite_offset[k]] = -3;
+							g_atom_arr[m]->occupied_neighbor_sites[opposite_offset[k]] = -3;
 							++errors;
 						}
 					
@@ -870,11 +873,11 @@ void check_system(void)
 	while (errors != 0);
 
 	// now let's bury any atoms that should be buried - DON'T WANT THIS NOW!
-	/*for (j=0;j<atom_cnt;++j)
+	/*for (j=0;j<g_atom_cnt;++j)
 	{
 		k = 0;		// k will be the number of buried or occupied neighbors
 
-		for (i=0;i<number_of_possible_neighbors;++i)
+		for (i=0;i<g_max_neighbors;++i)
 		{
 			if (atom[j]->occupied_neighbor_sites[i] >= 0)
 			{	
@@ -888,11 +891,11 @@ void check_system(void)
 
 		// SPECIAL SC routine included here otherwise for second nearest neighbors?
 
-		if (k == number_of_possible_neighbors)
+		if (k == g_max_neighbors)
 		{
 			// bury atom j
 
-			for (i=0;i<number_of_possible_neighbors;++i)
+			for (i=0;i<g_max_neighbors;++i)
 			{
 				m = atom[j]->occupied_neighbor_sites[i];
 				if (m >= 0)
@@ -934,19 +937,19 @@ void check_system(void)
 					}
 			}
 
-			if (j != (atom_cnt-1))
-					move_atom((atom_cnt-1), j);
+			if (j != (g_atom_cnt-1))
+					move_atom((g_atom_cnt-1), j, ss);
 
-			free(atom[atom_cnt-1]);
-			--atom_cnt;
+			free(atom[g_atom_cnt-1]);
+			--g_atom_cnt;
 			--j;
 		}
 	}*/
 
 	// now we can recalculate diffusion rates
 
-	for (j=0;j<atom_cnt;++j)
-		refresh_transitions(j);
+	for (j=0;j<g_atom_cnt;++j)
+		refresh_transitions(j, ss);
 
 	return;
 }
@@ -988,7 +991,7 @@ int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial con
 	//printf("before teh switch: atom type = %d\n", atom_type);
 
 	/*printf("final configuration: ");
-	for (i=0;i<number_of_possible_neighbors;++i)
+	for (i=0;i<g_max_neighbors;++i)
 		printf("%d ", final_configuration[i]);
 	printf("\n");*/
 
@@ -1077,7 +1080,7 @@ int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial con
 
 	// ENHANCE: replace calculating the exp with memoizing up the value (uhash?) -> speedup?
 	// BUG: why was overpotential removed? Isn't it necessary for linear sweep stuff?
-	//*rate = 1e13*exp(-energy/(kBoltz*temperature)) //+ 1e-4*exp(-(energy-overpotential)/(kBoltz*temperature));
+	//*rate = 1e13*exp(-energy/(kBoltz*ss->temperature)) //+ 1e-4*exp(-(energy-ss->overpotential)/(kBoltz*ss->temperature));
 	*rate = 1e13*exp(-energy/(kBoltz*temperature));
 	//printf("rate = %le\n", *rate);
 	return 0;
@@ -1104,10 +1107,10 @@ int calculate_evaporation_rate(	int initial_configuration[],			// initial config
 
 	energy = 0.0;
 
-	/*if ((ncsk == 1)||(evaporation_flag == false)) //I don't think this happens
+	/*if ((ncsk == 1)||(g_evaporation_flag == false)) //I don't think this happens
 	{
 		energy = 1000.;
-		*rate = 1e4*exp(-(energy)/(kBoltz*temperature));
+		*rate = 1e4*exp(-(energy)/(kBoltz*ss->temperature));
 		return 1;
 	}*/
 
@@ -1120,7 +1123,7 @@ int calculate_evaporation_rate(	int initial_configuration[],			// initial config
 	switch(atom_type)
 	{ // [ ]: how much of this is duplicated with calculate_surf_diffusion_rate
 		case 1:
-			if (solubility[0]) {
+			if (g_solubility[0]) {
 				//A can evaporate
 				for (i=0;i<number_of_neighbors;++i)
 				{ // calculate energy of initial state before evaporation
@@ -1135,7 +1138,7 @@ int calculate_evaporation_rate(	int initial_configuration[],			// initial config
 			break;
 
 		case 2:
-			if (solubility[1]) {
+			if (g_solubility[1]) {
 				//B can evaporate
 				for (i=0;i<number_of_neighbors;++i)
 				{
@@ -1150,7 +1153,7 @@ int calculate_evaporation_rate(	int initial_configuration[],			// initial config
 			break;
 
 		case 3:
-			if (solubility[2]) {
+			if (g_solubility[2]) {
 				//C can evaporate
 				for (i=0;i<number_of_neighbors;++i)
 				{

@@ -1,12 +1,14 @@
-int add_atom(int x, int y, int z, int type, int special);
-int atom_at(int cx, int cy, int cz);
-void remove_atom(int at);
-void move_atom(int ia, int fa);
+#include "Common.h"
+
+int add_atom(int x, int y, int z, int type, int special, struct SimulationState *ss);
+int atom_at(int cx, int cy, int cz, struct SimulationState *ss);
+void remove_atom(int at, struct SimulationState *ss);
+void move_atom(int ia, int fa, struct SimulationState *ss);
 
 // void make_buried_atoms_real(void);
 
-int random_reincarnate_atom(int x, int y, int z, int type, int vc); //feels like it'll never be called
-int reincarnate_atom(int x, int y, int z, int type, int vc); //will not be called
+int random_reincarnate_atom(int x, int y, int z, int type, int vc, struct SimulationState *ss); //feels like it'll never be called
+int reincarnate_atom(int x, int y, int z, int type, int vc, struct SimulationState *ss); //will not be called
 void bury_atom(int at, int *pos); //no longer relevant
 
 // rotation and molecule orientation
@@ -20,7 +22,7 @@ void centerg(Atom* atom_arr[], int atom_cnt); //not really relevant now (visuali
 void copy_atom(int, int);
 void create_default_atom(int na); //can modify this to remove things like color?
 
-void kill_atom(int atom_number);
+void kill_atom(int atom_number, struct SimulationState *ss);
 void cell_to_latmat(double c[6], double ltmt[3][3]);
 void primitive_basis2ucell_params(double ltmt[3][3], double c[6]);
 

@@ -26,7 +26,7 @@ endif
 # object_names := Mesosim.o Atoms.o FileIO.o Random.o Simulation_Aux.o Simulation.o Vector.o
 # OBJS := $(addprefix $(BUILD_DIR)/,$(object_names))
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o, $(wildcard $(SRC_DIR)/*.c))
-XS_HEADERS := Defs.h Geometry.h
+XS_HEADERS := Common.h Defs.h Geometry.h
 XS_HPATH := $(addprefix $(INCLUDE_DIR)/,$(XS_HEADERS))
 # all: $(BIN_DIR)/$(EXECUTABLE)
 
