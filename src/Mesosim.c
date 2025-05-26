@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
     fprintf(g_sim_log_file, "successfully read input file and preprocessed\n");
     fprintf(g_sim_log_file, "system size is %lf x %lf x %lf\n", sim_env->ssx, sim_env->ssy, sim_env->ssz);
 
-    switch (g_lattice_type) {
+    switch (sim_env->lattice_type) {
         case FCC:
             fprintf(g_sim_log_file, "crystal structure is FCC\n");
             break;
@@ -164,13 +164,13 @@ int main(int argc, char* argv[]) {
 
     switch (sim_env->simulation_type) {
         case SIMULATION_TYPE_FLAT_SHEET:
-            fprintf(g_sim_log_file, "Initialized flat sheet with monolayer depth %d\n", g_sheet_thickness);
+            fprintf(g_sim_log_file, "Initialized flat sheet with monolayer depth %d\n", sim_env->sheet_thickness);
             break;
         case SIMULATION_TYPE_CLUSTER:
-            fprintf(g_sim_log_file, "Initialized spherical cluster with radius %d\n", g_cluster_radius);
+            fprintf(g_sim_log_file, "Initialized spherical cluster with radius %d\n", sim_env->cluster_radius);
             break;
         case SIMULATION_TYPE_FROM_FILE:
-            fprintf(g_sim_log_file, "Initialized user-defined structure with filename %s\n", g_atoms_filename);
+            fprintf(g_sim_log_file, "Initialized user-defined structure with filename %s\n", sim_env->atoms_filename);
             break;
     }
 

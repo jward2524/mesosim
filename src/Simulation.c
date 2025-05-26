@@ -73,11 +73,11 @@ bool checkpoint_reached = false;
 // int ss->ssx = DSIMSIZE, ss->ssy = DSIMSIZE, ss->ssz = DSIMSIZE;	// system size x, y, z in lattice coordinates // TODO: lattice coordinates but not along lattice vectors? // XXX: overwritten by input file
 // double ss->ssr;
 // int ss->zix = TTS, ss->ziy = TTS, ss->ziz = TTS;
-int g_lattice_type = FCC;
-int g_max_neighbors = 12; // [ ]: this should be dependent on the crystal structure
-int g_sheet_thickness = -1;
-int g_cluster_radius = -1;
-char g_atoms_filename[256] = "";
+// int ss->lattice_type = FCC;
+// int se->max_neighbors = 12; // [ ]: this should be dependent on the crystal structure
+// int se->sheet_thickness = -1;
+// int se->cluster_radius = -1;
+// char se->atoms_filename[256] = "";
 // Zone g_zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
 double g_initial_overpotential = DEFAULT_OVERPOTENTIAL;
 double g_overpotential_ramp_rate = 0.0;
@@ -138,7 +138,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 	ss->total_volume_dissolved = 0; //do i care
 
 	// initial state
-	calculate_internal_energy(ss->atom_cnt, ss);
+	calculate_internal_energy(ss->atom_cnt, ss, se);
 	//printf("energy calculated\n");
 	output_log_file(g_sim_log_file, framenum, ss);
 	write_xyz_file(g_coordinate_log_prefix, framenum, ss);
@@ -160,7 +160,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 		{
 			//find_average_curvature(); //no longer valid
 
-			calculate_internal_energy(ss->atom_cnt, ss);
+			calculate_internal_energy(ss->atom_cnt, ss, se);
 			output_log_file(g_sim_log_file, framenum, ss);
 			write_xyz_file(g_coordinate_log_prefix, framenum, ss);
 
@@ -209,12 +209,12 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 				atom_number = ss->transition_arr[which_one]->atom_idx;
 				jump_vector = ss->transition_arr[which_one]->offset_idx;
 
-				// if jump_vector == g_max_neighbors then the atom is going to evaporate
+				// if jump_vector == se->max_neighbors then the atom is going to evaporate
 				moved_flag = true;
 
 				adatom_before = 0;
 
-				if (jump_vector != g_max_neighbors) //diffusion
+				if (jump_vector != se->max_neighbors) //diffusion
 				{
 					//printf("the transition is diffusion of atom %d, jumping from %lf %lf %lf ", atom_number, atom[atom_number]->lattice[0], atom[atom_number]->lattice[1], atom[atom_number]->lattice[2]);
 					// coordinates atom is jumping to
@@ -259,7 +259,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 			}
 		}
 
-		if (moved_flag == false) //only happens iff jump_vector == g_max_neighbors
+		if (moved_flag == false) //only happens iff jump_vector == se->max_neighbors
 		{
 			printf("for some reason I didn't transition\n");
 			//deposition is vestigial and we don't want it!
@@ -329,7 +329,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 			//record the elapsed time in a file here
 			printf("writing file %d: elapsed_stime = %lf\n", framenum, ss->elapsed_stime);
 			
-			calculate_internal_energy(ss->atom_cnt, ss);
+			calculate_internal_energy(ss->atom_cnt, ss, se);
 			output_log_file(g_sim_log_file, framenum, ss);
 			write_xyz_file(g_coordinate_log_prefix, framenum, ss);
 			
@@ -379,7 +379,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 	
 	//write ss->elapsed_stime to mark finish
 	//TODO: finish IO
-	calculate_internal_energy(ss->atom_cnt, ss);
+	calculate_internal_energy(ss->atom_cnt, ss, se);
 	output_log_file(g_sim_log_file, framenum, ss);
 	write_xyz_file(g_coordinate_log_prefix, framenum, ss);
 
@@ -454,7 +454,7 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss, struct Simulat
 
 	//printf("removing\n"); // XXX: commented print
 	// first, remove all mention of this atom from transition list
-	for (i=0; i<g_max_neighbors + g_dissolution; ++i) // extra 1 for evaporation
+	for (i=0; i<se->max_neighbors + g_dissolution; ++i) // extra 1 for evaporation
 	{
 		if (ss->atom_arr[atom_idx]->transition_indices[i] != -1) // something can happen in the "i" direction
 			take_off_transition_list(atom_idx, i, ss);
@@ -462,7 +462,7 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss, struct Simulat
 
 	//printf("cycling\n"); // XXX: commented print
 	// cycle through neighbor coordinates, and check if there is an atom there
-	for (i=0;i<g_max_neighbors;++i)
+	for (i=0;i<se->max_neighbors;++i)
 	{
    		next_x = ss->atom_arr[atom_idx]->lattice[0] + jump_offset[i].dx;
 		next_y = ss->atom_arr[atom_idx]->lattice[1] + jump_offset[i].dy;
@@ -484,13 +484,13 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss, struct Simulat
 	atom_rates_cnt = 0;
 	//ok_to_evaporate = true; //doesn't get used
 
-	g_intial_config_neighbor_cnt = get_initial_configuration2(atom_idx, 0, start_config, ss);		// k is number of near neighbors
+	g_intial_config_neighbor_cnt = get_initial_configuration2(atom_idx, 0, start_config, ss, se);		// k is number of near neighbors
 
-	if (g_intial_config_neighbor_cnt == g_max_neighbors) // skip calculating a rate of a fully coordinated atom
+	if (g_intial_config_neighbor_cnt == se->max_neighbors) // skip calculating a rate of a fully coordinated atom
 		return atom_rates_cnt;			
 
 	//printf("calculating surf diffusion rate\n");
-	for (i=0; i<g_max_neighbors; ++i)
+	for (i=0; i<se->max_neighbors; ++i)
 	{
 		if (ss->atom_arr[atom_idx]->occupied_neighbor_sites[i] == -1)
 		{ // if unoccupied, consider transition
@@ -499,7 +499,7 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss, struct Simulat
 			//printf("surf diffusion\n");
 			calculate_surf_diffusion_rate(		start_config, // ENHANCE: make this look prettier
 												end_config,
-												g_max_neighbors,
+												se->max_neighbors,
 												ss->atom_arr[atom_idx]->type,
 												g_nnE,
 												ss->temperature,
@@ -524,7 +524,7 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss, struct Simulat
 
 	//printf("calcualte evap\n");
 	calculate_evaporation_rate(	start_config,
-								g_max_neighbors,
+								se->max_neighbors,
 								ss->atom_arr[atom_idx]->type,
 								g_nnE,
 								ss->temperature,
@@ -534,12 +534,12 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss, struct Simulat
 	//replace with the lines below because it's more obvious
 	/*if ((rate_idx = is_on_transition_list(rate, ss)) != -1)
 	{
-		add_to_transition_list(rate_idx, atom_idx, g_max_neighbors, ss);
+		add_to_transition_list(rate_idx, atom_idx, se->max_neighbors, ss);
 	}
 	else  // the transition rate to that spot turned out to be a new one.
 	{		
 		rate_idx = create_new_transition(rate, ss);
-		add_to_transition_list(rate_idx, atom_idx, g_max_neighbors, ss);
+		add_to_transition_list(rate_idx, atom_idx, se->max_neighbors, ss);
 	}*/
 
 	//printf("end stuff\n");
@@ -548,7 +548,7 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss, struct Simulat
 	if (rate_idx == -1)
 		rate_idx = create_new_transition(rate, ss); //the transition rate to the spot is a new one!
 
-	add_to_transition_list(rate_idx, atom_idx, g_max_neighbors, ss); // evaporation is considered to be last in jump_offset (not really in array but uses that index number)
+	add_to_transition_list(rate_idx, atom_idx, se->max_neighbors, ss); // evaporation is considered to be last in jump_offset (not really in array but uses that index number)
 	//printf("gonna return %d\n", atom_rates_cnt);
 	return atom_rates_cnt;						// gives number of current transitions for that atom
 }
@@ -747,7 +747,7 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 	// first, remove all atoms from the transition list.  We'll add them after we check neighbors
 
 	for (j=0;j<ss->atom_cnt;++j)
-		for (i=0;i<g_max_neighbors + 1;++i)				// extra 1 for evaporation
+		for (i=0;i<se->max_neighbors + 1;++i)				// extra 1 for evaporation
 			{
 				if (ss->atom_arr[j]->transition_indices[i] != -1)		// something can happen in the "i" direction
 					take_off_transition_list(j, i, ss);
@@ -756,7 +756,7 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 	// for each atom, cycle through neighbor coordinates, and and reconcile occupancy
 
 	for (j=0;j<ss->atom_cnt;++j)
-		for (i=0;i<g_max_neighbors;++i)
+		for (i=0;i<se->max_neighbors;++i)
 		{
    			next_x = ss->atom_arr[j]->lattice[0] + jump_offset[i].dx;
 			next_y = ss->atom_arr[j]->lattice[1] + jump_offset[i].dy;
@@ -782,7 +782,7 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 		errors = 0;
 
 		for (j=0;j<ss->atom_cnt;++j)
-		for (i=0;i<g_max_neighbors;++i)
+		for (i=0;i<se->max_neighbors;++i)
 		{
 			if (ss->atom_arr[j]->occupied_neighbor_sites[i] == -2)
 			{
@@ -794,7 +794,7 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 
 				adjust_pbc(&next_x, &next_y, &next_z);
 
-				for (k=0;k<g_max_neighbors;++k)
+				for (k=0;k<se->max_neighbors;++k)
 				{
 					nnx = next_x + jump_offset[k].dx;
 					nny = next_y + jump_offset[k].dy;
@@ -831,7 +831,7 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 		errors = 0;
 
 		for (j=0;j<ss->atom_cnt;++j)
-		for (i=0;i<g_max_neighbors;++i)
+		for (i=0;i<se->max_neighbors;++i)
 		{
 			if (ss->atom_arr[j]->occupied_neighbor_sites[i] == -3)
 			{
@@ -843,7 +843,7 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 
 				adjust_pbc(&next_x, &next_y, &next_z);
 
-				for (k=0;k<g_max_neighbors;++k)
+				for (k=0;k<se->max_neighbors;++k)
 				{
 					nnx = next_x + jump_offset[k].dx;
 					nny = next_y + jump_offset[k].dy;
@@ -877,7 +877,7 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 	{
 		k = 0;		// k will be the number of buried or occupied neighbors
 
-		for (i=0;i<g_max_neighbors;++i)
+		for (i=0;i<se->max_neighbors;++i)
 		{
 			if (atom[j]->occupied_neighbor_sites[i] >= 0)
 			{	
@@ -891,11 +891,11 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 
 		// SPECIAL SC routine included here otherwise for second nearest neighbors?
 
-		if (k == g_max_neighbors)
+		if (k == se->max_neighbors)
 		{
 			// bury atom j
 
-			for (i=0;i<g_max_neighbors;++i)
+			for (i=0;i<se->max_neighbors;++i)
 			{
 				m = atom[j]->occupied_neighbor_sites[i];
 				if (m >= 0)
@@ -991,7 +991,7 @@ int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial con
 	//printf("before teh switch: atom type = %d\n", atom_type);
 
 	/*printf("final configuration: ");
-	for (i=0;i<g_max_neighbors;++i)
+	for (i=0;i<se->max_neighbors;++i)
 		printf("%d ", final_configuration[i]);
 	printf("\n");*/
 

@@ -19,12 +19,12 @@
 // double ss->ssr;
 // int ss->zix = TTS, ss->ziy = TTS, ss->ziz = TTS;
 // // defaults are fcc
-// int g_lattice_type = FCC;
-// int g_max_neighbors = 12; // [ ]: this should be dependent on the crystal structure
+// int ss->lattice_type = FCC;
+// int se->max_neighbors = 12; // [ ]: this should be dependent on the crystal structure
 
-// int g_sheet_thickness = -1;
-// int g_cluster_radius = -1;
-// char g_atoms_filename[256] = "";
+// int se->sheet_thickness = -1;
+// int se->cluster_radius = -1;
+// char se->atoms_filename[256] = "";
 
 // // splits cell into zones to facilitate finding atoms by coordinate/spatial position
 // // each zone contains a linked list of atoms that is iterated over
@@ -122,7 +122,7 @@ void get_system_normal(void) // XXX: supposedly only for vizualization
 
 /******************************************************************************/
 /******************************************************************************/
-// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; rmat; g_normal_x, g_normal_y, g_normal_z; g_max_neighbors, jump_offset, opposite_offset; zi*, zi*shift, *sh], ss->rate_cnt, ss->transition_cnt, ss->atom_cnt, ss->frequency_sum, ss->elapsed_stime, ss->overpotential, g_next_log_checkpoint
+// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; rmat; g_normal_x, g_normal_y, g_normal_z; se->max_neighbors, jump_offset, opposite_offset; zi*, zi*shift, *sh], ss->rate_cnt, ss->transition_cnt, ss->atom_cnt, ss->frequency_sum, ss->elapsed_stime, ss->overpotential, g_next_log_checkpoint
 void general_simulation_initialization(struct SimulationState *ss, struct SimulationEnv *se)
 {
 	// first, remove any atoms that may exist
@@ -137,13 +137,13 @@ void general_simulation_initialization(struct SimulationState *ss, struct Simula
 
 	// system geometry initialization
 
-	set_primitive_basis(g_lattice_type, ss);
-	set_default_orientation(ss); // supposedly was only for visualization
+	set_primitive_basis(se->lattice_type, ss);
+	set_default_orientation(ss, se); // supposedly was only for visualization
 	get_system_normal();	// maybe only for visualization
 
 	// initialize data structures that help figure out which atoms are next to which other atoms
 
-	initialize_neighbor_offsets();
+	initialize_neighbor_offsets(se);
 	initialize_zones(ss, se);							// initialize zone offsets
 
 	//set_atom_colors(atom_color); // not needed anymore
@@ -175,14 +175,14 @@ void do_initialize_simulation(int simulation_index, struct SimulationState *ss, 
 	switch(simulation_index) // TODO: just use the damn macros instead
 	{
 		case 1:										// flat plane
-			initialize_flat_sheet_1(g_sheet_thickness, ss, se);
+			initialize_flat_sheet_1(se->sheet_thickness, ss, se);
 			break;
 
 		case 2:
-			initialize_spherical_cluster(g_cluster_radius, ss, se);
+			initialize_spherical_cluster(se->cluster_radius, ss, se);
 			break;
 		case 3:
-			initialize_from_file(g_atoms_filename, ss, se); //TODO! THIS IS BIG!
+			initialize_from_file(se->atoms_filename, ss, se); //TODO! THIS IS BIG!
 			break;
 	}
 	//printf("My atoms are added\n");
@@ -285,7 +285,7 @@ void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz, struct Simul
 /********************************************************************************/
 /********************************************************************************/
 // updates rmat
-void set_default_orientation(struct SimulationState *ss) // supposedly for viewing
+void set_default_orientation(struct SimulationState *ss, struct SimulationEnv *se) // supposedly for viewing
 {
 	static int index[3] = {1,1,1};
 	double axis[3], pnormal[3], axis_mag;
@@ -297,7 +297,7 @@ void set_default_orientation(struct SimulationState *ss) // supposedly for viewi
 
 	organize(ss->atom_arr, ss->atom_cnt); // ss->atom_cnt ='d 0
 
-	switch(g_lattice_type)
+	switch(se->lattice_type)
 	{
 	    case FCC:
 			axis[0] = -1.0;										// {1,1,1}
@@ -365,23 +365,23 @@ void initialize_zones(struct SimulationState *ss, struct SimulationEnv *se)
 
 /********************************************************************************/
 /********************************************************************************/
-// updates g_max_neighbors, [jump_offset, opposite_offset]
-void initialize_neighbor_offsets(void)
+// updates se->max_neighbors, [jump_offset, opposite_offset]
+void initialize_neighbor_offsets(struct SimulationEnv *se)
 {	
-	switch(g_lattice_type)
+	switch(se->lattice_type)
 		{
 			case FCC:
-				g_max_neighbors = 12;
+				se->max_neighbors = 12;
 				initialize_jump_offsets(FCC);
 				break;
 
 			case SC:
-				g_max_neighbors = 6;
+				se->max_neighbors = 6;
 				initialize_jump_offsets(SC);
 				break;
 
 			case BCC:
-				g_max_neighbors = 8;
+				se->max_neighbors = 8;
 				initialize_jump_offsets(BCC);
 				break;
 		}
@@ -390,7 +390,7 @@ void initialize_neighbor_offsets(void)
 }
 
 // initializes jump_offset, opposite_offset
-void initialize_jump_offsets(int lattice_type)	// g_lattice_type = crystal lattice type
+void initialize_jump_offsets(int lattice_type)	// ss->lattice_type = crystal lattice type
 {
 	int i;
 	int fcc_offs[12] = {11, 10, 7, 4, 3, 6, 5, 2, 9, 8, 1, 0};
@@ -437,7 +437,7 @@ void initialize_jump_offsets(int lattice_type)	// g_lattice_type = crystal latti
 
 /********************************************************************************/
 /********************************************************************************/
-void calculate_internal_energy(int atom_cnt, struct SimulationState *ss)
+void calculate_internal_energy(int atom_cnt, struct SimulationState *ss, struct SimulationEnv *se)
 {
 	int neighbor, type;
 	ss->total_internal_energy = 0.;
@@ -445,7 +445,7 @@ void calculate_internal_energy(int atom_cnt, struct SimulationState *ss)
 	int nneB_index[3] = {1, 3, 4}; //indices of B-A, B-B, B-C bonds
 	int nneC_index[3] = {2, 4, 5}; //indices of C-A, C-B, C-C bonds
 	for (int i = 0; i < atom_cnt; ++i) {
-		for (int j = 0; j < g_max_neighbors; ++j)
+		for (int j = 0; j < se->max_neighbors; ++j)
 		{
 			neighbor = ss->atom_arr[i]->occupied_neighbor_sites[j];
 
@@ -476,7 +476,7 @@ void calculate_internal_energy(int atom_cnt, struct SimulationState *ss)
 /********************************************************************************/
 /********************************************************************************/
 // updates primitive_basis, ucell_params, Atoms' cart_coords? to match lattice type
-void set_primitive_basis(int lattice_type, struct SimulationState *ss) // g_lattice_type = crystal structure type
+void set_primitive_basis(int lattice_type, struct SimulationState *ss) // ss->lattice_type = crystal structure type
 {
 	switch(lattice_type)
 	{
@@ -533,12 +533,12 @@ void set_primitive_basis(int lattice_type, struct SimulationState *ss) // g_latt
 /********************************************************************************/
 /********************************************************************************/
 // fills initial_config with type of neighbors to atom[at], before jump offset_idx
-int get_initial_configuration2(int atom_idx, int offset_idx, int initial_config[], struct SimulationState *ss) // atom_idx is position in atom list, offset_idx is index in jump_offset
+int get_initial_configuration2(int atom_idx, int offset_idx, int initial_config[], struct SimulationState *ss, struct SimulationEnv *se) // atom_idx is position in atom list, offset_idx is index in jump_offset
 {	// TODO: rename to remove the 2
    	int i, j;
 	int nn_count = 0; // nearest-neighbors
 
-	for (i=0; i<g_max_neighbors; ++i)
+	for (i=0; i<se->max_neighbors; ++i)
     {
 		j = ss->atom_arr[atom_idx]->occupied_neighbor_sites[i];
 
@@ -573,7 +573,7 @@ int get_final_configuration2(int at, int offset_idx, int final_config[], struct 
 	adjust_pbc(&new_x, &new_y, &new_z);
 
 	//printf("after pbc xyz %lf %lf %lf\n", x, y, z);
-	for (i=0; i<g_max_neighbors; ++i)
+	for (i=0; i<se->max_neighbors; ++i)
       	{
 			//printf("offset_idx = %d, i = %d\n", offset_idx, i);
 			if (i == opposite_offset[offset_idx]) { // if direction is where the jump came from, set as empty 
@@ -600,7 +600,7 @@ int get_final_configuration2(int at, int offset_idx, int final_config[], struct 
 			else final_config[i] = -1;
 		}
 	/*printf("final config: "); // XXX: commented print
-	for (i=0;i<g_max_neighbors;++i)
+	for (i=0;i<se->max_neighbors;++i)
 		printf("%d ", final_config[i]);
 	printf("\n");*/
 

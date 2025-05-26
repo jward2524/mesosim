@@ -289,13 +289,13 @@ int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se
 			return FILE_COMMAND_IGNORED;
 		}
 		if (strncmp(structtype, "FCC", 3) == 0 || strncmp(structtype, "1", 1) == 0)
-			g_lattice_type = FCC;
+			se->lattice_type = FCC;
 		else if (strncmp(structtype, "BCC", 3) == 0 || strncmp(structtype, "2", 1) == 0)
-			g_lattice_type = BCC;
+			se->lattice_type = BCC;
 		else if (strncmp(structtype, "SC", 2) == 0 || strncmp(structtype, "3", 1) == 0)
-			g_lattice_type = SC;
+			se->lattice_type = SC;
 		/*else if (strncmp(structtype, "DIA", 3) == 0 || strncmp(structtype, "4", 1) == 0)
-			g_lattice_type = DIAMOND;*/ 
+			se->lattice_type = DIAMOND;*/ 
 		else {
 			fprintf(g_temp_log, "ERROR! Structure type %s not valid\n", structtype);
 			return FILE_COMMAND_IGNORED;
@@ -312,21 +312,21 @@ int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se
 		//initialize the atoms! the options are either flat sheet, spherical cluster, or file input
 		if (strncmp(params, "sheet", 5) == 0) {
 			se->simulation_type = SIMULATION_TYPE_FLAT_SHEET;
-			if ((argsread = sscanf(params, "%*s %d", &g_sheet_thickness)) != 1) {
+			if ((argsread = sscanf(params, "%*s %d", &se->sheet_thickness)) != 1) {
 				fprintf(g_temp_log, "ERROR! Could not correctly read sheet thickness\n");
 				return FILE_COMMAND_IGNORED;
 			}
 		}
 		else if (strncmp(params, "cluster", 6) == 0) {
 			se->simulation_type = SIMULATION_TYPE_CLUSTER;
-			if ((argsread = sscanf(params, "%*s %d", &g_cluster_radius)) != 1) {
+			if ((argsread = sscanf(params, "%*s %d", &se->cluster_radius)) != 1) {
 				fprintf(g_temp_log, "ERROR! Could not correctly read cluster radius\n");
 				return FILE_COMMAND_IGNORED;
 			}
 		}
 		else if (strncmp(params, "file", 4) == 0) {
 			se->simulation_type = SIMULATION_TYPE_FROM_FILE;
-			if ((argsread = sscanf(params, "%*s %s", g_atoms_filename)) != 1) {
+			if ((argsread = sscanf(params, "%*s %s", se->atoms_filename)) != 1) {
 				fprintf(g_temp_log, "ERROR! Could not correctly read file name for atoms\n");
 				return FILE_COMMAND_IGNORED;
 			}

@@ -53,11 +53,11 @@ extern double g_current_probability;
 // extern int g_ssx, g_ssy, g_ssz;
 // extern double g_ssr;
 // extern int g_zix, g_ziy, g_ziz;
-extern int g_lattice_type;
-extern int g_max_neighbors;
-extern int g_sheet_thickness;
-extern int g_cluster_radius;
-extern char g_atoms_filename[256];
+// extern int g_lattice_type;
+// extern int g_max_neighbors;
+// extern int g_sheet_thickness;
+// extern int g_cluster_radius;
+// extern char g_atoms_filename[256];
 // extern Zone g_zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z];
 extern double g_initial_overpotential;
 extern double g_overpotential_ramp_rate;
@@ -97,12 +97,12 @@ struct SimulationEnv
     double ssr;
     int zix, ziy, ziz;
 
-    // int lattice_type;
-    // int max_neighbors;
+    int lattice_type;
+    int max_neighbors;
 
-    // int sheet_thickness;
-    // int cluster_radius;
-    // char atoms_filename[256];
+    int sheet_thickness;
+    int cluster_radius;
+    char atoms_filename[256];
 
     // double initial_overpotential;
     // double overpotential_ramp_rate;

@@ -252,7 +252,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState 
 
 	// [ ]: saturate all the bonds, except it doesn't?
 
-	for (i=0;i<g_max_neighbors;++i)
+	for (i=0;i<se->max_neighbors;++i)
 	{
 		// mark that this atom cannot yet jump in direction i
 		/*if (x > 60) // XXX: commented prints
@@ -442,7 +442,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState 
 	//printf("bond saturated\n");
 	// can't evaporate either
 	// [ ]: bc bonds saturated, except they aren't? so don't let it evaporate
-	ss->atom_arr[pos]->transition_indices[g_max_neighbors] = -1;
+	ss->atom_arr[pos]->transition_indices[se->max_neighbors] = -1;
 
 	//printf("did you cause a problem\n");
 	// set the hopping rates for this atom
@@ -457,7 +457,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState 
 	//printf("my transition refreshed\n");
 	// cycle through the nearest neighbors, refresh their transitions [or bury as necessary]
 
-	for (i=0;i<g_max_neighbors;++i)
+	for (i=0;i<se->max_neighbors;++i)
 	{
 		//printf("trying to refresh neighbor %d\n", i);
 		j = ss->atom_arr[pos]->occupied_neighbor_sites[i];
@@ -515,7 +515,7 @@ void move_atom(int ia, int fa, struct SimulationState *ss, struct SimulationEnv 
 				ss->zone_arr[xzone][yzone][zzone].offset = fa;
 			}
 
-		for (n=0;n < g_max_neighbors;++n)
+		for (n=0;n < se->max_neighbors;++n)
 			{
 				ss->atom_arr[fa]->occupied_neighbor_sites[n] =	ss->atom_arr[ia]->occupied_neighbor_sites[n];
 
@@ -528,11 +528,11 @@ void move_atom(int ia, int fa, struct SimulationState *ss, struct SimulationEnv 
             	ss->transition_arr[ss->atom_arr[fa]->transition_indices[n]]->atom_idx = fa;
 			}
 
-		ss->atom_arr[fa]->transition_indices[g_max_neighbors]
-      		= ss->atom_arr[ia]->transition_indices[g_max_neighbors];
+		ss->atom_arr[fa]->transition_indices[se->max_neighbors]
+      		= ss->atom_arr[ia]->transition_indices[se->max_neighbors];
 
-		if (ss->atom_arr[fa]->transition_indices[g_max_neighbors] >= 0)
-      		ss->transition_arr[ss->atom_arr[fa]->transition_indices[g_max_neighbors]]->atom_idx = fa;
+		if (ss->atom_arr[fa]->transition_indices[se->max_neighbors] >= 0)
+      		ss->transition_arr[ss->atom_arr[fa]->transition_indices[se->max_neighbors]]->atom_idx = fa;
 
 		return;
 	}
@@ -576,7 +576,7 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
 
   	type = ss->atom_arr[at]->type;
 
-	for (i=0;i<g_max_neighbors;++i)
+	for (i=0;i<se->max_neighbors;++i)
 	{
 		j = ss->atom_arr[at]->occupied_neighbor_sites[i];
 
@@ -630,7 +630,7 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
 		}
 	}
 
-	take_off_transition_list(at, g_max_neighbors, ss);			// dissolution
+	take_off_transition_list(at, se->max_neighbors, ss);			// dissolution
 
 	// now get rid of the atom.  This is almost equivalent to burying it.
 	// find out what zone we're in
@@ -822,7 +822,7 @@ int reincarnate(int x, int y, int z, int type, int vc, int buried, struct Simula
 	// find (or set) the occupied neighbor sites
 	// except for the vc direction, all other spots should be occupied
 
-	for (i=0;i<g_max_neighbors;++i)
+	for (i=0;i<se->max_neighbors;++i)
 	{
 		checkx = x + jump_offset[i].dx;
 		checky = y + jump_offset[i].dy;
@@ -839,7 +839,7 @@ int reincarnate(int x, int y, int z, int type, int vc, int buried, struct Simula
 	// we'll have to add this atom to the transition lists, and also
 	// update the configuration of the atoms contained in n[i]
 
-	for (i=0;i<g_max_neighbors;++i)
+	for (i=0;i<se->max_neighbors;++i)
 	{
 		if (ss->atom_arr[ss->atom_cnt]->occupied_neighbor_sites[i] >= 0)
 			ss->atom_arr[ss->atom_arr[ss->atom_cnt]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = ss->atom_cnt;
@@ -847,7 +847,7 @@ int reincarnate(int x, int y, int z, int type, int vc, int buried, struct Simula
 		ss->atom_arr[ss->atom_cnt]->transition_indices[i] = -1;		// initialization
 	}
 
-	ss->atom_arr[ss->atom_cnt]->transition_indices[g_max_neighbors] = -1;
+	ss->atom_arr[ss->atom_cnt]->transition_indices[se->max_neighbors] = -1;
 
 	refresh_transitions(ss->atom_cnt, ss, se);
 
@@ -929,7 +929,7 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
 
 	// make all atoms whose neighbor this was see an empty spot
 
-	for (i=0;i<g_max_neighbors;++i)
+	for (i=0;i<se->max_neighbors;++i)
 	{
 		if (ss->atom_arr[atom_number]->occupied_neighbor_sites[i] >= 0)
 		{
