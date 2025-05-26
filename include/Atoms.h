@@ -1,26 +1,28 @@
+#ifndef ATOMS_H
+#define ATOMS_H
+
 #include "Common.h"
 
-int add_atom(int x, int y, int z, int type, int special, struct SimulationState *ss, struct SimulationEnv *se);
-int atom_at(int cx, int cy, int cz, struct SimulationState *ss, struct SimulationEnv *se);
-void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se);
-void move_atom(int ia, int fa, struct SimulationState *ss, struct SimulationEnv *se);
+int add_atom(int x, int y, int z, int type, int special, struct SimulationState* ss, struct SimulationEnv* se);
+int atom_at(int cx, int cy, int cz, Atom *atom_arr[], Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
+void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se);
+void move_atom(int ia, int fa, Atom *atom_arr[], Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition *transition_arr[], struct SimulationEnv *se);
 
 // void make_buried_atoms_real(void);
 
-int random_reincarnate_atom(int x, int y, int z, int type, int vc, struct SimulationState *ss, struct SimulationEnv *se); //feels like it'll never be called
-int reincarnate_atom(int x, int y, int z, int type, int vc, struct SimulationState *ss, struct SimulationEnv *se); //will not be called
+int random_reincarnate_atom(int x, int y, int z, int type, int vc); //feels like it'll never be called
+int reincarnate_atom(int x, int y, int z, int type, int vc); //will not be called
 void bury_atom(int at, int *pos); //no longer relevant
 
 // rotation and molecule orientation
-// these prototypes are wrong, redefined somewhere else
 // void rotmat(Atom* atm[], int na, double rtmat[3][3]);
 void organize(Atom* atom_arr[], int atom_cnt); //keep for now but need to retool
 void orthomol(Atom* atom_arr[], int atom_cnt, double basis[3][3]);
 void centerg(Atom* atom_arr[], int atom_cnt); //not really relevant now (visualization)
 
 // general atom and bond handling routines
-void copy_atom(int, int, struct SimulationState *ss);
-void create_default_atom(int na, struct SimulationState *ss); //can modify this to remove things like color?
+void copy_atom(int i, int j, Atom *atom_arr[]);
+void create_default_atom(int na, Atom *atom_arr[]); //can modify this to remove things like color?
 
 void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv *se);
 void cell_to_latmat(double c[6], double ltmt[3][3]);
@@ -33,6 +35,7 @@ void lattice2cartesian(int clattice[3], double primitive_basis[3][3], double cca
 int round_towards(double val, int target);
 
 /* symmetry related variables */
+// TODO: into SimulationEnv
 extern double rmat[3][3];
 extern double centroid[3];
 extern crystal_offset jump_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
@@ -42,9 +45,11 @@ extern double ucell_params[6];
 extern double dax, day, daz;
 extern crystal_offset lattice_first_offset[24];
 extern crystal_offset lattice_second_offset[24];
-extern crystal_offset bcc_offset[8];
-extern crystal_offset fcc_offset[12];
-extern crystal_offset sc_offset[6];
-extern crystal_offset sc_second_offsets[12];
-extern crystal_offset fcc_second_offsets[6];
-extern crystal_offset bcc_second_offsets[6];
+extern const crystal_offset BCC_OFFSET[8];
+extern const crystal_offset FCC_OFFSET[12];
+extern const crystal_offset SC_OFFSET[6];
+extern const crystal_offset SC_OFFSET_2[12];
+extern const crystal_offset FCC_OFFSET_2[6];
+extern const crystal_offset BCC_OFFSET_2[6];
+
+#endif // ATOMS_H

@@ -1,3 +1,6 @@
+#ifndef RANDOM_H
+#define RANDOM_H
+
 // defintions for the random number routines
 #define IM1 2147483563
 #define IM2 2147483399
@@ -24,3 +27,5 @@ extern long rand_seed;
 extern long idum2;
 extern long iy;
 extern long iv[];
+
+#endif // RANDOM_H

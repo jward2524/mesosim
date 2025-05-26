@@ -1,17 +1,22 @@
+#ifndef FILEIO_H
+#define FILEIO_H
+
 #include "Common.h"
+#include <stdbool.h>
 
-// IO
-bool simulation_parameters_from_file(char *filename, struct SimulationState *ss, struct SimulationEnv *se); //need to modify!
-bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState *ss); //need to modify
-bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState *ss, struct SimulationEnv *se); //need to modify
-bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState *ss, struct SimulationEnv *se);
-bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState *ss, struct SimulationEnv *se); //is this actually relevant?
+bool simulation_parameters_from_file(char* filename, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls, FILE* temp_log, time_t starttime); //need to modify!
+bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls); //need to modify
+bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls); //need to modify
+bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls);
+bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls); //is this actually relevant?
 
-int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se);
+int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls);
 int parse_boolean(char* str);
-int match_atom_type(char* type, char* types[], int* num_types);
-int parse_datalog_params(char* params, int cursor);
+int match_atom_type(char* type, char* types[], int* num_types, FILE* temp_log);
+int parse_datalog_params(char* params, int cursor, struct LoggingState* ls, FILE* temp_log);
 
-bool output_log_file(FILE* sim_log_file, int frame_num, struct SimulationState *ss);
-bool write_xyz_file(char* xyz_filename, int frame_num, struct SimulationState *ss);
+bool output_log_file(FILE* sim_log_file, int frame_num, double elapsed_stime, double temperature, double overpotential, int atom_cnt, double total_internal_energy);
+bool write_xyz_file(struct SimulationState* sim_state, char* xyz_filename, int frame_num);
 bool output_kmc_file(char *kmc_filename); //need to rework
+
+#endif // FILEIO_H

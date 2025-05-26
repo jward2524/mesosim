@@ -1,5 +1,5 @@
-﻿#include "stdafx.h"
-#include "Vector.h"
+﻿#include "Vector.h"
+#include <math.h>
 
 /******************************************************************
 rotmata(x,f,a):  Produce matrix a for the rotation about a vector

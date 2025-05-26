@@ -1,5 +1,11 @@
+#ifndef MESOSIM_H
+#define MESOSIM_H
+
 #include "Common.h"
+#include <time.h>
+
 // void initialize_symmetry_elements(void);
-void initialize_lattice_geometry(struct SimulationEnv *se);
+void initialize_lattice_geometry(struct SimulationEnv* sim_env);
 void write_backlog(FILE*, FILE*);
-extern time_t starttime, endtime;
+
+#endif // MESOSIM_H

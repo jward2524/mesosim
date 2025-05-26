@@ -1,3 +1,6 @@
+#ifndef VECTOR_H
+#define VECTOR_H
+
 // prototypes for the functions contained in vector.cpp
 
 void make_rotmat(double rangle1, double a[3][3], int axis);
@@ -40,3 +43,4 @@ void fconmul(double* a, double factor, double* b, double a_len);
 int idot(int x[3], int y[3]);
 void ivecsum(int x[3], int y[3], int z[3]);
 
+#endif // VECTOR_H

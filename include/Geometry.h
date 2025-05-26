@@ -1,6 +1,7 @@
-#include "Defs.h"
+#ifndef GEOMETRY_H
+#define GEOMETRY_H
 
-#pragma once
+#include "Defs.h"
 
 // [ ]: what is the difference between the atom linked list and the atom array?
 typedef struct
@@ -28,7 +29,7 @@ typedef struct
 
 		// simulation data
 
-		// atom lives multiple times on the transition list ss->transition_arr
+		// atom lives multiple times on the transition list transition_arr
 		// index of this list refers to the transition vector in jump_offset[index]
 		// in the implementation here, the maximum number of times the atom may live on the transition list
 		// equals the number of directions it may diffuse, plus one more special transition such as dissolution
@@ -112,7 +113,7 @@ typedef struct
 		int listnum[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS];
 		double lbound[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS]; // ENHANCE: lbound and ubound are duplicating info
 		double ubound[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS]; // lbound[i] = ubound[i+1] ?
-	} Trans_Prob;
+	} TransProb;
 
 typedef struct
 	{
@@ -123,14 +124,14 @@ typedef struct
 	{
 		double k;						// rate constant?
 		double frequency;				// rate constant * count, for calculating probability of transition
-		int transition_count;           			// number (count?) of this type of transition in ss->transition_arr
-		int transition_start_idx; 					// index to first item in ss->transition_arr with this rate constant 
+		int transition_count;           			// number (count?) of this type of transition in transition_arr
+		int transition_start_idx; 					// index to first item in transition_arr with this rate constant 
 	} Rate;
 
 typedef struct
 	{
-		int atom_idx;		// index in ss->atom_arr of atom that the transition belongs to / is acting on
-		char offset_idx;   	// this represents the translation vector, as the index in jump_offset
+		int atom_idx;		// index in atom_arr of atom that the transition belongs to / is acting on
+		unsigned char offset_idx;   	// this represents the translation vector, as the index in jump_offset
 
 	} Transition;
 
@@ -166,70 +167,6 @@ typedef struct
 	double g;
 	double b;
 } Atom_Color;
+// XXX: visualization I think, if not its commented code
 
-/*typedef struct
-	{
-		int index;				// number of atom
-		double normal[3];		// normal to this atom
-		double inside_vector[3];
-		int neighbors[20];
-		int nn;
-		int rnn;
-		double cart_coord[3];
-		double color[3];
-		int triangles[20];
-		int num_triangles;
-		int mark;
-
-		double k1;
-		double k2;
-
-		double area;
-		double dx[3];
-		double newcoord[3];
-
-		double newnormal[3];
-
-		double residual;
-		double residual_direction;
-
-	} Surface_Atom;*/ //used in display/plot/curvature
-	
-/*typedef struct
-{
-	int index[3];				// surface atoms comprising triangle
-	double normal[3][3];		// normals of atoms comprising triangle
-	double cart_coord[3][3];
-	double overallnormal[3];
-	int mark;
-
-	int nn;						// number of bordering triangles
-	int neighbors[15];			// indices to bordering triangles
-
-	double area;
-
-	double centroid[3];
-
-	double color[3];
-
-	double kappa1;
-	double kappa2;
-
-//	int order[10][3];
-
-	double angles[3];
-
-} Triangle;*/ //used in curvature/display/plot
-
-/*typedef struct
-{
-	int spoint[750];
-} Spoint;*/ //only used in curvature
-
-/*typedef struct
-{
-	int snum;
-	char incarnated;
-	Spoint *sindex;
-	//sindex[100];
-} TZone;*/ //only used in curvature
+#endif // GEOMETRY_H
