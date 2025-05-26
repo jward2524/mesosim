@@ -7,20 +7,20 @@
 
 
 // Simulation.h
-extern Atom *g_atom_arr[MAXIMUM_NUMBER_OF_ATOMS];
-extern int g_atom_cnt;
-extern Rate g_rate_arr[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS];
-extern int g_rate_cnt;
-extern Transition *g_transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
-extern int g_transition_cnt;
+// extern Atom *g_atom_arr[MAXIMUM_NUMBER_OF_ATOMS];
+// extern int g_atom_cnt;
+// extern Rate g_rate_arr[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS];
+// extern int g_rate_cnt;
+// extern Transition *g_transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
+// extern int g_transition_cnt;
 // extern Trans_Prob g_transition_probability;
-extern Bond g_bond[MAXIMUM_NUMBER_OF_BONDS];
-extern int g_simulation_type;
+// extern Bond g_bond[MAXIMUM_NUMBER_OF_BONDS];
+// extern int g_simulation_type;
 extern int g_num_sims; // XXX
 extern Atom g_temp_atom;
 extern char g_atom_names[3][3];
 extern double g_default_color[3];
-extern bool g_evaporation_flag;
+// extern bool g_evaporation_flag;
 extern char g_coordinate_log_prefix[256];
 // extern unsigned long ss->final_iteration; // max number of iterations
 // extern double ss->run_stime; // simulation max runtime default (in seconds)
@@ -47,12 +47,12 @@ extern double g_current_probability;
 
 // Simulation_Aux.h
 // extern double ss->total_internal_energy;
-extern int g_zixshift, g_ziyshift, g_zizshift;
-extern int g_ssxshift, g_ssyshift, g_sszshift;
-extern int g_zsh, g_ysh, g_xsh;
-extern int g_ssx, g_ssy, g_ssz;
-extern double g_ssr;
-extern int g_zix, g_ziy, g_ziz;
+// extern int g_zixshift, g_ziyshift, g_zizshift;
+// extern int g_ssxshift, g_ssyshift, g_sszshift;
+// extern int g_zsh, g_ysh, g_xsh;
+// extern int g_ssx, g_ssy, g_ssz;
+// extern double g_ssr;
+// extern int g_zix, g_ziy, g_ziz;
 extern int g_lattice_type;
 extern int g_max_neighbors;
 extern int g_sheet_thickness;
@@ -85,17 +85,17 @@ extern FILE *g_sim_log_file;
 
 struct SimulationEnv
 {
-    // int g_simulation_type;
-    // bool evaporation_flag;
+    int simulation_type;
+    bool evaporation_flag;
 
-    // int zixshift, ziyshift, zizshift;
-    // int g_ssxshift, g_ssyshift, g_sszshift;
-    // int zsh, ysh, xsh;							// shifts
+    int zixshift, ziyshift, zizshift;
+    int ssxshift, ssyshift, sszshift;
+    int zsh, ysh, xsh;
 
-    // // [ ]: what are the units for this? how does it relate to atomic spacing?
-    // int ssx, ssy, ssz;					// system size x, y, z
-    // double ssr;
-    // int zix, ziy, ziz;
+    // [ ]: what are the units for this? how does it relate to atomic spacing?
+    int ssx, ssy, ssz; // system size x, y, z
+    double ssr;
+    int zix, ziy, ziz;
 
     // int lattice_type;
     // int max_neighbors;
@@ -130,17 +130,17 @@ struct SimulationEnv
 
 struct SimulationState
 {
-    // Bond bond[MAXIMUM_NUMBER_OF_BONDS];
+    Bond bond[MAXIMUM_NUMBER_OF_BONDS];
 
-    // Atom *atom_arr[MAXIMUM_NUMBER_OF_ATOMS];
-    // int atom_cnt;
+    Atom *atom_arr[MAXIMUM_NUMBER_OF_ATOMS];
+    int atom_cnt;
 
-    // // ENHANCE: malloc?
-    // Rate rate_arr[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS];
-    // int rate_cnt;
+    // ENHANCE: malloc?
+    Rate rate_arr[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS];
+    int rate_cnt;
 
-    // Transition* transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
-    // int transition_cnt;
+    Transition* transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
+    int transition_cnt;
     
     Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z]; // TODO: change to malloc
     Trans_Prob transition_probability;

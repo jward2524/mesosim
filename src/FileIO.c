@@ -20,7 +20,7 @@ FILE *g_sim_log_file = NULL;
 
 const int buffer_size = 200;
 
-bool simulation_parameters_from_file(char* filename, struct SimulationState *ss)
+bool simulation_parameters_from_file(char* filename, struct SimulationState *ss, struct SimulationEnv *se)
 {
 	char extension[4] = "";
 
@@ -52,22 +52,22 @@ bool simulation_parameters_from_file(char* filename, struct SimulationState *ss)
 	if (strncmp(extension, "xyz", 3) == 0)
 	{
 		// open simple x,y,z,type coordinate file
-		return process_xyz_file(g_temp_log, input_file);
+		return process_xyz_file(g_temp_log, input_file, ss);
 	}
 	else if (strncmp(extension, "kmc", 3) == 0)
 	{
 		// open kmc type file
-		return process_kmc_file(g_temp_log, input_file, ss);
+		return process_kmc_file(g_temp_log, input_file, ss, se);
 	}
 	else if (strncmp(extension, "in", 2) == 0)
 	{
 		//open and process parameter input file
-		return process_in_file(g_temp_log, input_file, ss);
+		return process_in_file(g_temp_log, input_file, ss, se);
     }
 	else if (strncmp(extension, "kmx", 3) == 0)
 	{
 		//open and process new kmc input type that removes fluff (does this need to happen)
-		return process_kmx_file(g_temp_log, input_file, ss);
+		return process_kmx_file(g_temp_log, input_file, ss, se);
     }
 	else
 	{
@@ -83,7 +83,7 @@ bool simulation_parameters_from_file(char* filename, struct SimulationState *ss)
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState *ss) {
+bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState *ss, struct SimulationEnv *se) {
 	char parameter_line[buffer_size];
 	int errnum;
 	// ENHANCE: line length should be a const that is used to pull lines and create buffer sizes
@@ -91,7 +91,7 @@ bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState *s
 		if (strncmp(parameter_line, "restart", 7) == 0) {
 			//TODO: restart the simulation from a log file and don't do the rest of the loop
 		}
-		errnum = parse_input(parameter_line, ss);
+		errnum = parse_input(parameter_line, ss, se);
 		if (errnum != NO_INPUT_ERROR)
 		{
 			//should write to the temp
@@ -107,7 +107,7 @@ bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState *s
 /*******************************************************************************
 *******************************************************************************/
 
-int parse_input(char* line, struct SimulationState *ss)
+int parse_input(char* line, struct SimulationState *ss, struct SimulationEnv *se)
 {
 	//TODO: use strtok?
 	//printf("Trying to parse this line! \"%s\"\n", line);
@@ -148,7 +148,7 @@ int parse_input(char* line, struct SimulationState *ss)
 	int argsread; //check to see if everything got read correctly
 	if (strncmp(cmd, "systemsize", 10) == 0) {
 		// set the system size using params
-		if ((argsread = sscanf(params, "%d %d %d", &g_ssx, &g_ssy, &g_ssz)) != 3)
+		if ((argsread = sscanf(params, "%d %d %d", &se->ssx, &se->ssy, &se->ssz)) != 3)
 		{
 			fprintf(g_temp_log, "ERROR! Could not correctly read system size parameters %s\n", params);
 			return FILE_COMMAND_IGNORED;
@@ -311,21 +311,21 @@ int parse_input(char* line, struct SimulationState *ss)
 	else if (strncmp(cmd, "geometry", 8) == 0) {
 		//initialize the atoms! the options are either flat sheet, spherical cluster, or file input
 		if (strncmp(params, "sheet", 5) == 0) {
-			g_simulation_type = SIMULATION_TYPE_FLAT_SHEET;
+			se->simulation_type = SIMULATION_TYPE_FLAT_SHEET;
 			if ((argsread = sscanf(params, "%*s %d", &g_sheet_thickness)) != 1) {
 				fprintf(g_temp_log, "ERROR! Could not correctly read sheet thickness\n");
 				return FILE_COMMAND_IGNORED;
 			}
 		}
 		else if (strncmp(params, "cluster", 6) == 0) {
-			g_simulation_type = SIMULATION_TYPE_CLUSTER;
+			se->simulation_type = SIMULATION_TYPE_CLUSTER;
 			if ((argsread = sscanf(params, "%*s %d", &g_cluster_radius)) != 1) {
 				fprintf(g_temp_log, "ERROR! Could not correctly read cluster radius\n");
 				return FILE_COMMAND_IGNORED;
 			}
 		}
 		else if (strncmp(params, "file", 4) == 0) {
-			g_simulation_type = SIMULATION_TYPE_FROM_FILE;
+			se->simulation_type = SIMULATION_TYPE_FROM_FILE;
 			if ((argsread = sscanf(params, "%*s %s", g_atoms_filename)) != 1) {
 				fprintf(g_temp_log, "ERROR! Could not correctly read file name for atoms\n");
 				return FILE_COMMAND_IGNORED;
@@ -508,7 +508,7 @@ int parse_datalog_params(char* params, int cursor){
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState *ss)
+bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState *ss, struct SimulationEnv *se)
 {
 	int newnat;
 
@@ -516,12 +516,12 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState *
 	int x,y,z;
 
 	// system and zone size
-	g_ssx = DSIMSIZE; //is this always true?????
-	g_ssy = DSIMSIZE;
-	g_ssz = DSIMSIZE;
-	g_zix = TTS;
-	g_ziy = TTS;
-	g_ziz = TTS;							// zones in x, y, z
+	se->ssx = DSIMSIZE; //is this always true?????
+	se->ssy = DSIMSIZE;
+	se->ssz = DSIMSIZE;
+	se->zix = TTS;
+	se->ziy = TTS;
+	se->ziz = TTS;							// zones in x, y, z
 
 	//general_simulation_initialization(); //happens later
 
@@ -536,11 +536,11 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState *
 		&rmat[1][0], &rmat[1][1], &rmat[1][2], 
 		&rmat[2][0], &rmat[2][1], &rmat[2][2]); 
 
-	fscanf(input_file, "%d %d %d", &g_ssx, &g_ssy, &g_ssz);
+	fscanf(input_file, "%d %d %d", &se->ssx, &se->ssy, &se->ssz);
 
 	fscanf(input_file, "%d", &newnat);
 
-	fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", g_ssx, g_ssy, g_ssz, newnat);
+	fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", se->ssx, se->ssy, se->ssz, newnat);
 	
 	int tempint;
 	double tempdouble[3][3];
@@ -581,14 +581,14 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState *
 		y = g_temp_atom.lattice[1];
 		z = g_temp_atom.lattice[2];
 
-		if (atom_at(x, y, z, ss) == -1)
+		if (atom_at(x, y, z, ss, se) == -1)
 		{
-			j = add_atom(x,y,z,g_temp_atom.type, SPECIFIED, ss);
+			j = add_atom(x,y,z,g_temp_atom.type, SPECIFIED, ss, se);
 		}
 	}
 
 	primitive_basis2ucell_params(primitive_basis, ucell_params);
-	organize(g_atom_arr, g_atom_cnt);
+	organize(ss->atom_arr, ss->atom_cnt);
 
 
 	fclose(input_file);
@@ -598,7 +598,7 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState *
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_xyz_file(FILE* temp_log, FILE* input_file)
+bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState *ss)
 {
 	// processes file with .xyz format (number of atoms / comment / type x y z)
 
@@ -611,7 +611,7 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file)
 	double radius;
 	int atype;
 
-	//set_primitive_basis(SC); //is this always true? this should be set somewhere else (beforehand or after?)
+	//set_primitive_basis(SC, ss); //is this always true? this should be set somewhere else (beforehand or after?)
 
 	//first line should be the number of atoms
 	int nremain; //number of expected atoms
@@ -634,13 +634,13 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file)
       	{
 			fclose(input_file);
 			fprintf(temp_log, "ERROR! Ran into EOF, expected %d atoms remaining\n", nremain);
-			//organize(atom, g_atom_cnt); //do I need to call this?
+			//organize(atom, ss->atom_cnt); //do I need to call this?
 			return false;
 		}
 
-		i=g_atom_cnt;	
+		i=ss->atom_cnt;	
 				
-		create_default_atom(i);
+		create_default_atom(i, ss);
 
 		if ((argsread = sscanf(g_command_string, "%s %lf %lf %lf %lf", xyz_type, xyz_pos, xyz_pos+1, xyz_pos+2, &radius)) != 5)
 		{
@@ -649,21 +649,21 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file)
 			return false;
         }
 
-		g_atom_arr[i]->cart_coord[0] = xyz_pos[0];
-		g_atom_arr[i]->cart_coord[1] = xyz_pos[1];
-		g_atom_arr[i]->cart_coord[2] = xyz_pos[2];
+		ss->atom_arr[i]->cart_coord[0] = xyz_pos[0];
+		ss->atom_arr[i]->cart_coord[1] = xyz_pos[1];
+		ss->atom_arr[i]->cart_coord[2] = xyz_pos[2];
 		atype = match_atom_type(xyz_type, typenames, &ntypes);
 
 		if (atype == -1) //check to see if atom type is successfully added
 		{
 			for (int i = 0; i < ntypes; ++i)
 				free(typenames[i]);
-			//organize(atoms, g_atom_cnt) //???
+			//organize(atoms, ss->atom_cnt) //???
 			return false;
 		}
 
-		g_atom_arr[i]->type = atype;
-		g_atom_arr[i]->bsradius = radius;
+		ss->atom_arr[i]->type = atype;
+		ss->atom_arr[i]->bsradius = radius;
 
 		//vecmul(atom[i]->cart_coord, invert_primitive_basis, atom[i]->lattice); // TODO: need to do this later now!
 
@@ -712,7 +712,7 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file)
 				break;
 	    }*/
 
-		++g_atom_cnt;
+		++ss->atom_cnt;
 		
 	}
 
@@ -720,9 +720,9 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file)
 	for (int i = 0; i < ntypes; ++i)
 		free(typenames[i]);
 	
-	fprintf(temp_log, "Successfully read %d atoms from .xyz file\n", g_atom_cnt);
+	fprintf(temp_log, "Successfully read %d atoms from .xyz file\n", ss->atom_cnt);
 	fclose(input_file);
-	//organize(atom, g_atom_cnt); //???
+	//organize(atom, ss->atom_cnt); //???
 	return true;
 }
 
@@ -753,7 +753,7 @@ int match_atom_type(char* type, char* types[], int* num_types) {
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState *ss) {
+bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState *ss, struct SimulationEnv *se) {
 	int newnat;
 	int i,j,k;
 	int x,y,z;
@@ -768,11 +768,11 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState *
 		&rmat[1][0], &rmat[1][1], &rmat[1][2], 
 		&rmat[2][0], &rmat[2][1], &rmat[2][2]); 
 
-	fscanf(input_file, "%d %d %d", &g_ssx, &g_ssy, &g_ssz);
+	fscanf(input_file, "%d %d %d", &se->ssx, &se->ssy, &se->ssz);
 
 	fscanf(input_file, "%d", &newnat);
 
-	fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", g_ssx, g_ssy, g_ssz, newnat);
+	fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", se->ssx, se->ssy, se->ssz, newnat);
 		
 
 	for (i=0;i<newnat;++i)
@@ -797,14 +797,14 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState *
 		y = g_temp_atom.lattice[1];
 		z = g_temp_atom.lattice[2];
 
-		if (atom_at(x, y, z, ss) == -1)
+		if (atom_at(x, y, z, ss, se) == -1)
 		{
-			j = add_atom(x,y,z,g_temp_atom.type, SPECIFIED, ss);
+			j = add_atom(x,y,z,g_temp_atom.type, SPECIFIED, ss, se);
 		}
 	}
 
 	primitive_basis2ucell_params(primitive_basis, ucell_params);
-	organize(g_atom_arr, g_atom_cnt);
+	organize(ss->atom_arr, ss->atom_cnt);
 
 
 	fclose(input_file);
@@ -819,7 +819,7 @@ bool output_log_file(FILE* sim_log_file, int frame_num, struct SimulationState *
 {
 	fprintf(sim_log_file, "![%d]\t", frame_num);
 	fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t", ss->elapsed_stime, ss->temperature, ss->overpotential); // TODO: add iteration number to this
-	fprintf(sim_log_file, "atoms = %d\tinternal energy = %lf [eV]\n", g_atom_cnt, ss->total_internal_energy);
+	fprintf(sim_log_file, "atoms = %d\tinternal energy = %lf [eV]\n", ss->atom_cnt, ss->total_internal_energy);
 	fflush(sim_log_file);
 	return true;
 }
@@ -834,12 +834,12 @@ bool write_xyz_file(char* xyz_filename, int frame_num, struct SimulationState *s
 		printf("ERROR! Couldn't open output file %s\n", filename_full);
 		return false;
 	}
-	fprintf(fileid, "%d\n", g_atom_cnt); //start with number of atoms
+	fprintf(fileid, "%d\n", ss->atom_cnt); //start with number of atoms
 	fprintf(fileid, "time = %lf, temperature = %lf, potential = %lf, energy = %lf\n", ss->elapsed_stime, ss->temperature, ss->overpotential, ss->total_internal_energy); //need to compute energy here!
 	// fprintf(fileid, "idx type x y z radius\n");
 
-	for (int i = 0; i < g_atom_cnt; ++i)
-		fprintf(fileid, "%d %s %lf %lf %lf %lf\n", i, g_atom_arr[i]->name, g_atom_arr[i]->cart_coord[0], g_atom_arr[i]->cart_coord[1], g_atom_arr[i]->cart_coord[2], g_atom_arr[i]->bsradius); //name is now element type
+	for (int i = 0; i < ss->atom_cnt; ++i)
+		fprintf(fileid, "%d %s %lf %lf %lf %lf\n", i, ss->atom_arr[i]->name, ss->atom_arr[i]->cart_coord[0], ss->atom_arr[i]->cart_coord[1], ss->atom_arr[i]->cart_coord[2], ss->atom_arr[i]->bsradius); //name is now element type
 	//ball and stick or space filling?
 	fclose(fileid);
 	return true;

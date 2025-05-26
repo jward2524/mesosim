@@ -10,14 +10,14 @@
 
 // double ss->total_internal_energy = 0;
 // // [ ]: what are these?
-// int g_zixshift, g_ziyshift, g_zizshift; // bit shifts for finding zones from coordinates
-// int g_ssxshift, g_ssyshift, g_sszshift; // used with zi*shift
-// int g_zsh, g_ysh, g_xsh;	// total bit shifts, zi*shift - ss*shift
+// int ss->zixshift, ss->ziyshift, ss->zizshift; // bit shifts for finding zones from coordinates
+// int ss->ssxshift, ss->ssyshift, ss->sszshift; // used with zi*shift
+// int ss->zsh, ss->ysh, ss->xsh;	// total bit shifts, zi*shift - ss*shift
 
 // // [ ]: what are the units for this? how does it relate to atomic spacing?
-// int g_ssx = DSIMSIZE, g_ssy = DSIMSIZE, g_ssz = DSIMSIZE;	// system size x, y, z in lattice coordinates // TODO: lattice coordinates but not along lattice vectors? // XXX: overwritten by input file
-// double g_ssr;
-// int g_zix = TTS, g_ziy = TTS, g_ziz = TTS;
+// int ss->ssx = DSIMSIZE, ss->ssy = DSIMSIZE, ss->ssz = DSIMSIZE;	// system size x, y, z in lattice coordinates // TODO: lattice coordinates but not along lattice vectors? // XXX: overwritten by input file
+// double ss->ssr;
+// int ss->zix = TTS, ss->ziy = TTS, ss->ziz = TTS;
 // // defaults are fcc
 // int g_lattice_type = FCC;
 // int g_max_neighbors = 12; // [ ]: this should be dependent on the crystal structure
@@ -52,18 +52,18 @@
 /******************************************************************************/
 /******************************************************************************/
 // XXX: only used for re-deposition
-void get_system_rw_radius(void)
+void get_system_rw_radius(struct SimulationEnv *se)
 {
 	int ss;
 
 	// find minimum axial distance to system edge
 
-	ss = g_ssx;
-	if (g_ssy < ss) ss = g_ssy;
-	if (g_ssz < ss) ss = g_ssz;
+	ss = se->ssx;
+	if (se->ssy < se) se = se->ssy;
+	if (se->ssz < se) se = se->ssz;
 
-	g_ssr = (double)ss/2.;
-	g_ssr = g_ssr - 5.;
+	se->ssr = (double)ss/2.;
+	se->ssr = se->ssr - 5.;
 	
 	return;
 }
@@ -122,36 +122,36 @@ void get_system_normal(void) // XXX: supposedly only for vizualization
 
 /******************************************************************************/
 /******************************************************************************/
-// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; rmat; g_normal_x, g_normal_y, g_normal_z; g_max_neighbors, jump_offset, opposite_offset; zi*, zi*shift, *sh], g_rate_cnt, g_transition_cnt, g_atom_cnt, ss->frequency_sum, ss->elapsed_stime, ss->overpotential, g_next_log_checkpoint
-void general_simulation_initialization(struct SimulationState *ss)
+// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; rmat; g_normal_x, g_normal_y, g_normal_z; g_max_neighbors, jump_offset, opposite_offset; zi*, zi*shift, *sh], ss->rate_cnt, ss->transition_cnt, ss->atom_cnt, ss->frequency_sum, ss->elapsed_stime, ss->overpotential, g_next_log_checkpoint
+void general_simulation_initialization(struct SimulationState *ss, struct SimulationEnv *se)
 {
 	// first, remove any atoms that may exist
-	// [ ]: why would g_atom_cnt not be zero????
-	while (g_atom_cnt != 0) // TODO: start here
-		kill_atom(g_atom_cnt-1, ss);
+	// [ ]: why would ss->atom_cnt not be zero????
+	while (ss->atom_cnt != 0) // TODO: start here
+		kill_atom(ss->atom_cnt-1, ss, se);
 
 	if (rand_seed > 0) rand_seed = -rand_seed;
 	srandj(&rand_seed);
-	// g_atom_cnt=0 for the initialization functions, so some of them end up doing nothing
-	get_shifts();	// bit shifts for periodic boundary conditions
+	// ss->atom_cnt=0 for the initialization functions, so some of them end up doing nothing
+	get_shifts(se);	// bit shifts for periodic boundary conditions
 
 	// system geometry initialization
 
-	set_primitive_basis(g_lattice_type);
-	set_default_orientation(); // supposedly was only for visualization
+	set_primitive_basis(g_lattice_type, ss);
+	set_default_orientation(ss); // supposedly was only for visualization
 	get_system_normal();	// maybe only for visualization
 
 	// initialize data structures that help figure out which atoms are next to which other atoms
 
 	initialize_neighbor_offsets();
-	initialize_zones(ss);							// initialize zone offsets
+	initialize_zones(ss, se);							// initialize zone offsets
 
 	//set_atom_colors(atom_color); // not needed anymore
 
-	g_rate_cnt = 0;	// initialize global transition variables
-	g_transition_cnt = 0;
+	ss->rate_cnt = 0;	// initialize global transition variables
+	ss->transition_cnt = 0;
 
-	g_atom_cnt = 0;	// initialize global atom variables
+	ss->atom_cnt = 0;	// initialize global atom variables
 	//current_iteration = 0; //not needed if only running 1 simulation at a time // XXX: commented code, never used
 	ss->frequency_sum = 0.0;
 
@@ -169,26 +169,26 @@ void general_simulation_initialization(struct SimulationState *ss)
 }
 
 
-void do_initialize_simulation(int simulation_index, struct SimulationState *ss) // index represents g_simulation_type, from macros
+void do_initialize_simulation(int simulation_index, struct SimulationState *ss, struct SimulationEnv *se) // index represents ss->simulation_type, from macros
 {
 	//printf("I'm in here, simulation index is %d\n", simulation_index);
 	switch(simulation_index) // TODO: just use the damn macros instead
 	{
 		case 1:										// flat plane
-			initialize_flat_sheet_1(g_sheet_thickness, ss);
+			initialize_flat_sheet_1(g_sheet_thickness, ss, se);
 			break;
 
 		case 2:
-			initialize_spherical_cluster(g_cluster_radius, ss);
+			initialize_spherical_cluster(g_cluster_radius, ss, se);
 			break;
 		case 3:
-			initialize_from_file(g_atoms_filename, ss); //TODO! THIS IS BIG!
+			initialize_from_file(g_atoms_filename, ss, se); //TODO! THIS IS BIG!
 			break;
 	}
 	//printf("My atoms are added\n");
-	check_system(ss); // optimizes the atoms added in the initialization routines
+	check_system(ss, se); // optimizes the atoms added in the initialization routines
 	//printf("My atoms are checked\n");
-	organize(g_atom_arr, g_atom_cnt);
+	organize(ss->atom_arr, ss->atom_cnt);
 	//printf("My atoms are organized\n");
 	//simulation_initialized = true; //this never really gets used
 
@@ -198,62 +198,62 @@ void do_initialize_simulation(int simulation_index, struct SimulationState *ss) 
 /********************************************************************************/
 /********************************************************************************/
 // zi* are the number of zones in that dimension, zi*shift is for bit shifting to find which zone a lattice coordinate corresponds to?
-void get_shifts(void)
+void get_shifts(struct SimulationEnv *se)
 { // updates zi*, zi*shift, *sh
 	int temp1;
 
-	temp1 = g_zix;
-	g_zixshift = 0;
+	temp1 = se->zix;
+	se->zixshift = 0;
 	while (temp1 > 1)
 	{
-		++g_zixshift;
+		++se->zixshift;
 		temp1 = temp1/2;
 	}
 
-	temp1 = g_ziy;
-	g_ziyshift = 0;
+	temp1 = se->ziy;
+	se->ziyshift = 0;
 	while (temp1 > 1)
 	{
-		++g_ziyshift;
+		++se->ziyshift;
 		temp1 = temp1/2;
 	}
 
-	temp1 = g_ziz;
-	g_zizshift = 0;
+	temp1 = se->ziz;
+	se->zizshift = 0;
 	while (temp1 > 1)
 	{
-		++g_zizshift;
+		++se->zizshift;
 		temp1 = temp1/2;
 	}
 
-	temp1 = g_ssx;
-	g_ssxshift = 0;
+	temp1 = se->ssx;
+	se->ssxshift = 0;
 	while (temp1 > 1)
 	{
-		++g_ssxshift;
+		++se->ssxshift;
 		temp1 = temp1/2;
 	}
 
-	temp1 = g_ssy;
-	g_ssyshift = 0;
+	temp1 = se->ssy;
+	se->ssyshift = 0;
 	while (temp1 > 1)
 	{
-		++g_ssyshift;
+		++se->ssyshift;
 		temp1 = temp1/2;
 	}
 
-	temp1 = g_ssz;
-	g_sszshift = 0;
+	temp1 = se->ssz;
+	se->sszshift = 0;
 	while (temp1 > 1)
 	{
-		++g_sszshift;
+		++se->sszshift;
 		temp1 = temp1/2;
 	}
-	// never used, just left and right shift with g_zixshift and g_ssxshift in findzone()
-	g_xsh = g_zixshift - g_ssxshift;
-	g_ysh = g_ziyshift - g_ssyshift;
-	g_zsh = g_zizshift - g_sszshift;
-	// TODO: more shifts in zones than in system? g_zix > g_ssx
+	// never used, just left and right shift with ss->zixshift and ss->ssxshift in findzone()
+	se->xsh = se->zixshift - se->ssxshift;
+	se->ysh = se->ziyshift - se->ssyshift;
+	se->zsh = se->zizshift - se->sszshift;
+	// TODO: more shifts in zones than in system? ss->zix > ss->ssx
 	return;
 }
 
@@ -270,14 +270,14 @@ void adjust_pbc(int* x, int* y, int* z) // should be lattice coordinates
 /********************************************************************************/
 /********************************************************************************/
 // finds the zone indices xy yz zz that correspond to the lattice coordinates xxx yyy zzz
-void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz)
+void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz, struct SimulationEnv *se)
 { 
 	// *z are pointers to return indices of the zone, *** are lattice coordinates
 	// normalize coordinates to the sblimits, then find which zone
 	// (zones / extent) * adjusted_coordinate
-	*xz = (int) (((double) g_zix / (g_sblimits_lat[0][1] - g_sblimits_lat[0][0])) * (xxx - g_sblimits_lat[0][0]));
-	*yz = (int) (((double) g_ziy / (g_sblimits_lat[1][1] - g_sblimits_lat[1][0])) * (yyy - g_sblimits_lat[1][0]));
-	*zz = (int) (((double) g_ziz / (g_sblimits_lat[2][1] - g_sblimits_lat[2][0])) * (zzz - g_sblimits_lat[2][0]));
+	*xz = (int) (((double) se->zix / (g_sblimits_lat[0][1] - g_sblimits_lat[0][0])) * (xxx - g_sblimits_lat[0][0]));
+	*yz = (int) (((double) se->ziy / (g_sblimits_lat[1][1] - g_sblimits_lat[1][0])) * (yyy - g_sblimits_lat[1][0]));
+	*zz = (int) (((double) se->ziz / (g_sblimits_lat[2][1] - g_sblimits_lat[2][0])) * (zzz - g_sblimits_lat[2][0]));
 
 	return;
 }
@@ -285,7 +285,7 @@ void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz)
 /********************************************************************************/
 /********************************************************************************/
 // updates rmat
-void set_default_orientation(void) // supposedly for viewing
+void set_default_orientation(struct SimulationState *ss) // supposedly for viewing
 {
 	static int index[3] = {1,1,1};
 	double axis[3], pnormal[3], axis_mag;
@@ -295,7 +295,7 @@ void set_default_orientation(void) // supposedly for viewing
 	double spin_ax[3];
 	double vec_angle;
 
-	organize(g_atom_arr, g_atom_cnt); // g_atom_cnt ='d 0
+	organize(ss->atom_arr, ss->atom_cnt); // ss->atom_cnt ='d 0
 
 	switch(g_lattice_type)
 	{
@@ -352,13 +352,13 @@ void set_default_orientation(void) // supposedly for viewing
 /********************************************************************************/
 /********************************************************************************/
 // updates zone (array) based on zi* (zone sizes?), initializes offset to -1 
-void initialize_zones(struct SimulationState *ss)
+void initialize_zones(struct SimulationState *ss, struct SimulationEnv *se)
 {
 	int i, j, k;
 	
-	for (i=0;i<g_zix;++i)
-		for (j=0;j<g_ziy;++j)
-			for (k=0;k<g_ziz;++k)
+	for (i=0;i<se->zix;++i)
+		for (j=0;j<se->ziy;++j)
+			for (k=0;k<se->ziz;++k)
 				ss->zone_arr[i][j][k].offset = -1;
 	return;
 }
@@ -447,13 +447,13 @@ void calculate_internal_energy(int atom_cnt, struct SimulationState *ss)
 	for (int i = 0; i < atom_cnt; ++i) {
 		for (int j = 0; j < g_max_neighbors; ++j)
 		{
-			neighbor = g_atom_arr[i]->occupied_neighbor_sites[j];
+			neighbor = ss->atom_arr[i]->occupied_neighbor_sites[j];
 
 			if (neighbor != -1) //site is not empty
 			{
-				type = g_atom_arr[neighbor]->type;
+				type = ss->atom_arr[neighbor]->type;
 				//bonds are assumed to be isotropic
-				switch (g_atom_arr[i]->type) {
+				switch (ss->atom_arr[i]->type) {
 					case 1:
 						ss->total_internal_energy += g_nnE[nneA_index[type - 1]];
 						break;
@@ -476,7 +476,7 @@ void calculate_internal_energy(int atom_cnt, struct SimulationState *ss)
 /********************************************************************************/
 /********************************************************************************/
 // updates primitive_basis, ucell_params, Atoms' cart_coords? to match lattice type
-void set_primitive_basis(int lattice_type) // g_lattice_type = crystal structure type
+void set_primitive_basis(int lattice_type, struct SimulationState *ss) // g_lattice_type = crystal structure type
 {
 	switch(lattice_type)
 	{
@@ -526,28 +526,28 @@ void set_primitive_basis(int lattice_type) // g_lattice_type = crystal structure
 	inver(primitive_basis, invert_primitive_basis);
 	primitive_basis2ucell_params(primitive_basis, ucell_params);
 
-	organize(g_atom_arr, g_atom_cnt); // ENHANCE: likely unnecessary bc at this point g_atom_cnt=0
+	organize(ss->atom_arr, ss->atom_cnt); // ENHANCE: likely unnecessary bc at this point ss->atom_cnt=0
 	return;
 }
 
 /********************************************************************************/
 /********************************************************************************/
 // fills initial_config with type of neighbors to atom[at], before jump offset_idx
-int get_initial_configuration2(int atom_idx, int offset_idx, int initial_config[]) // atom_idx is position in atom list, offset_idx is index in jump_offset
+int get_initial_configuration2(int atom_idx, int offset_idx, int initial_config[], struct SimulationState *ss) // atom_idx is position in atom list, offset_idx is index in jump_offset
 {	// TODO: rename to remove the 2
    	int i, j;
 	int nn_count = 0; // nearest-neighbors
 
 	for (i=0; i<g_max_neighbors; ++i)
     {
-		j = g_atom_arr[atom_idx]->occupied_neighbor_sites[i];
+		j = ss->atom_arr[atom_idx]->occupied_neighbor_sites[i];
 
 		if (j == -1)
 			initial_config[i] = -1;	// site is empty
 	    else
 		{
 			++nn_count;	// increment number of near neighbors
-			initial_config[i] = g_atom_arr[atom_idx]->type;	// site is occupied by some atom
+			initial_config[i] = ss->atom_arr[atom_idx]->type;	// site is occupied by some atom
 		}
 	}
 
@@ -557,7 +557,7 @@ int get_initial_configuration2(int atom_idx, int offset_idx, int initial_config[
 /********************************************************************************/
 /********************************************************************************/
 // fills initial_config with type of neighbors to atom[at], after jump in direction jump_offset[offset_idx]
-int get_final_configuration2(int at, int offset_idx, int final_config[], struct SimulationState *ss) // offset_idx is position in offset list
+int get_final_configuration2(int at, int offset_idx, int final_config[], struct SimulationState *ss, struct SimulationEnv *se) // offset_idx is position in offset list
 {
 	int i, j, k;
 	int new_x, new_y, new_z;
@@ -565,9 +565,9 @@ int get_final_configuration2(int at, int offset_idx, int final_config[], struct 
 	//int n = 0; // XXX:
 	int nn_cnt = 0; // nearest-neighbors
 	// atom position after jump offset_idx
-	new_x = g_atom_arr[at]->lattice[0] + jump_offset[offset_idx].dx;
-	new_y = g_atom_arr[at]->lattice[1] + jump_offset[offset_idx].dy;
-	new_z = g_atom_arr[at]->lattice[2] + jump_offset[offset_idx].dz;
+	new_x = ss->atom_arr[at]->lattice[0] + jump_offset[offset_idx].dx;
+	new_y = ss->atom_arr[at]->lattice[1] + jump_offset[offset_idx].dy;
+	new_z = ss->atom_arr[at]->lattice[2] + jump_offset[offset_idx].dz;
 
 	//printf("before pbc xyz %lf %lf %lf\n", x, y, z); // XXX: commented print
 	adjust_pbc(&new_x, &new_y, &new_z);
@@ -589,11 +589,11 @@ int get_final_configuration2(int at, int offset_idx, int final_config[], struct 
 			//printf("before pbc nxyz %lf %lf %lf\n", neighbor_x, neighbor_y, neighbor_z);
 			adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z);
 			//printf("after pbc nxyz %lf %lf %lf\n", neighbor_x, neighbor_y, neighbor_z);
-	        j = atom_at(neighbor_x, neighbor_y, neighbor_z, ss);
+	        j = atom_at(neighbor_x, neighbor_y, neighbor_z, ss, se);
 			//printf("j = %d\n", j);
 	        if (j != -1)
 		        { // if there is an atom present, 'return' its type
-					final_config[i] = g_atom_arr[at]->type;
+					final_config[i] = ss->atom_arr[at]->type;
 					//printf("at = %d, atom[at]->type = %d, atom[j]->type = %d\n", at, atom[at]->type, atom[j]->type);
 					++nn_cnt;
 				}
@@ -610,7 +610,7 @@ int get_final_configuration2(int at, int offset_idx, int final_config[], struct 
 /********************************************************************************/
 /********************************************************************************/
 
-void initialize_flat_sheet_1(int z, struct SimulationState *ss)
+void initialize_flat_sheet_1(int z, struct SimulationState *ss, struct SimulationEnv *se)
 {
 	int i,j,k;
 	double nz;
@@ -618,18 +618,18 @@ void initialize_flat_sheet_1(int z, struct SimulationState *ss)
 	for (k = 0; k < z; ++k) //new here! loop through z because nothing is buried
 	{
 		//printf("layer k = %d\n", k);
-		for (i=0;i<g_ssx;++i)						// loop through x and y
+		for (i=0;i<se->ssx;++i)						// loop through x and y
 		{
-			for (j=0;j<g_ssy;++j)
+			for (j=0;j<se->ssy;++j)
 			{
 				nz = drandj(&rand_seed);
 				//printf("i, j, k = %d, %d, %d\n", i, j, k);
 				if (nz <= g_substrate_percent_a)
-					add_atom(i, j, k, 1, NORMAL, ss);
+					add_atom(i, j, k, 1, NORMAL, ss, se);
 				else if (nz <= g_substrate_percent_a + g_substrate_percent_b)
-					add_atom(i, j, k, 2, NORMAL, ss);
+					add_atom(i, j, k, 2, NORMAL, ss, se);
 				else
-					add_atom(i, j, k, 3, NORMAL, ss);
+					add_atom(i, j, k, 3, NORMAL, ss, se);
 			}
 		}
 	}
@@ -639,7 +639,7 @@ void initialize_flat_sheet_1(int z, struct SimulationState *ss)
 /********************************************************************************/
 /********************************************************************************/
 // ENHANCE: currently adds one extra atom to radius - remove it
-void initialize_spherical_cluster(int radius_lattice, struct SimulationState *ss) // radius of cluster in number of atoms (nearest-neighbor distances)
+void initialize_spherical_cluster(int radius_lattice, struct SimulationState *ss, struct SimulationEnv *se) // radius of cluster in number of atoms (nearest-neighbor distances)
 {
 	double center_cart[3]; // cartesian/orthogonal coordinates of center point
 	int center_lattice[3]; // lattice coordinates of center point
@@ -653,9 +653,9 @@ void initialize_spherical_cluster(int radius_lattice, struct SimulationState *ss
 	double dist;
 
 	//center of the cluster is the halfway point
-	center_cart[0] = g_ssx / 2;
-	center_cart[1] = g_ssy / 2;
-	center_cart[2] = g_ssz / 2;
+	center_cart[0] = se->ssx / 2;
+	center_cart[1] = se->ssy / 2;
+	center_cart[2] = se->ssz / 2;
 	// TODO: check that the center is at a lattice site?
 	cartesian2lattice_site(center_cart, invert_primitive_basis, center_lattice);
 
@@ -737,17 +737,17 @@ void initialize_spherical_cluster(int radius_lattice, struct SimulationState *ss
  					random_num = drandj(&rand_seed);
 					// determining composition of atom to be placed
 					if (random_num < g_substrate_percent_a)
-						add_atom(u, v, w, 1, NORMAL, ss);
+						add_atom(u, v, w, 1, NORMAL, ss, se);
 					else if (random_num < g_substrate_percent_a + g_substrate_percent_b)
-						add_atom(u, v, w, 2, NORMAL, ss);
+						add_atom(u, v, w, 2, NORMAL, ss, se);
 					else
-						add_atom(u, v, w, 3, NORMAL, ss);
+						add_atom(u, v, w, 3, NORMAL, ss, se);
 				}	
 			}
 		}
 	}
 	// conversion from aotm->lattice to cartesian and store in atom->cart_coord
-	organize(g_atom_arr, g_atom_cnt);
+	organize(ss->atom_arr, ss->atom_cnt);
 
 	return;
 }
@@ -755,9 +755,9 @@ void initialize_spherical_cluster(int radius_lattice, struct SimulationState *ss
 /********************************************************************************/
 /********************************************************************************/
 
-void initialize_from_file(char* filename, struct SimulationState *ss) {
+void initialize_from_file(char* filename, struct SimulationState *ss, struct SimulationEnv *se) {
 	//does this need more to it?
-	simulation_parameters_from_file(filename, ss);
+	simulation_parameters_from_file(filename, ss, se);
 	return;
 }
 
@@ -782,9 +782,9 @@ void initialize_simulation_box(double system_size_x, double system_size_y, doubl
 	// 6 planes, of form dot(normal, point on plane) = dot(normal, [x,y,z of point to test])
 	// normal=(1,0,0); point on plane=(128,0,0) -> 128 = x
 	// normal of family (1,0,0) (-1,0,0)
-	// point on plane of family  (g_ssx,0,0) (0,0,0)
-	// x=0 y=0 z=0 x=g_ssx y=g_ssy z=g_ssz
-	// to define a region: x>=0 y>=0 z>=0 x<g_ssx y<g_ssy z<g_ssz
+	// point on plane of family  (ss->ssx,0,0) (0,0,0)
+	// x=0 y=0 z=0 x=ss->ssx y=ss->ssy z=ss->ssz
+	// to define a region: x>=0 y>=0 z>=0 x<ss->ssx y<ss->ssy z<ss->ssz
 	// normals point towards inside of region (keeps the inequality the same)
 
 	// convert into lattice vector form

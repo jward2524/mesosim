@@ -40,6 +40,13 @@ int main(int argc, char* argv[]) {
     struct SimulationEnv *sim_env = calloc(1, sizeof(struct SimulationEnv));
     struct LoggingState *log_state = calloc(1, sizeof(struct LoggingState));
 
+    sim_env->zix = TTS;
+    sim_env->ziy = TTS;
+    sim_env->ziz = TTS;
+
+    // Atom *arr[];
+    // sim_state->atom_arr = &arr;
+
     // TODO: multiple instances of program will be overwriting temp files
     //write to a temporary file until a logfile is identified
     char* temp_name = "temp.log";
@@ -50,13 +57,14 @@ int main(int argc, char* argv[]) {
         exit(errno);
     }
     fputs("MESOSIM 2024\n", g_temp_log);
-    initialize_lattice_geometry(); //this gets overwritten by info from the input file
+    initialize_lattice_geometry(sim_env); //this gets overwritten by info from the input file
 
-    g_simulation_type = -1; //TODO: need to define in globals!!
+    sim_env->simulation_type = -1; //TODO: need to define in globals!!
+    
     fprintf(g_temp_log, "Start time: %lld", starttime);
     fprintf(g_temp_log, "Attempting to read in file %s\n", argv[1]);
     // simulation_parameters_from_file also initializes atom list
-    if (simulation_parameters_from_file(argv[1], sim_state) == false) {
+    if (simulation_parameters_from_file(argv[1], sim_state, sim_env) == false) {
         fprintf(g_temp_log, "ERROR! Something bad happened when reading the input file\n");
         return 1;
     }
@@ -66,7 +74,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (g_simulation_type == -1) {
+    if (sim_env->simulation_type == -1) {
         fprintf(g_temp_log, "ERROR! Structure type was not specified in input file\n");
         return 1;
     }
@@ -76,13 +84,13 @@ int main(int argc, char* argv[]) {
 
     //finish_preprocessing();   //only called when deposition matters
 
-    general_simulation_initialization(sim_state);
+    general_simulation_initialization(sim_state, sim_env);
     
-    initialize_simulation_box(g_ssx, g_ssy, g_ssz);
+    initialize_simulation_box(sim_env->ssx, sim_env->ssy, sim_env->ssz);
     // get_shifts()
     // initialize_zones(, ss)
 
-    do_initialize_simulation(g_simulation_type, sim_state);
+    do_initialize_simulation(sim_env->simulation_type, sim_state, sim_env);
 
 
     if (strcmp(g_outFile, "") == 0) {
@@ -106,7 +114,7 @@ int main(int argc, char* argv[]) {
     //print a lot of information to the log
     // TODO: move this to a function, esp since most of these are globals anyways
     fprintf(g_sim_log_file, "successfully read input file and preprocessed\n");
-    fprintf(g_sim_log_file, "system size is %lf x %lf x %lf\n", g_ssx, g_ssy, g_ssz);
+    fprintf(g_sim_log_file, "system size is %lf x %lf x %lf\n", sim_env->ssx, sim_env->ssy, sim_env->ssz);
 
     switch (g_lattice_type) {
         case FCC:
@@ -154,7 +162,7 @@ int main(int argc, char* argv[]) {
 
     fprintf(g_sim_log_file, "Random seed is %ld\n", rand_seed);
 
-    switch (g_simulation_type) {
+    switch (sim_env->simulation_type) {
         case SIMULATION_TYPE_FLAT_SHEET:
             fprintf(g_sim_log_file, "Initialized flat sheet with monolayer depth %d\n", g_sheet_thickness);
             break;
@@ -166,7 +174,7 @@ int main(int argc, char* argv[]) {
             break;
     }
 
-    fprintf(g_sim_log_file, "Atoms created, %d total\n", g_atom_cnt);
+    fprintf(g_sim_log_file, "Atoms created, %d total\n", sim_state->atom_cnt);
     fprintf(g_sim_log_file, "Beginning simulation\n");  
     
     //get the necessary file name prefix for xyz outputs
@@ -177,7 +185,7 @@ int main(int argc, char* argv[]) {
 
     //perform simulations
     unsigned long sim_error;
-    sim_error = perform_simulation(sim_state);
+    sim_error = perform_simulation(sim_state, sim_env);
 
     if (sim_error != 0) {
         printf("ERROR! Something went wrong in the simulation\n");
@@ -187,10 +195,10 @@ int main(int argc, char* argv[]) {
     //finalize everything
 
     //free the only malloced memory
-    for (int i = g_transition_cnt; i > 0; --i)
-        free(g_transition_arr[i-1]);
-    for (int i = g_atom_cnt; i > 0; --i)
-        free(g_atom_arr[i-1]);
+    for (int i = sim_state->transition_cnt; i > 0; --i)
+        free(sim_state->transition_arr[i-1]);
+    for (int i = sim_state->atom_cnt; i > 0; --i)
+        free(sim_state->atom_arr[i-1]);
 
     time(&endtime);
     fprintf(g_sim_log_file, "Finished! Total time taken: %d seconds\n", (int)(endtime-starttime));
@@ -198,7 +206,7 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 // initializes primitve_basis, ucell_params, ss*
-void initialize_lattice_geometry(void)
+void initialize_lattice_geometry(struct SimulationEnv *se)
 {
 	// Initializes the generic lattice geometry to be simple cubic (i.e., a=1, b=1, c=1, alpha = 90, beta = 90, gamma = 90)
 
@@ -217,9 +225,9 @@ void initialize_lattice_geometry(void)
 	inver(primitive_basis, invert_primitive_basis);
 	primitive_basis2ucell_params(primitive_basis, ucell_params);
 
-	g_ssx = 1;
-	g_ssy = 1;
-	g_ssz = 1;
+	se->ssx = 1;
+	se->ssy = 1;
+	se->ssz = 1;
 
 	return;
 }
