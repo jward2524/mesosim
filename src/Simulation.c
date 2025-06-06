@@ -93,17 +93,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			//simulation_is_going = false; //not needed
 			return 1; //return 1 b/c error?
 		}
-
-		int j, k;
-		for (i = 0; i < ss->transition_cnt; i++){
-			k = ss->transition_arr[i]->atom_idx;
-			if (k >= ss->atom_cnt+2){
-				printf("%d\n", k);
-				j = i;
-			}
-		}
-		if ((ss->transition_cnt >= 1271980) && (ss->transition_arr[1271980]->atom_idx == 490438))
-			printf("stud");
 		
 		for (j=0; j < ss->atom_cnt; ++j)
 			refresh_transitions(j, ss, se); // resets all kinetic paramters
@@ -547,14 +536,10 @@ void add_to_transition_list(struct SimulationState* ss, int rate_idx, int atom_i
 		initial_transition_index = ss->rate_arr[i].transition_start_idx;
 		final_transition_index = initial_transition_index + ss->rate_arr[i].transition_count;
 
-		if (ss->transition_arr[initial_transition_index]->atom_idx == 490438) // XXX
-		{
-			printf("%d\n", 490438);
-		}
 		ss->transition_arr[final_transition_index]->atom_idx = ss->transition_arr[initial_transition_index]->atom_idx;
 		ss->transition_arr[final_transition_index]->offset_idx = ss->transition_arr[initial_transition_index]->offset_idx;
 
-		if (initial_transition_index != final_transition_index) // XXX: seg fault here
+		if (initial_transition_index != final_transition_index)
 			ss->atom_arr[ss->transition_arr[final_transition_index]->atom_idx]->transition_indices[ss->transition_arr[final_transition_index]->offset_idx] = final_transition_index;
 
 		++ss->rate_arr[i].transition_start_idx;
@@ -566,10 +551,6 @@ void add_to_transition_list(struct SimulationState* ss, int rate_idx, int atom_i
 
 	++ss->rate_arr[rate_idx].transition_count;
 
-	if (atom_idx >= ss->atom_cnt) // XXX
-	{
-		printf("%d\n", atom_idx);
-	}
 	ss->transition_arr[n]->atom_idx = atom_idx;
 	ss->transition_arr[n]->offset_idx = offset_idx;
 
@@ -618,10 +599,7 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 			// make transition at new start index (which is of different Rate than old start index) have same atom and offset as new end index (which is of same Rate as old end index)
 			transition_idx = ss->rate_arr[i].transition_start_idx;
 			transition_end_idx = ss->rate_arr[i].transition_start_idx + ss->rate_arr[i].transition_count;		// count is always at least 1
-			if (ss->transition_arr[transition_end_idx]->atom_idx == 490438) // XXX
-			{
-				printf("%d\n", transition_end_idx);
-			}
+
 			ss->transition_arr[transition_idx]->atom_idx = ss->transition_arr[transition_end_idx]->atom_idx;
 			ss->transition_arr[transition_idx]->offset_idx = ss->transition_arr[transition_end_idx]->offset_idx;
 			// update the transition index in the corresponding atom in atom_arr to have the new (lower) transition index 
@@ -647,10 +625,6 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 
 	// swap transition_end_idx into the position atom_idx:offset_idx occupied
 	// ENHANCE: this is the same shit that happens when count==0
-	if (ss->transition_arr[transition_end_idx]->atom_idx == 490438) // XXX
-	{
-		printf("%d\n", transition_end_idx);
-	}
 	ss->transition_arr[transition_idx]->atom_idx = ss->transition_arr[transition_end_idx]->atom_idx;
 	ss->transition_arr[transition_idx]->offset_idx = ss->transition_arr[transition_end_idx]->offset_idx;
 
@@ -665,10 +639,7 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 
 		transition_idx = ss->rate_arr[i].transition_start_idx;
 		transition_end_idx = ss->rate_arr[i].transition_start_idx + ss->rate_arr[i].transition_count;
-		if (ss->transition_arr[transition_end_idx]->atom_idx == 490438) // XXX
-		{
-			printf("%d\n", transition_end_idx);
-		}
+
 		ss->transition_arr[transition_idx]->atom_idx = ss->transition_arr[transition_end_idx]->atom_idx;
 		ss->transition_arr[transition_idx]->offset_idx = ss->transition_arr[transition_end_idx]->offset_idx;
 

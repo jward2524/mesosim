@@ -4,9 +4,9 @@
 #include "Common.h"
 
 int add_atom(int x, int y, int z, int type, int special, struct SimulationState* ss, struct SimulationEnv* se);
-int atom_at(int cx, int cy, int cz, Atom *atom_arr[], Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
+int atom_at(int cx, int cy, int cz, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
 void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se);
-void move_atom(int ia, int fa, Atom *atom_arr[], Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition *transition_arr[], struct SimulationEnv *se);
+void move_atom(int ia, int fa, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition** transition_arr, struct SimulationEnv *se);
 
 // void make_buried_atoms_real(void);
 
@@ -16,13 +16,13 @@ void bury_atom(int at, int *pos); //no longer relevant
 
 // rotation and molecule orientation
 // void rotmat(Atom* atm[], int na, double rtmat[3][3]);
-void organize(Atom* atom_arr[], int atom_cnt); //keep for now but need to retool
-void orthomol(Atom* atom_arr[], int atom_cnt, double basis[3][3]);
-void centerg(Atom* atom_arr[], int atom_cnt); //not really relevant now (visualization)
+void organize(Atom** atom_arr, int atom_cnt); //keep for now but need to retool
+void orthomol(Atom** atom_arr, int atom_cnt, double basis[3][3]);
+void centerg(Atom** atom_arr, int atom_cnt); //not really relevant now (visualization)
 
 // general atom and bond handling routines
-void copy_atom(int i, int j, Atom *atom_arr[]);
-void create_default_atom(int na, Atom *atom_arr[]); //can modify this to remove things like color?
+void copy_atom(int i, int j, Atom** atom_arr);
+void create_default_atom(int na, Atom** atom_arr); //can modify this to remove things like color?
 
 void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv *se);
 void cell_to_latmat(double c[6], double ltmt[3][3]);

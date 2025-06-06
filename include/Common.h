@@ -54,16 +54,22 @@ struct SimulationState
 {
     Bond bond[MAXIMUM_NUMBER_OF_BONDS];
 
-    Atom *atom_arr[MAXIMUM_NUMBER_OF_ATOMS];
+    // array of Atom structs, initialized in ____
+    // contains all atoms in the simulation, in the first atom_cnt indices
+    Atom **atom_arr;
     int atom_cnt;
 
-    // ENHANCE: malloc?
-    Rate rate_arr[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS];
+    // array of Rate structs, initialized in ____
+    // contains all the unique rate constants and number of transitions with that rate const
+    Rate *rate_arr;
     int rate_cnt;
 
-    Transition* transition_arr[MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS];
+    // array of Transition structs, initialized in ____
+    // [ ]: the list of possible transitions? with atom and transition direction
+    Transition **transition_arr;
     int transition_cnt;
-    
+
+    // array of zones, to help find atoms based on position
     Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z]; // TODO: change to malloc
     TransProb transition_probability;
 

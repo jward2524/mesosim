@@ -251,7 +251,7 @@ void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz, struct Simul
 /********************************************************************************/
 /********************************************************************************/
 // updates rmat
-void set_default_orientation(Atom *atom_arr[], int atom_cnt, int lattice_type) // supposedly for viewing
+void set_default_orientation(Atom** atom_arr, int atom_cnt, int lattice_type) // supposedly for viewing
 {
 	static int index[3] = {1,1,1};
 	double axis[3], pnormal[3], axis_mag;
@@ -403,7 +403,7 @@ void initialize_jump_offsets(int lattice_type)	// lattice_type = crystal lattice
 
 /********************************************************************************/
 /********************************************************************************/
-void calculate_internal_energy(Atom *atom_arr[], int atom_cnt, double nnE[6], int max_neighbors, double* total_internal_energy)
+void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double nnE[6], int max_neighbors, double* total_internal_energy)
 {
 	int neighbor, type;
 	
@@ -502,7 +502,7 @@ void set_primitive_basis(int lattice_type) // lattice_type = crystal structure t
 /********************************************************************************/
 /********************************************************************************/
 // fills initial_config with type of neighbors to atom[at], before jump offset_idx
-int get_initial_configuration2(int atom_idx, int offset_idx, int max_neighbors, Atom *atom_arr[], int initial_config[]) // atom_idx is position in atom list, offset_idx is index in jump_offset
+int get_initial_configuration2(int atom_idx, int offset_idx, int max_neighbors, Atom** atom_arr, int initial_config[]) // atom_idx is position in atom list, offset_idx is index in jump_offset
 {	// TODO: rename to remove the 2
    	int i, j;
 	int nn_count = 0; // nearest-neighbors

@@ -124,8 +124,8 @@ typedef struct
 	{
 		double k;						// rate constant?
 		double frequency;				// rate constant * count, for calculating probability of transition
-		int transition_count;           			// number (count?) of this type of transition in transition_arr
-		int transition_start_idx; 					// index to first item in transition_arr with this rate constant 
+		int transition_count;           // number (count?) of this type of transition in transition_arr
+		int transition_start_idx; 		// index to first item in transition_arr with this rate constant 
 	} Rate;
 
 typedef struct

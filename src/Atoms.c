@@ -95,7 +95,7 @@ const crystal_offset BCC_OFFSET_2[6] =
 		{0, -1, -1}};
 
 // updates atom_arr // [ ]: but doesn't update atom_cnt?
-void create_default_atom(int n, Atom *atom_arr[]) // n = position on atom list
+void create_default_atom(int n, Atom** atom_arr) // n = position on atom list
 {
 	int i,j;
 	char errorstring[256]; // XXX: unused
@@ -482,7 +482,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 // copies one element ia of atom list to another point fa
 // used only within the simulation routines, things like bonds, etc. are not copied.
 
-void move_atom(int ia, int fa, Atom *atom_arr[], Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition *transition_arr[], struct SimulationEnv *se)
+void move_atom(int ia, int fa, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition** transition_arr, struct SimulationEnv *se)
 {
 	int n;
 	int n2;
@@ -528,10 +528,6 @@ void move_atom(int ia, int fa, Atom *atom_arr[], Zone zone_arr[ZONES_IN_X][ZONES
 
 			if (atom_arr[fa]->transition_indices[n] >= 0)
 			transition_arr[atom_arr[fa]->transition_indices[n]]->atom_idx = fa;
-			if (fa >= 490438) // XXX
-			{
-				printf("%d\n", fa);
-			}
 		}
 
 	atom_arr[fa]->transition_indices[se->max_neighbors]
@@ -539,10 +535,6 @@ void move_atom(int ia, int fa, Atom *atom_arr[], Zone zone_arr[ZONES_IN_X][ZONES
 
 	if (atom_arr[fa]->transition_indices[se->max_neighbors] >= 0){
 		transition_arr[atom_arr[fa]->transition_indices[se->max_neighbors]]->atom_idx = fa;
-		if (fa >= 490438) // XXX
-		{
-			printf("%d\n", fa);
-		}
 	}
 		
 
@@ -761,7 +753,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 
 // checks if there is an atom at point (cx, cy, cz).
 // If so, it returns the index to that atom.  If not, return -1.
-int atom_at(int cx, int cy, int cz, Atom *atom_arr[], Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se) // lattice coordinate xyz
+int atom_at(int cx, int cy, int cz, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se) // lattice coordinate xyz
 {
 	int i;
 	int zx, zy, zz;
@@ -969,7 +961,7 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
 
 // Copy all aspects of atom j into atom i
 
-void copy_atom(int i, int j, Atom *atom_arr[])
+void copy_atom(int i, int j, Atom** atom_arr)
 {
 	int m, bn;
 
@@ -1024,7 +1016,7 @@ void copy_atom(int i, int j, Atom *atom_arr[])
 /******************************************************************************/
 /******************************************************************************/
 // conversion from aotm->lattice to cartesian and store in atom->cart_coord
-void organize(Atom *atom_arr[], int atom_cnt) // atom_cnt=number of atoms
+void organize(Atom** atom_arr, int atom_cnt) // atom_cnt=number of atoms
 {
 	// like copy_xyz_to_coord, [but adjusts center of gravity, too, if not commented out]
 
@@ -1034,7 +1026,7 @@ void organize(Atom *atom_arr[], int atom_cnt) // atom_cnt=number of atoms
 
 // Orthogonalize all the lattice coordinates according to the cell orthogonalization matrix (com)
 // Convert lattice coordinates into cartesian coordinates
-void orthomol(Atom* atom_arr[], int atom_cnt, double basis[3][3])
+void orthomol(Atom** atom_arr, int atom_cnt, double basis[3][3])
 {
 	int k;
 
@@ -1046,7 +1038,7 @@ void orthomol(Atom* atom_arr[], int atom_cnt, double basis[3][3])
 
 // Translate the coordinates of the atoms so that their center of gravity is on the origin
 
-void centerg(Atom* atom_arr[], int atom_cnt)
+void centerg(Atom** atom_arr, int atom_cnt)
 {
 	int i,j;
 

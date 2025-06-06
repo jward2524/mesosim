@@ -42,12 +42,31 @@ int main(int argc, char* argv[]) {
     sim_env->ziy = TTS;
     sim_env->ziz = TTS;
     sim_env->dissolution = DISSOLUTION; // holy shit, when not =1, it breaks some shit heavy
-    // Atom *arr[];
-    // sim_state->atom_arr = &arr;
     // sim_env->max_neighbors = 12;
     // initialize_lattice_geometry(); //this gets overwritten by info from the input file
 
     sim_env->simulation_type = -1; //TODO: need to define in globals!!
+    sim_state->atom_arr = (Atom**) malloc(MAXIMUM_NUMBER_OF_ATOMS * sizeof(Atom*));
+    sim_state->rate_arr = (Rate*) malloc(MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS * sizeof(Rate*));
+    sim_state->transition_arr = (Transition**) malloc(MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS * sizeof(Transition*));
+
+    // null pointer checks
+    if (!sim_state->atom_arr)
+    {
+        perror("Couldn't allocate memory for atom array");
+        exit(errno);
+    }
+    if (!sim_state->rate_arr)
+    {
+        perror("Couldn't allocate memory for rate array");
+        exit(errno);
+    }
+    if (!sim_state->transition_arr)
+    {
+        perror("Couldn't allocate memory for transition array");
+        exit(errno);
+    }
+    
 
     // TODO: multiple instances of program will be overwriting temp files
 	//write to a temporary file until a logfile is identified
