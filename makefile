@@ -11,19 +11,18 @@ BIN_DIR := bin
 # change extension depending on system (exe for windows, none for linux)
 EXECUTABLE := mesosim.exe
 
-XS_CFLAGS := -mcmodel=medium
-CFLAGS := -std=c11 -Wall -Wextra -Wpedantic $(XS_CFLAGS)
+# XS_CFLAGS := -mcmodel=medium
+CFLAGS := -std=c11 $(XS_CFLAGS)
 # -v verbose
 LDFLAGS := -lm
 
 ifeq ($(debug), 1)
-	CFLAGS := $(CFLAGS) -ggdb -O0
+	CFLAGS := $(CFLAGS) -ggdb -O0 -Wall -Wextra -Wpedantic
 else
 	CFLAGS := $(CFLAGS) -O2
 endif
 
 # object files, use for mesosim target
-# object_names := Mesosim.o Atoms.o FileIO.o Random.o Simulation_Aux.o Simulation.o Vector.o
 # OBJS := $(addprefix $(BUILD_DIR)/,$(object_names))
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o, $(wildcard $(SRC_DIR)/*.c))
 XS_HEADERS := Common.h Defs.h Geometry.h
