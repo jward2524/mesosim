@@ -14,7 +14,7 @@ void set_default_orientation(Atom** atom_arr, int atom_cnt, int lattice_type); /
 int get_initial_configuration2(int atom_index, int offset_index, int max_neighbors, Atom** atom_arr, int initial_config[]);
 int get_final_configuration2(int at, int offset_idx, struct SimulationState *ss, struct SimulationEnv *se, int final_config[]);
 void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz, struct SimulationEnv* se);
-void adjust_pbc(int *x, int *y, int *z);
+void adjust_pbc(int *x, int *y, int *z, struct SimulationEnv* se);
 void set_primitive_basis(int lt);
 
 void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double nnE[6], int max_neighbors, double* total_internal_energy);

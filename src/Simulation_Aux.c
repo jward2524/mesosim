@@ -226,11 +226,27 @@ void get_shifts(struct SimulationEnv* se)
 /******************************************************************************/
 /******************************************************************************/
 
-void adjust_pbc(int* x, int* y, int* z) // should be lattice coordinates
+void adjust_pbc(int* x, int* y, int* z, struct SimulationEnv* se) // should be lattice coordinates
 {
-	check_pbc(x, y, z);
+	// x y z in lattice coordinates
+	if (*x < se->simbox_limits_lat[0][0])
+		*x += se->simbox_limits_lat[0][1];
+	if (*x >= se->simbox_limits_lat[0][1])
+		*x -= se->simbox_limits_lat[0][1];
+
+	if (*y < se->simbox_limits_lat[1][0])
+		*y += se->simbox_limits_lat[1][1];
+	if (*y >= se->simbox_limits_lat[1][1])
+		*y -= se->simbox_limits_lat[1][1];
+
+	if (*z < se->simbox_limits_lat[2][0])
+		*z += se->simbox_limits_lat[2][1];
+	if (*z >= se->simbox_limits_lat[2][1])
+		*z -= se->simbox_limits_lat[2][1];
 
 	return;
+
+	// check_pbc()
 }
 
 /********************************************************************************/
@@ -539,7 +555,7 @@ int get_final_configuration2(int at, int offset_idx, struct SimulationState *ss,
 	new_z = ss->atom_arr[at]->lattice[2] + jump_offset[offset_idx].dz;
 
 	//printf("before pbc xyz %lf %lf %lf\n", x, y, z); // XXX: commented print
-	adjust_pbc(&new_x, &new_y, &new_z);
+	adjust_pbc(&new_x, &new_y, &new_z, se);
 
 	//printf("after pbc xyz %lf %lf %lf\n", x, y, z);
 	for (i=0; i<se->max_neighbors; ++i)
@@ -556,7 +572,7 @@ int get_final_configuration2(int at, int offset_idx, struct SimulationState *ss,
 	        neighbor_z = new_z + jump_offset[i].dz;
 
 			//printf("before pbc nxyz %lf %lf %lf\n", neighbor_x, neighbor_y, neighbor_z);
-			adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z);
+			adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
 			//printf("after pbc nxyz %lf %lf %lf\n", neighbor_x, neighbor_y, neighbor_z);
 	        j = atom_at(neighbor_x, neighbor_y, neighbor_z, ss->atom_arr, ss->zone_arr, se);
 			//printf("j = %d\n", j);

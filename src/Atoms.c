@@ -277,7 +277,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 		checkz = z + jump_offset[i].dz;
 		/*if (x > 60) // XXX: commented prints
 			printf("before pbc xyz %lf %lf %lf\n", checkx, checky, checkz);*/
-		adjust_pbc(&checkx, &checky, &checkz);
+		adjust_pbc(&checkx, &checky, &checkz, se);
 		/*if (x > 60)
 			printf("after pbc xyz %lf %lf %lf\n", checkx, checky, checkz);*/
 
@@ -600,7 +600,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 
 				adjust_pbc(&new_atom[number_of_new_atoms].x,
 							&new_atom[number_of_new_atoms].y,
-							&new_atom[number_of_new_atoms].z);
+							&new_atom[number_of_new_atoms].z, se);
 
 				++number_of_new_atoms;
 				break;
@@ -616,7 +616,8 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 
 				adjust_pbc(&new_random_atom[number_of_new_random_atoms].x,
                      		&new_random_atom[number_of_new_random_atoms].y,
-							&new_random_atom[number_of_new_random_atoms].z);
+							&new_random_atom[number_of_new_random_atoms].z,
+							se);
 
 				++number_of_new_random_atoms;
 				break;
@@ -831,7 +832,7 @@ int reincarnate(int x, int y, int z, int type, int vc, int buried) {
 	// 	checky = y + jump_offset[i].dy;
 	// 	checkz = z + jump_offset[i].dz;
 
-	// 	adjust_pbc(&checkx, &checky, &checkz);
+	// 	adjust_pbc(&checkx, &checky, &checkz, se);
 
 	// 	atom_arr[atom_cnt]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz);
 

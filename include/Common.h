@@ -14,7 +14,7 @@ struct SimulationEnv
     int ssxshift, ssyshift, sszshift;
     int zsh, ysh, xsh; // shifts
 
-    // [ ]: what are the units for this? how does it relate to atomic spacing?
+    // [ ]: cartesian, units of nearest-neighbor spacing?
     int ssx, ssy, ssz; // system size x, y, z
     double ssr;
     int zix, ziy, ziz;
@@ -35,6 +35,7 @@ struct SimulationEnv
 
     double normal_x, normal_y, normal_z; // XXX: likely vistigal
 
+    // the lattice coorinate limits in order to accomodate the "simulation box"
     int simbox_limits_lat[3][2];
 
     double nnE[6];

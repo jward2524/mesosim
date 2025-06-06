@@ -143,7 +143,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 					lastyt = ss->atom_arr[atom_number]->lattice[1] + jump_offset[jump_vector].dy;
 					lastzt = ss->atom_arr[atom_number]->lattice[2] + jump_offset[jump_vector].dz;
 
-					adjust_pbc(&lastxt, &lastyt, &lastzt);
+					adjust_pbc(&lastxt, &lastyt, &lastzt, se);
 
 					atype = ss->atom_arr[atom_number]->type;
 
@@ -389,7 +389,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 		next_y = ss->atom_arr[atom_idx]->lattice[1] + jump_offset[i].dy;
         next_z = ss->atom_arr[atom_idx]->lattice[2] + jump_offset[i].dz;
 
-		adjust_pbc(&next_x, &next_y, &next_z);
+		adjust_pbc(&next_x, &next_y, &next_z, se);
 
         j = atom_at(next_x, next_y, next_z, ss->atom_arr, ss->zone_arr, se);
 
@@ -691,7 +691,7 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 			next_y = ss->atom_arr[j]->lattice[1] + jump_offset[i].dy;
 	        next_z = ss->atom_arr[j]->lattice[2] + jump_offset[i].dz;
 
-			adjust_pbc(&next_x, &next_y, &next_z);
+			adjust_pbc(&next_x, &next_y, &next_z, se);
 
 			k = atom_at(next_x, next_y, next_z, ss->atom_arr, ss->zone_arr, se);
 
@@ -721,7 +721,7 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 				next_y = ss->atom_arr[j]->lattice[1] + jump_offset[i].dy;
 		        next_z = ss->atom_arr[j]->lattice[2] + jump_offset[i].dz;
 
-				adjust_pbc(&next_x, &next_y, &next_z);
+				adjust_pbc(&next_x, &next_y, &next_z, se);
 
 				for (k=0;k<se->max_neighbors;++k)
 				{
@@ -729,7 +729,7 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 					nny = next_y + jump_offset[k].dy;
 					nnz = next_z + jump_offset[k].dz;
 
-					adjust_pbc(&nnx, &nny, &nnz);
+					adjust_pbc(&nnx, &nny, &nnz, se);
 
 					m = atom_at(nnx, nny, nnz, ss->atom_arr, ss->zone_arr, se);
 
@@ -772,7 +772,7 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 				next_y = ss->atom_arr[j]->lattice[1] + jump_offset[i].dy;
 		        next_z = ss->atom_arr[j]->lattice[2] + jump_offset[i].dz;
 
-				adjust_pbc(&next_x, &next_y, &next_z);
+				adjust_pbc(&next_x, &next_y, &next_z, se);
 
 				for (k=0;k<se->max_neighbors;++k)
 				{
@@ -780,7 +780,7 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 					nny = next_y + jump_offset[k].dy;
 					nnz = next_z + jump_offset[k].dz;
 
-					adjust_pbc(&nnx, &nny, &nnz);
+					adjust_pbc(&nnx, &nny, &nnz, se);
 
 					m = atom_at(nnx, nny, nnz, ss->atom_arr, ss->zone_arr, se);
 
