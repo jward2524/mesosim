@@ -2,7 +2,7 @@
 #define FILEIO_H
 
 #include "Common.h"
-#include <stdbool.h>
+#include <time.h>
 
 bool simulation_parameters_from_file(char* filename, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls, FILE* temp_log, time_t starttime); //need to modify!
 bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls); //need to modify

@@ -4,7 +4,6 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <time.h>
 
 const int BUFFER_SIZE = 200;
 char outFile[260] = ""; //MAX_PATH variable Windows related, default 260
