@@ -216,10 +216,20 @@ int main(int argc, char* argv[]) {
         free(sim_state->transition_arr[i-1]);
     for (int i = sim_state->atom_cnt; i > 0; --i)
         free(sim_state->atom_arr[i-1]);
+    
+    free(sim_state->atom_arr);
+    free(sim_state->rate_arr);
+    free(sim_state->transition_arr);
 
+    free(sim_state);
+    free(sim_env);
+    
     time(&endtime);
     fprintf(log_state->sim_log_file, "Finished! Total time taken: %d seconds\n", (int)(endtime-starttime));
     fclose(log_state->sim_log_file);
+
+    free(log_state);
+    
     return 0;
 }
 // initializes primitve_basis, ucell_params, ss*
