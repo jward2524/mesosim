@@ -67,12 +67,10 @@ int main(int argc, char* argv[]) {
         exit(errno);
     }
     
-
-    // TODO: multiple instances of program will be overwriting temp files
 	//write to a temporary file until a logfile is identified
-    char* temp_name = "temp.log";
-    FILE* temp_log = fopen(temp_name, "w");
-    printf("Temp log: %s\n", temp_name);
+    // not supported for msvcrt.dll [msys's mingw64]
+    FILE *temp_log = tmpfile();
+    printf("Temporary log created\n");
     if (temp_log == NULL) {
         perror("Failed to make temp file");
         exit(errno);
@@ -103,7 +101,6 @@ int main(int argc, char* argv[]) {
     // put everything that was in temp_log into outFile
     write_backlog(temp_log, log_state->sim_log_file);
     fclose(temp_log);
-    remove(temp_name);
 
     //finish_preprocessing();   //only called when deposition matters
 
@@ -198,8 +195,8 @@ int main(int argc, char* argv[]) {
     }
 
     fprintf(log_state->sim_log_file, "Atoms created, %d total\n", sim_state->atom_cnt);
-    fprintf(log_state->sim_log_file, "Beginning simulation\n");  
     
+    printf("Beginning simulation\n");
     //perform simulations
     unsigned long sim_error;
     sim_error = perform_simulation(sim_state, sim_env, log_state);
@@ -211,7 +208,7 @@ int main(int argc, char* argv[]) {
 
     //finalize everything
 
-    //free the only malloced memory
+    //free the malloc'ed memory
     for (int i = sim_state->transition_cnt; i > 0; --i)
         free(sim_state->transition_arr[i-1]);
     for (int i = sim_state->atom_cnt; i > 0; --i)
@@ -229,7 +226,7 @@ int main(int argc, char* argv[]) {
     fclose(log_state->sim_log_file);
 
     free(log_state);
-    
+
     return 0;
 }
 // initializes primitve_basis, ucell_params, ss*
