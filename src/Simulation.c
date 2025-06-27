@@ -371,9 +371,6 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	int start_config[MAXIMUM_NUMBER_OF_NEIGHBORS]; // -1 if empty, type if filled
 	int end_config[MAXIMUM_NUMBER_OF_NEIGHBORS];
 
-	//bool ok_to_evaporate; //doesn't get used // XXX: commented code
-
-	//printf("removing\n"); // XXX: commented print
 	// first, remove all mention of this atom from transition list
 	for (i=0; i < se->max_neighbors + se->dissolution; ++i) // extra 1 for evaporation
 	{
@@ -381,7 +378,6 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 			take_off_transition_list(atom_idx, i, ss);
 	}
 
-	//printf("cycling\n"); // XXX: commented print
 	// cycle through neighbor coordinates, and check if there is an atom there
 	for (i=0;i < se->max_neighbors;++i)
 	{
@@ -526,6 +522,16 @@ void add_to_transition_list(struct SimulationState* ss, int rate_idx, int atom_i
 	if (ss->transition_cnt == 1232011)
 		printf("%d\n", 1232011);
 	ss->transition_arr[ss->transition_cnt] = (Transition *)malloc(sizeof(Transition));	// adds entry to the end of the list
+
+	if (ss->transition_arr[ss->transition_cnt] == NULL)
+	{
+		// TODO: free mallocs before exiting
+		char error_msg[200];
+		printf("ERROR! Not enough memory to allocate transition %d\n", ss->transition_cnt);
+		snprintf(error_msg, 200, "Couldn't allocate memory for atom %d", ss->transition_cnt);
+		perror(error_msg);
+        exit(errno);
+	}
 
 	// what is this
 	//		final_transition_index = rate_arr[rate_cnt-1].transition_start_idx + rate_arr[rate_cnt-1].number;	

@@ -93,13 +93,13 @@ typedef struct
 		//double color[3];		
 	} Atom_type;
 
-// command line commands
-
+// command line commands // XXX
 typedef struct
 	{
 		char name[25];
 		int count;
 	} Command;
+
 // the direction of an atomic jump / diffusion move
 typedef struct
 	{
@@ -122,8 +122,8 @@ typedef struct
 
 typedef struct
 	{
-		double k;						// rate constant?
-		double frequency;				// rate constant * count, for calculating probability of transition
+		double k;						// rate constant
+		double frequency;				// rate constant * transition_count, for calculating probability of transition
 		int transition_count;           // number (count?) of this type of transition in transition_arr
 		int transition_start_idx; 		// index to first item in transition_arr with this rate constant 
 	} Rate;

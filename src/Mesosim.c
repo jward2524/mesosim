@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
         exit(errno);
     }
     fputs("MESOSIM 2024\n", temp_log);
-	fprintf(temp_log, "Start time: %lld", starttime);
+	fprintf(temp_log, "Start time: %lld\n", starttime);
     fprintf(temp_log, "Attempting to read in file %s\n", argv[1]);
 
     // simulation_parameters_from_file also initializes atom list

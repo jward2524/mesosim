@@ -104,8 +104,12 @@ void create_default_atom(int n, Atom** atom_arr) // n = position on atom list
 
 	if (atom_arr[n] == NULL)
 	{
+		// TODO: free mallocs before exiting
+		char error_msg[200];
 		printf("ERROR! Not enough memory to allocate atom %d\n", n);
-		return;
+		snprintf(error_msg, 200, "Couldn't allocate memory for atom %d", n);
+		perror(error_msg);
+        exit(errno);
 	}
 
 	strcpy(atom_arr[n]->name, DEFAULT_ATOM_NAME);
@@ -771,7 +775,8 @@ int atom_at(int cx, int cy, int cz, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][Z
 			(atom_arr[i]->lattice[1] == cy)&&
 			(atom_arr[i]->lattice[2] == cz))
 			return i;
-		else i = atom_arr[i]->next_atom;
+		else
+			i = atom_arr[i]->next_atom;
 	}
 
 	return -1;	// no atom

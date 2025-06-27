@@ -66,7 +66,9 @@ struct SimulationState
     int rate_cnt;
 
     // array of Transition structs, initialized in ____
-    // [ ]: the list of possible transitions? with atom and transition direction
+    // the list of possible transitions with atom and transition direction
+    // all transitions of same Rate are next to each other
+    // they live between rate.transition_start_idx and
     Transition **transition_arr;
     int transition_cnt;
 
