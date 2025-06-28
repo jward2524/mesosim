@@ -522,6 +522,11 @@ void add_to_transition_list(struct SimulationState* ss, int rate_idx, int atom_i
 	if (ss->transition_cnt == 1232011)
 		printf("%d\n", 1232011);
 	ss->transition_arr[ss->transition_cnt] = (Transition *)malloc(sizeof(Transition));	// adds entry to the end of the list
+	if (ss->transition_cnt > MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS)
+	{
+		perror("More transitions than allocated in transition array");
+		exit(1);
+	}
 
 	if (ss->transition_arr[ss->transition_cnt] == NULL)
 	{
