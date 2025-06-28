@@ -5,6 +5,7 @@
 #include "Atoms.h"
 #include <math.h>
 #include <stdlib.h>
+#include <errno.h>
 
 int rate_skip; // transition list binary search index
 int adatom_before; // XXX: never used?
