@@ -41,33 +41,12 @@ int main(int argc, char* argv[]) {
     sim_env->zix = TTS;
     sim_env->ziy = TTS;
     sim_env->ziz = TTS;
-    sim_env->dissolution = DISSOLUTION; // holy shit, when not =1, it breaks some shit heavy
+    sim_env->dissolution = DISSOLUTION; // holy shit, when not =DISSOLUTION[=1], it breaks some shit heavy
     // sim_env->max_neighbors = 12;
     // initialize_lattice_geometry(); //this gets overwritten by info from the input file
-
     sim_env->simulation_type = -1; //TODO: need to define in globals!!
-    sim_state->atom_arr = (Atom**) malloc(MAXIMUM_NUMBER_OF_ATOMS * sizeof(Atom*));
-    sim_state->rate_arr = (Rate*) malloc(MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS * sizeof(Rate*));
-    sim_state->transition_arr = (Transition**) malloc(MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS * sizeof(Transition*));
-
-    // null pointer checks
-    if (!sim_state->atom_arr)
-    {
-        perror("Couldn't allocate memory for atom array");
-        exit(errno);
-    }
-    if (!sim_state->rate_arr)
-    {
-        perror("Couldn't allocate memory for rate array");
-        exit(errno);
-    }
-    if (!sim_state->transition_arr)
-    {
-        perror("Couldn't allocate memory for transition array");
-        exit(errno);
-    }
     
-	//write to a temporary file until a logfile is identified
+    //write to a temporary file until a logfile is identified
     // not supported for msvcrt.dll [msys's mingw64]
     FILE *temp_log = tmpfile();
     printf("Temporary log created\n");
@@ -76,7 +55,7 @@ int main(int argc, char* argv[]) {
         exit(errno);
     }
     fputs("MESOSIM 2024\n", temp_log);
-	fprintf(temp_log, "Start time: %lld\n", starttime);
+    fprintf(temp_log, "Start time: %lld\n", starttime);
     fprintf(temp_log, "Attempting to read in file %s\n", argv[1]);
 
     // simulation_parameters_from_file also initializes atom list
@@ -95,7 +74,31 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    printf("Read file successfully, finishing preprocessing now\n");
+    sim_env->max_atoms = sim_env->ssx * sim_env->ssy * sim_env->ssz;
+    sim_env->max_transitions = ((MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION) * sim_env->max_atoms) + 10;
+    
+    sim_state->atom_arr = (Atom**) malloc(sim_env->max_atoms * sizeof(Atom*));
+    sim_state->rate_arr = (Rate*) malloc(MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS * sizeof(Rate*));
+    sim_state->transition_arr = (Transition**) malloc(sim_env->max_transitions * sizeof(Transition*));
+
+    // null pointer checks
+    if (!sim_state->atom_arr)
+    {
+        perror("Couldn't allocate memory for atom array");
+        exit(errno);
+    }
+    if (!sim_state->rate_arr)
+    {
+        perror("Couldn't allocate memory for rate array");
+        exit(errno);
+    }
+    if (!sim_state->transition_arr)
+    {
+        perror("Couldn't allocate memory for transition array");
+        exit(errno);
+    }
+
+    printf("Read file successfully\n");
     //pre-process the file information and fill in the gaps with defaults
 
     // put everything that was in temp_log into outFile

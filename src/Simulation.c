@@ -431,14 +431,14 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 			//printf("adding step\n");
 			if ((rate_idx = is_on_transition_list(ss, rate)) != -1)
 			{ // if rate constant already in rate list, use that rate list index
-				add_to_transition_list(ss, rate_idx, atom_idx, i);
+				add_to_transition_list(rate_idx, atom_idx, i, ss, se);
 			}
 			else
 			{
 				// the transition rate with rate constant rate turned out to be a new one
 				// add to rate list/array
 				rate_idx = create_new_transition(ss, rate);
-				add_to_transition_list(ss, rate_idx, atom_idx, i);
+				add_to_transition_list(rate_idx, atom_idx, i, ss, se);
 			}
 		}
 	}	
@@ -472,7 +472,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	if (rate_idx == -1)
 		rate_idx = create_new_transition(ss, rate); //the transition rate to the spot is a new one!
 
-	add_to_transition_list(ss, rate_idx, atom_idx, se->max_neighbors); // evaporation is considered to be last in jump_offset (not really in array but uses that index number)
+	add_to_transition_list(rate_idx, atom_idx, se->max_neighbors, ss, se); // evaporation is considered to be last in jump_offset (not really in array but uses that index number)
 	//printf("gonna return %d\n", atom_rates_cnt);
 	return atom_rates_cnt;						// gives number of current transitions for that atom
 }
@@ -512,7 +512,7 @@ int create_new_transition(struct SimulationState* ss, double rate)
 
 // add to rate_arr[rate_idx] the atom atom_idx going in direction offset_idx
 // updates transition_arr, rate_arr[rate_idx].transition_count, atom_arr[atom_idx]->transition_indices[offset_idx]
-void add_to_transition_list(struct SimulationState* ss, int rate_idx, int atom_idx, int offset_idx) // rate_arr index, atom_arr index, jump_offset index
+void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct SimulationState* ss, struct SimulationEnv* se) // rate_arr index, atom_arr index, jump_offset index
 {
 	int i; // loop variable
 	int n;
@@ -523,9 +523,9 @@ void add_to_transition_list(struct SimulationState* ss, int rate_idx, int atom_i
 	if (ss->transition_cnt == 1232011)
 		printf("%d\n", 1232011);
 	ss->transition_arr[ss->transition_cnt] = (Transition *)malloc(sizeof(Transition));	// adds entry to the end of the list
-	if (ss->transition_cnt > MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS)
+	if (ss->transition_cnt > se->max_transitions)
 	{
-		fprintf(stderr, "More transitions (%d) than allocated in transition array (%u)\n", ss->transition_cnt, MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS);
+		fprintf(stderr, "More transitions (%d) than allocated in transition array (%u)\n", ss->transition_cnt, se->max_transitions);
 		exit(errno);
 	}
 

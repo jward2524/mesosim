@@ -194,9 +194,9 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 	/*if (x > 60)
 		printf("atom of type %d being added at %lf %lf %lf\n", type, x, y, z);*/
 	pos = ss->atom_cnt; // position in atom array, presumably
-	if (pos > MAXIMUM_NUMBER_OF_ATOMS)
+	if (pos > se->max_atoms)
 	{
-		fprintf(stderr, "More atoms (%d) than allocated in atom array (%d)\n", pos, MAXIMUM_NUMBER_OF_ATOMS);
+		fprintf(stderr, "More atoms (%d) than allocated in atom array (%d)\n", pos, se->max_atoms);
 		exit(1);
 	}
 	create_default_atom(ss->atom_cnt, ss->atom_arr);

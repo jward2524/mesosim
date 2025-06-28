@@ -7,6 +7,9 @@
 
 struct SimulationEnv
 {
+    unsigned long long int max_atoms;
+    unsigned long long int max_transitions;
+
     int simulation_type;
     bool evaporation_flag;
 
