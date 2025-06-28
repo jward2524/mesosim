@@ -525,17 +525,14 @@ void add_to_transition_list(struct SimulationState* ss, int rate_idx, int atom_i
 	ss->transition_arr[ss->transition_cnt] = (Transition *)malloc(sizeof(Transition));	// adds entry to the end of the list
 	if (ss->transition_cnt > MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS)
 	{
-		perror("More transitions than allocated in transition array");
-		exit(1);
+		fprintf(stderr, "More transitions (%d) than allocated in transition array (%u)\n", ss->transition_cnt, MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS);
+		exit(errno);
 	}
 
 	if (ss->transition_arr[ss->transition_cnt] == NULL)
 	{
 		// TODO: free mallocs before exiting
-		char error_msg[200];
-		printf("ERROR! Not enough memory to allocate transition %d\n", ss->transition_cnt);
-		snprintf(error_msg, 200, "Couldn't allocate memory for atom %d", ss->transition_cnt);
-		perror(error_msg);
+		fprintf(stderr, "Couldn't allocate memory for atom %d: %s\n", ss->transition_cnt, strerror(errno));
         exit(errno);
 	}
 

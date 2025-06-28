@@ -106,10 +106,8 @@ void create_default_atom(int n, Atom** atom_arr) // n = position on atom list
 	if (atom_arr[n] == NULL)
 	{
 		// TODO: free mallocs before exiting
-		char error_msg[200];
 		printf("ERROR! Not enough memory to allocate atom %d\n", n);
-		snprintf(error_msg, 200, "Couldn't allocate memory for atom %d", n);
-		perror(error_msg);
+		fprintf(stderr, "Couldn't allocate memory for atom %d: %s", n, strerror(errno));
         exit(errno);
 	}
 
@@ -198,7 +196,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 	pos = ss->atom_cnt; // position in atom array, presumably
 	if (pos > MAXIMUM_NUMBER_OF_ATOMS)
 	{
-		perror("More atoms than allocated in atom array");
+		fprintf(stderr, "More atoms (%d) than allocated in atom array (%d)\n", pos, MAXIMUM_NUMBER_OF_ATOMS);
 		exit(1);
 	}
 	create_default_atom(ss->atom_cnt, ss->atom_arr);

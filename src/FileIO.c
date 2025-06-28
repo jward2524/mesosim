@@ -11,10 +11,7 @@ char outFile[260] = ""; //MAX_PATH variable Windows related, default 260
 bool fopen_error(char* filename, FILE* file, char* base_msg){
 	if (file == NULL) 
 	{
-		int msg_size = 1 + strlen(base_msg) + strlen(filename);
-		char error_msg[msg_size];
-		snprintf(error_msg, msg_size, "%s%s", base_msg, filename);
-        perror(error_msg);
+		fprintf(stderr, "%s%s: %s\n", base_msg, filename, strerror(errno));
         exit(errno);
     }
 	return true;
