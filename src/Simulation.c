@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 
 int rate_skip; // transition list binary search index
 int adatom_before; // XXX: never used?
@@ -523,9 +524,9 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct S
 	if (ss->transition_cnt == 1232011)
 		printf("%d\n", 1232011);
 	ss->transition_arr[ss->transition_cnt] = (Transition *)malloc(sizeof(Transition));	// adds entry to the end of the list
-	if (ss->transition_cnt > se->max_transitions)
+	if ((unsigned int) ss->transition_cnt > se->max_transitions)
 	{
-		fprintf(stderr, "More transitions (%d) than allocated in transition array (%u)\n", ss->transition_cnt, se->max_transitions);
+		fprintf(stderr, "More transitions (%d) than allocated in transition array (%llu)\n", ss->transition_cnt, se->max_transitions);
 		exit(errno);
 	}
 

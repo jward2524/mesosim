@@ -72,7 +72,7 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
 	
 	if (strcmp(outFile, "") == 0) {
 		//an out file name was not defined in input file, use starttime as filename
-        sprintf(outFile, "%lld.out", starttime);
+        sprintf(outFile, "%ld.out", starttime);
         fprintf(temp_log, "Log file name not defined, using \"%s\"", outFile);
     }
 	
@@ -558,7 +558,12 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 	{
 		fscanf(input_file, "%s\t", temp_atom.name);
 
-		fscanf(input_file, "%d\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%*lf\t%*d\t%*d\t%*d\t%*lf\t%*lf\t%*lf\t",
+		fscanf(input_file, 
+			"%c\t\
+			%lf\t%lf\t%lf\t\
+			%d\t%d\t%d\t\
+			%lf\t\
+			%*lf\t%*d\t%*d\t%*d\t%*lf\t%*lf\t%*lf\t", // these are not assigned to anything
 			&temp_atom.type,
 			&temp_atom.cart_coord[0], &temp_atom.cart_coord[1], &temp_atom.cart_coord[2],
 			&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2],
@@ -573,9 +578,9 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 		fscanf(input_file, "%d\t%d\t", &temp_atom.next_atom, &temp_atom.previous_atom);
 
 		for (j=0;j<MAXIMUM_NUMBER_OF_COSMETIC_BONDS;++j)
-			fscanf(input_file, "%*d\t", &tempint);
+			fscanf(input_file, "%d\t", &tempint);
 
-		fscanf(input_file, "%*d\t", &tempint);
+		fscanf(input_file, "%d\t", &tempint);
 
 		fscanf(input_file, "%*lf\t", tempdouble);
 
@@ -787,7 +792,10 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 	{
 		fscanf(input_file, "%s\t", temp_atom.name);
 
-		fscanf(input_file, "%d\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t",
+		fscanf(input_file, 
+			"%c\t\
+			%lf\t%lf\t%lf\t\
+			%d\t%d\t%d\t",
 			&temp_atom.type,
 			&temp_atom.cart_coord[0], &temp_atom.cart_coord[1], &temp_atom.cart_coord[2],
 			&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2]); //get rid of lattice coords too?

@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
         exit(errno);
     }
     fputs("MESOSIM 2024\n", temp_log);
-    fprintf(temp_log, "Start time: %lld\n", starttime);
+    fprintf(temp_log, "Start time: %ld\n", starttime);
     fprintf(temp_log, "Attempting to read in file %s\n", argv[1]);
 
     // simulation_parameters_from_file also initializes atom list
@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
     //print a lot of information to the log
     // TODO: move this to a function, esp since most of these are globals anyways
     fprintf(log_state->sim_log_file, "successfully read input file and preprocessed\n");
-    fprintf(log_state->sim_log_file, "system size is %lf x %lf x %lf\n", sim_env->ssx, sim_env->ssy, sim_env->ssz);
+    fprintf(log_state->sim_log_file, "system size is %d x %d x %d\n", sim_env->ssx, sim_env->ssy, sim_env->ssz);
 
     switch (sim_env->lattice_type) {
         case FCC:
