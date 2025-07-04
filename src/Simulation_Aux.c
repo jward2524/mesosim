@@ -3,6 +3,7 @@
 #include "Random.h"
 #include "Atoms.h"
 #include "Simulation.h"
+#include "FileIO.h"
 #include <math.h>
 
 double ssr;
@@ -436,6 +437,7 @@ void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double nnE[6], int
 			{
 				type = atom_arr[neighbor]->type;
 				//bonds are assumed to be isotropic
+				// get_env_index();
 				switch (atom_arr[i]->type) {
 					case 1:
 						*total_internal_energy += nnE[nneA_index[type - 1]];

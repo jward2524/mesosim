@@ -8,6 +8,9 @@
 const int BUFFER_SIZE = 200;
 char outFile[260] = ""; //MAX_PATH variable Windows related, default 260
 
+int fact(int n);
+void calloc_nnE(struct SimulationEnv* se);
+
 bool fopen_error(char* filename, FILE* file, char* base_msg){
 	if (file == NULL) 
 	{
@@ -530,7 +533,7 @@ int parse_datalog_params(char* params, int cursor, struct LoggingState* ls, FILE
 	}
 }
 
-
+// allocates space for nnE array
 void calloc_nnE(struct SimulationEnv* se)
 {
 	se->nnEa = (double *)calloc(se->num_nn_levels * se->num_bond_types, sizeof(double));
@@ -539,7 +542,7 @@ void calloc_nnE(struct SimulationEnv* se)
 // gets the index in atom_env, nnE arrays (nearest_neighbor - bond_type combo)
 int get_env_index(int nn, int bond_idx, struct SimulationEnv* se)
 {
-	return nn * se->num_bond_types + bond_idx;
+	return (nn-1) * se->num_bond_types + bond_idx;
 }
 
 // calculate the number of bond types

@@ -422,7 +422,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 			ss->atom_arr[atom_idx]->occupied_neighbor_sites[i] = j;
 			
 			int bond_idx = get_bond_index(ss->atom_arr[atom_idx]->type, ss->atom_arr[j]->type, se);
-			int env_idx = get_env_index(0, bond_idx, se);
+			int env_idx = get_env_index(1, bond_idx, se);
 			// 0 for 1st nn
 			atom_env[env_idx]++;
 		}
