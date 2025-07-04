@@ -15,23 +15,22 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se);
 int calculate_surf_diffusion_rate(
     int initial_configuration[],
     int final_configuration[],
-    int number_of_neighbors,
     int atom_type,
-    double nnE[6],
     double temperature,
     double overpotential,
-    double *rate
+    double *rate,
+    struct SimulationEnv* se
 );
 
 int	calculate_evaporation_rate(
     int initial_configuration[],
-    int number_of_neighbors,
     int atom_type,
-    double nnE[6],
-    bool solubility[3],
     double temperature,
     double overpotential,
-    double *rate
+    double *rate,
+    struct SimulationEnv* se
 );
+
+int get_bond_index(int a, int b, struct SimulationEnv* se);
 
 #endif // SIMULATION_H

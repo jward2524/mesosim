@@ -418,39 +418,28 @@ void initialize_jump_offsets(int lattice_type)	// lattice_type = crystal lattice
 
 /********************************************************************************/
 /********************************************************************************/
-void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double nnE[6], int max_neighbors, double* total_internal_energy)
+void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double* total_internal_energy, struct SimulationEnv* se)
 {
-	int neighbor, type;
+	int neighbor, a_type, b_type, bond_idx, env_idx;
 	
 	*total_internal_energy = 0.;
 
-	int nneA_index[3] = {0, 1, 2}; //indices of A-A, A-B, A-C bonds
-	int nneB_index[3] = {1, 3, 4}; //indices of B-A, B-B, B-C bonds
-	int nneC_index[3] = {2, 4, 5}; //indices of C-A, C-B, C-C bonds
-
+	// for every atom, for every neighbor, calculate energy
 	for (int i = 0; i < atom_cnt; ++i) {
-		for (int j = 0; j < max_neighbors; ++j)
+		a_type = atom_arr[i]->type;
+		for (int j = 0; j < se->max_neighbors; ++j)
 		{
 			neighbor = atom_arr[i]->occupied_neighbor_sites[j];
 
 			if (neighbor != -1) //site is not empty
 			{
-				type = atom_arr[neighbor]->type;
+				b_type = atom_arr[neighbor]->type;
+				
 				//bonds are assumed to be isotropic
-				// get_env_index();
-				switch (atom_arr[i]->type) {
-					case 1:
-						*total_internal_energy += nnE[nneA_index[type - 1]];
-						break;
-					case 2:
-						*total_internal_energy += nnE[nneB_index[type - 1]];
-						break;
-					case 3:
-						*total_internal_energy += nnE[nneC_index[type - 1]];
-						break;
-					default:
-						break;
-				}
+				bond_idx = get_bond_index(a_type, b_type, se);
+				env_idx = get_env_index(1, bond_idx, se);
+
+				*total_internal_energy += se->nnEa[env_idx];
 			}
 
 		}

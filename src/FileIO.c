@@ -545,6 +545,11 @@ int get_env_index(int nn, int bond_idx, struct SimulationEnv* se)
 	return (nn-1) * se->num_bond_types + bond_idx;
 }
 
+// int get_env_index_types(int nn, int a, int b, struct SimulationEnv* se)
+// {
+// 	return get_env_index(nn, get_bond_index(a, b, se), se);
+// }
+
 // calculate the number of bond types
 int get_num_bond_types(int num_elements)
 {

@@ -61,7 +61,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	ss->total_atoms_dissolved = 0;
 
 	// initial state
-	calculate_internal_energy(ss->atom_arr, ss->atom_cnt, se->nnE, se->max_neighbors, &ss->total_internal_energy);
+	calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 	
 	output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 	write_xyz_file(ss, ls->position_log_prefix, framenum);
@@ -82,7 +82,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 		{
 			//find_average_curvature(); // XXX: no longer valid
 
-			calculate_internal_energy(ss->atom_arr, ss->atom_cnt, se->nnE, se->max_neighbors, &ss->total_internal_energy);
+			calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 			output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 			write_xyz_file(ss, ls->position_log_prefix, framenum);
 
@@ -252,7 +252,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			//record the elapsed time in a file here
 			printf("writing file %d: elapsed_stime = %lf\n", framenum, ss->elapsed_stime);
 			
-			calculate_internal_energy(ss->atom_arr, ss->atom_cnt, se->nnE, se->max_neighbors, &ss->total_internal_energy);
+			calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 			output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 			write_xyz_file(ss, ls->position_log_prefix, framenum);
 			
@@ -302,7 +302,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	
 	//write elapsed_stime to mark finish
 	//TODO: finish IO
-	calculate_internal_energy(ss->atom_arr, ss->atom_cnt, se->nnE, se->max_neighbors, &ss->total_internal_energy);
+	calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 	output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 	write_xyz_file(ss, ls->position_log_prefix, framenum);
 
@@ -451,12 +451,11 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 			calculate_surf_diffusion_rate(		
 				start_config, // ENHANCE: make this look prettier
 				end_config,
-				se->max_neighbors,
 				ss->atom_arr[atom_idx]->type,
-				se->nnE,
 				ss->temperature,
 				ss->overpotential,
-				&rate
+				&rate,
+				se
 			);
 					
 			++atom_rates_cnt;
@@ -478,13 +477,11 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	//printf("calcualte evap\n");
 	calculate_evaporation_rate(	
 		start_config,
-		se->max_neighbors,
 		ss->atom_arr[atom_idx]->type,
-		se->nnE,
-		se->solubility, 
 		ss->temperature,
 		ss->overpotential,
-		&rate
+		&rate,
+		se
 	);
 
 	//replace with the lines below because it's more obvious
@@ -928,105 +925,52 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 /******************************************************************************/
 /******************************************************************************/
 // calculates surface diffusion rate constant
-int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial configuration array
-									int final_configuration[],				// final configuration array
-									int number_of_neighbors,				// number of 1st near neighbors in current xtal structure
-									int atom_type,							// type of atom in consideration for transition
-									double nnE[6],							// bond energy (type 2)-(type 2) [nearest neighbor energy]
-									double temperature,						// system temperature
-									double overpotential,					// system overpotential
-									double *rate)							// return value - rate constant k
+int calculate_surf_diffusion_rate(	
+	int initial_configuration[],			// initial configuration array
+	int final_configuration[],				// final configuration array
+	int atom_type,							// type of atom in consideration for transition
+	double temperature,						// system temperature
+	double overpotential,					// system overpotential
+	double *rate,							// return value - rate constant k
+	struct SimulationEnv* se
+)
 { // ENHANCE: pass the number of nearest neighbors? (best practice)
 	int i;
 	double energy = 0.0;
 	
 	// [ ]: why are these doubles? presumably so they don't get implicitly cast as such when used in calculation
 	// total number of neighbors in initial/final
-	double neighbor_cnt_initial = 0.0;
-	double neighbor_cnt_final = 0.0;
+	int neighbor_cnt_initial = 0;
+	int neighbor_cnt_final = 0;
 	
 	// number of type A/B/C [index 012] neighboring atoms in initial/final configuration
-	double neighbor_type_cnt_initial[] = {0.0, 0.0, 0.0};
-	double neighbor_type_cnt_final[] = {0.0, 0.0, 0.0};
-	
-	int nnE_A_idxs[3] = {0, 1, 2}; // indices of A-A, A-B, A-C bonds in se->nnE array
-	int nnE_B_idxs[3] = {1, 3, 4}; // indices of B-A, B-B, B-C bonds
-	int nnE_C_idxs[3] = {2, 4, 5}; // indices of C-A, C-B, C-C bonds
+	int neighbor_type_cnt_initial[] = {0, 0, 0};
+	int neighbor_type_cnt_final[] = {0, 0, 0};
 
 	// [ ]: why is this static, not const? it should also be a simulation input
 	static double b_anisotropy_factor[12] = {1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.}; // "optional" anistropy factor, indices match jump_offset
 	
 	int neighbor_type; //type of atom for nearest neighbor
-	// XXX: commented prints
-	//printf("before teh switch: atom type = %d\n", atom_type);
 
-	/*printf("final configuration: ");
-	for (i=0;i<se->max_neighbors;++i)
-		printf("%d ", final_configuration[i]);
-	printf("\n");*/
-
-	// ENHANCE: lol these are identical except for se->nnE[se->nnE*_index...], do it better (use fxn)
-	switch(atom_type)
+	int bond_idx, env_idx;
+	for (i=0; i<se->max_neighbors; ++i)
 	{
-		case 1:
-			for (i=0; i<number_of_neighbors; ++i)
-			{
-				neighbor_type = initial_configuration[i];
-				//printf("init neighbor type %d\n", neighbor_type);
-				if (neighbor_type > 0) {
-					++neighbor_type_cnt_initial[neighbor_type - 1]; //number of type A/B/C neighboring atoms in init configuration
-					energy += nnE[nnE_A_idxs[neighbor_type - 1]]*b_anisotropy_factor[i]; //A-A/B/C bond - grab correct index of se->nnE array from se->nnE*_index array based on neighbor type
-				}
-				neighbor_type = final_configuration[i];
-				//printf("final neighbor type %d\n", neighbor_type);
-				if (neighbor_type > 0) {
-					++neighbor_type_cnt_final[neighbor_type - 1]; //number of type A/B/C neighboring atoms in final configuration
-					//energy -= se->nnE[nnE_A_idxs[neighbor_type - 1]]*b_anisotropy_factor[i]; //A-A/B/C bond, told to leave in and comment out
-				}
-			}
-			break;
+		bond_idx = get_bond_index(atom_type, neighbor_type, se);
+		env_idx = get_env_index(1, bond_idx, se); // TODO: hard-coded 1st nn
 
+		neighbor_type = initial_configuration[i];
+		if (neighbor_type > 0) {
+			++neighbor_type_cnt_initial[neighbor_type - 1]; //number of type A/B/C neighboring atoms in init configuration
+			energy += se->nnEa[env_idx] * b_anisotropy_factor[i]; //A-A/B/C bond - grab correct index of se->nnE array from se->nnE*_index array based on neighbor type
+		}
 
-		case 2:
-
-			for (i=0;i<number_of_neighbors;++i)
-			{
-				neighbor_type = initial_configuration[i];
-				//printf("init neighbor type %d\n", neighbor_type);
-				if (neighbor_type > 0) {
-					++neighbor_type_cnt_initial[neighbor_type - 1]; //number of type A/B/C neighboring atoms in init configuration
-					energy += nnE[nnE_B_idxs[neighbor_type - 1]]*b_anisotropy_factor[i]; //B-A/B/C bond
-				}
-				neighbor_type = final_configuration[i];
-				//printf("final neighbor type %d\n", neighbor_type);
-				if (neighbor_type > 0) {
-					++neighbor_type_cnt_final[neighbor_type - 1]; //number of type A/B/C neighboring atoms in final configuration
-					//energy -= se->nnE[nnE_B_idxs[neighbor_type - 1]]*b_anisotropy_factor[i]; //B-A/B/C bond, told to leave in and comment out
-				}
-			}
-			break;
-
-		case 3:
-			for (i=0;i<number_of_neighbors;++i)
-			{
-				neighbor_type = initial_configuration[i];
-				//printf("init neighbor type %d\n", neighbor_type);
-				if (neighbor_type > 0) {
-					++neighbor_type_cnt_initial[neighbor_type - 1]; //number of type A/B/C neighboring atoms in init configuration
-					energy += nnE[nnE_C_idxs[neighbor_type - 1]]*b_anisotropy_factor[i]; //C-A/B/C bond
-				}
-				neighbor_type = final_configuration[i];
-				//printf("final neighbor type %d\n", neighbor_type);
-				if (neighbor_type > 0) {
-					++neighbor_type_cnt_final[neighbor_type - 1]; //number of type A/B/C neighboring atoms in final configuration
-					//energy -= se->nnE[nnE_C_idxs[neighbor_type - 1]]*b_anisotropy_factor[i]; //C-A/B/C bond, told to leave in and comment out
-				}
-			}
-			break;
-
+		neighbor_type = final_configuration[i];
+		if (neighbor_type > 0) {
+			++neighbor_type_cnt_final[neighbor_type - 1]; //number of type A/B/C neighboring atoms in final configuration
+			//energy -= se->nnE[nnE_A_idxs[neighbor_type - 1]]*b_anisotropy_factor[i]; //A-A/B/C bond, told to leave in and comment out
+		}
 	}
 
-	//printf("after the switch\n");
 	for (i=0;i<3;++i)
 	{
 		neighbor_cnt_initial += neighbor_type_cnt_initial[i];
@@ -1041,7 +985,7 @@ int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial con
 
 	}
 
-	if ((neighbor_cnt_initial > 0) && (neighbor_cnt_final <= 1.0))
+	if ((neighbor_cnt_initial > 0) && (neighbor_cnt_final <= 1))
 	{ // [ ]: this is preventing evaporation (when no final neighbors) 
 		// BUG: this will mess up probabilities? by having fake transitions
 		energy = 1000.;				// final configuration has no near neighbors,
@@ -1060,85 +1004,39 @@ int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial con
 /******************************************************************************/
 /******************************************************************************/
 
-int calculate_evaporation_rate(	int initial_configuration[],			// initial configuration array of atom's nearest neighbors
-									int number_of_neighbors,				// number of 1st near neighbors in current xtal structure
-									int atom_type,							// type of atom in consideration for transition
-									double nnE[6],							// bond energy (type 2)-(type 2)
-									bool solubility[3],
-									double temperature,						// system temperature
-									double overpotential,					// system overpotential
-									double *rate)							// return value
+int calculate_evaporation_rate(
+	int initial_configuration[],			// initial configuration array of atom's nearest neighbors
+	int atom_type,							// type of atom in consideration for transition
+	double temperature,						// system temperature
+	double overpotential,					// system overpotential
+	double *rate,							// return value
+	struct SimulationEnv* se
+)
 {
 	int i;
-	double energy;
-	// XXX: not used
-	double EAu = .5;
-	double nscale = 0.0;
-
 	static double b_anisotropy_factor[12] = {1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.};			// optional anistropy factor
-
-	energy = 0.0;
-
-	/*if ((ncsk == 1)||(evaporation_flag == false)) //I don't think this happens
-	{
-		energy = 1000.;
-		*rate = 1e4*exp(-(energy)/(kBoltz*temperature));
-		return 1;
-	}*/
-
-	int nnE_A_idxs[3] = {0, 1, 2}; //indices of A-A, A-B, A-C bonds in se->nnE array
-	int nnE_B_idxs[3] = {1, 3, 4}; //indices of B-A, B-B, B-C bonds
-	int nnE_C_idxs[3] = {2, 4, 5}; //indices of C-A, C-B, C-C bonds
+	double energy = 0.0;
+	
 	int neighbor_type; //type of atom for nearest neighbor
-
-	// ENHANCE: lol these are identical except for se->nnE[se->nnE*_index...], be better (fxn)
-	switch(atom_type)
-	{ // [ ]: how much of this is duplicated with calculate_surf_diffusion_rate
-		case 1:
-			if (solubility[0]) {
-				//A can evaporate
-				for (i=0;i<number_of_neighbors;++i)
-				{ // calculate energy of initial state before evaporation
-					neighbor_type = initial_configuration[i];
-					if (neighbor_type > 0)
-						energy += nnE[nnE_A_idxs[neighbor_type - 1]]*b_anisotropy_factor[i]; //bonding with A
-				}
-			}
-			else
-				energy = 1000.; //A cannot evaporate
-			*rate = 1e4*exp(-(energy-overpotential)/(kBoltz*temperature)); // [ ]: dissolution/evaporation equation
-			break;
-
-		case 2:
-			if (solubility[1]) {
-				//B can evaporate
-				for (i=0;i<number_of_neighbors;++i)
-				{
-					neighbor_type = initial_configuration[i];
-					if (neighbor_type > 0)
-						energy += nnE[nnE_B_idxs[neighbor_type - 1]]*b_anisotropy_factor[i]; //bonding with B
-				}
-			}
-			else
-				energy = 1000.; //B cannot evaporate
-			*rate = 1e4*exp(-(energy-overpotential)/(kBoltz*temperature));
-			break;
-
-		case 3:
-			if (solubility[2]) {
-				//C can evaporate
-				for (i=0;i<number_of_neighbors;++i)
-				{
-					neighbor_type = initial_configuration[i];
-					if (neighbor_type > 0)
-						energy += nnE[nnE_C_idxs[neighbor_type - 1]]*b_anisotropy_factor[i]; //bonding with C
-				}
-			}
-			else
-				energy = 1000.; //C cannot evaporate
-			*rate = 1e4*exp(-(energy-overpotential)/(kBoltz*temperature));
-			break;
+	int bond_idx, env_idx;
+	if (se->solubility[0]) 
+	{
+		//A can evaporate
+		for (i=0;i<se->max_neighbors;++i)
+		{ // calculate energy of initial state before evaporation
+			neighbor_type = initial_configuration[i];
+			bond_idx = get_bond_index(atom_type, neighbor_type, se);
+			env_idx = get_env_index(1, bond_idx, se); // TODO: hard-coded 1st nn
+			if (neighbor_type > 0)
+				energy += se->nnEa[env_idx] * b_anisotropy_factor[i]; //bonding with A
+		}
 	}
+	else
+		// BUG: replace faking a really high energy with just not having the rate in the list
+		energy = 1000.; //A cannot evaporate
+	
+	// dissolution/evaporation equation
+	*rate = 1e4*exp(-(energy-overpotential)/(kBoltz*temperature));
 		
 	return 0;
 }
