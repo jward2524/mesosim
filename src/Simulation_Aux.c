@@ -7,8 +7,6 @@
 
 double ssr;
 
-int total_volume_dissolved;
-
 double normal_x, normal_y, normal_z;
 
 double lhs[6];

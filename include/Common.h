@@ -35,6 +35,11 @@ struct SimulationEnv
 
     double substrate_percent_a;
     double substrate_percent_b;
+    double *substrate_compotition;
+    int num_nn_levels;
+    int num_elements;
+    int num_element_combos; // C(num_elements,2)
+    int num_neighbor_types;
 
     double normal_x, normal_y, normal_z; // XXX: likely vistigal
 
@@ -43,6 +48,8 @@ struct SimulationEnv
 
     double nnE[6];
     double nnnE[6];
+    // double **nnE; // nnE[num_nn_levels][num_element_combos]
+
     
     bool solubility[3]; //all elements cannot dissolve by default
     
@@ -90,7 +97,7 @@ struct SimulationState
     
     double temperature;
     double overpotential;
-    int total_volume_dissolved;
+    int total_atoms_dissolved;
     
 };
 

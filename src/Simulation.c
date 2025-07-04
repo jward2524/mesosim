@@ -55,20 +55,17 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	for (i=0; i < ss->atom_cnt; ++i)	
 		// resets all kinetic paramters
 		refresh_transitions(i, ss, se);
-
+	// TODO: move this out from here, to only where output is necessary
 	organize(ss->atom_arr, ss->atom_cnt); //replacement for copy_xyz_to_coord but might not be necessary
-
-	//printf("transitioned and organized\n");
-
-	ss->total_volume_dissolved = 0; //do i care
+	
+	ss->total_atoms_dissolved = 0;
 
 	// initial state
 	calculate_internal_energy(ss->atom_arr, ss->atom_cnt, se->nnE, se->max_neighbors, &ss->total_internal_energy);
-	//printf("energy calculated\n");
+	
 	output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 	write_xyz_file(ss, ls->position_log_prefix, framenum);
-	//printf("files written\n");
-	++framenum;
+	framenum++;
 
 	unsigned long int iter = 1; // iteration count
 
@@ -90,12 +87,14 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			write_xyz_file(ss, ls->position_log_prefix, framenum);
 
 			ss->simulation_should_kill_itself = false;
-			organize(ss->atom_arr, ss->atom_cnt); //replace the copy with draw, maybe not needed
 
-			//simulation_is_going = false; //not needed
-			return 1; //return 1 b/c error?
+			// TODO: remove from here
+			organize(ss->atom_arr, ss->atom_cnt); // XXX: remove from here
+
+			return 1; //return 1 b/c error
 		}
 		
+		// TODO: only do this for the atom that was changed and its neighbors
 		for (j=0; j < ss->atom_cnt; ++j)
 			refresh_transitions(j, ss, se); // resets all kinetic paramters
 		//does this need to happen?
@@ -158,7 +157,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 				{
 					if (se->solubility[ss->atom_arr[atom_number]->type - 1] == true)	// atoms are dissolved based on input specs!
 					{
-						++ss->total_volume_dissolved;
+						++ss->total_atoms_dissolved;
 						remove_atom(atom_number, ss, se);	// evaporate the atom
 						//printf("the transition was dissolution of atom %d\n", atom_number);
 					}
@@ -359,6 +358,32 @@ void compute_transition_array(struct SimulationState* ss)
 	return;
 }
 
+int get_bond_index(int a, int b, struct SimulationEnv* se)
+{
+	// aa, ab, ac; bb, bc; cc [num_elements=3]
+	// 00, 01, 02; 11, 12; 22
+	// assume 0-indexed
+	int first, second;
+
+	if (a > b)
+	{
+		first = a;
+		second = b;
+	}
+	else {
+		first = b;
+		second = a;
+	}
+	
+	// a=1, b=2 -> (1*3)+(2-1)=4
+	return (a * (se->num_elements)) + (b-a);
+}
+
+int get_env_index(int nn, int bond_idx, struct SimulationEnv* se)
+{
+	return nn * se->num_nn_levels + bond_idx;
+}
+
 /******************************************************************************/
 /******************************************************************************/
 // updates [atom_arr[atom_idx], transition_arr[i], rate_arr[i].transition_start_idx], initializes rate_arr
@@ -366,12 +391,16 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 {
 	int i, j;
 	int rate_idx; // position of rate rate in rate list rate_arr[]
-	double rate; // rate constant from bond-breaking model
+	double rate, evap_rate; // rate constant from bond-breaking model
 	int next_x, next_y, next_z;
+	Atom *cur_atom = ss->atom_arr[atom_idx];
 
 	int atom_rates_cnt;	// this is returned as the number of transitions (jump_offsets) this atom can undergo, excluding evaporation
 	int start_config[MAXIMUM_NUMBER_OF_NEIGHBORS]; // -1 if empty, type if filled
 	int end_config[MAXIMUM_NUMBER_OF_NEIGHBORS];
+	
+	unsigned char *atom_env = (unsigned char*) calloc(se->num_nn_levels * se->num_element_combos, sizeof(unsigned char));
+	// unsigned char env_hash[se->num_nn_levels * se->num_element_combos];
 
 	// first, remove all mention of this atom from transition list
 	for (i=0; i < se->max_neighbors + se->dissolution; ++i) // extra 1 for evaporation
@@ -383,6 +412,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	// cycle through neighbor coordinates, and check if there is an atom there
 	for (i=0;i < se->max_neighbors;++i)
 	{
+		ss->atom_arr[atom_idx]->occupied_neighbor_sites[i] = 0;
    		next_x = ss->atom_arr[atom_idx]->lattice[0] + jump_offset[i].dx;
 		next_y = ss->atom_arr[atom_idx]->lattice[1] + jump_offset[i].dy;
         next_z = ss->atom_arr[atom_idx]->lattice[2] + jump_offset[i].dz;
@@ -391,30 +421,36 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 
         j = atom_at(next_x, next_y, next_z, ss->atom_arr, ss->zone_arr, se);
 
-		if (j >= 0) 
+		// update atom_env
+		if (j >= 0)
+		{
 			ss->atom_arr[atom_idx]->occupied_neighbor_sites[i] = j;
-		// if no atom atom_idx that position but occ_neighbor array says there is, fix it
-		if ((j == -1) && (ss->atom_arr[atom_idx]->occupied_neighbor_sites[i] >= 0))
-			ss->atom_arr[atom_idx]->occupied_neighbor_sites[i] = -1;
+			
+			int bond_idx = get_bond_index(ss->atom_arr[atom_idx]->type, ss->atom_arr[j]->type, se);
+			int env_idx = get_env_index(0, bond_idx, se);
+			// 0 for 1st nn
+			atom_env[env_idx]++;
+		}
+
+		// // if no atom atom_idx that position but occ_neighbor array says there is, fix it
+		// if ((j == -1) && (ss->atom_arr[atom_idx]->occupied_neighbor_sites[i] >= 0))
+		// 	ss->atom_arr[atom_idx]->occupied_neighbor_sites[i] = -1;
 	}
 
 	// cycle through the neighbor sites.  if there's an empty one, calculate the transition rate to it
 
-	//printf("getting config\n"); // XXX: commented prints
 	atom_rates_cnt = 0;
-	//ok_to_evaporate = true; //doesn't get used
 
 	int intial_config_neighbor_cnt = get_initial_configuration2(atom_idx, 0, se->max_neighbors, ss->atom_arr, start_config);		// k is number of near neighbors
 
 	if (intial_config_neighbor_cnt == se->max_neighbors) // skip calculating a rate of a fully coordinated atom
-		return atom_rates_cnt;			
-
-	//printf("calculating surf diffusion rate\n");
-	for (i=0; i < se->max_neighbors; ++i)
+		return atom_rates_cnt;
+	
+	for (i=0; i < se->max_neighbors; ++i) // create transitions to each unoccupied neighbor
 	{
-		if (ss->atom_arr[atom_idx]->occupied_neighbor_sites[i] == -1)
-		{ // if unoccupied, consider transition
-			//printf("final config\n");
+		if (ss->atom_arr[atom_idx]->occupied_neighbor_sites[i] == -1) // if unoccupied, consider transition
+		{ 
+			// end_config is only used to identify the transitions that are functionally evaporations (no neighbors in end configuration)
 			int final_config_neighbor_cnt = get_final_configuration2(atom_idx, i, ss, se, end_config);
 			//printf("surf diffusion\n");
 			calculate_surf_diffusion_rate(		
@@ -430,7 +466,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 					
 			++atom_rates_cnt;
 			//printf("adding step\n");
-			if ((rate_idx = is_on_transition_list(ss, rate)) != -1)
+			if ((rate_idx = is_on_rate_list(ss, rate)) != -1)
 			{ // if rate constant already in rate list, use that rate list index
 				add_to_transition_list(rate_idx, atom_idx, i, ss, se);
 			}
@@ -457,7 +493,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	);
 
 	//replace with the lines below because it's more obvious
-	/*if ((rate_idx = is_on_transition_list(rate)) != -1)
+	/*if ((rate_idx = is_on_rate_list(rate)) != -1)
 	{
 		add_to_transition_list(rate_idx, atom_idx, se->max_neighbors);
 	}
@@ -468,7 +504,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	}*/
 
 	//printf("end stuff\n");
-	rate_idx = is_on_transition_list(ss, rate);
+	rate_idx = is_on_rate_list(ss, rate);
 
 	if (rate_idx == -1)
 		rate_idx = create_new_transition(ss, rate); //the transition rate to the spot is a new one!
@@ -483,7 +519,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 
 //is there a better way of doing this?
 // checks if the rate constant is already in the rate list
-int is_on_transition_list(struct SimulationState* ss, double rate) 
+int is_on_rate_list(struct SimulationState* ss, double rate) 
 {
 	int i;
 
@@ -521,8 +557,6 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct S
 
 	// make room for the new arrival
 
-	if (ss->transition_cnt == 1232011)
-		printf("%d\n", 1232011);
 	ss->transition_arr[ss->transition_cnt] = (Transition *)malloc(sizeof(Transition));	// adds entry to the end of the list
 	if ((unsigned int) ss->transition_cnt > se->max_transitions)
 	{
@@ -1013,14 +1047,15 @@ int calculate_surf_diffusion_rate(	int initial_configuration[],			// initial con
 	}
 
 	if ((neighbor_cnt_initial > 0) && (neighbor_cnt_final <= 1.0))
-	{ // [ ]: this is preventing evaporation (when no final neighbors)
+	{ // [ ]: this is preventing evaporation (when no final neighbors) 
+		// BUG: this will mess up probabilities? by having fake transitions
 		energy = 1000.;				// final configuration has no near neighbors,
 									// so this effectively corresponds to an evaporation-like event.
 									// Don't let it happen!
 	}
 
 	// ENHANCE: replace calculating the exp with memoizing up the value (uhash?) -> speedup?
-	// BUG: why was overpotential removed? Isn't it necessary for linear sweep stuff?
+	// overpotential is only for evaporation
 	//*rate = 1e13*exp(-energy/(kBoltz*temperature)) //+ 1e-4*exp(-(energy-overpotential)/(kBoltz*temperature));
 	*rate = 1e13*exp(-energy/(kBoltz*temperature));
 	//printf("rate = %le\n", *rate);

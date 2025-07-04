@@ -861,6 +861,7 @@ bool write_xyz_file(struct SimulationState* ss, char* xyz_filename, int frame_nu
 
 	Atom **atoms = ss->atom_arr;
 	for (int i = 0; i < ss->atom_cnt; ++i)
+		// TODO: call organize here
 		fprintf(fileid, "%d %s %lf %lf %lf %lf\n", i, atoms[i]->name, atoms[i]->cart_coord[0], atoms[i]->cart_coord[1], atoms[i]->cart_coord[2], atoms[i]->bsradius); //name is now element type
 	//ball and stick or space filling?
 	fclose(fileid);

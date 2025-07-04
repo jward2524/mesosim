@@ -3,7 +3,8 @@
 
 #include "Defs.h"
 
-// [ ]: what is the difference between the atom linked list and the atom array?
+// atom array contains all atoms
+// atom linked list is multiple shorter lists (zone), split based on spatial location for faster addressing
 typedef struct
 	{
 		char name[24]; 			// name, 24 characters long
@@ -11,7 +12,6 @@ typedef struct
 		// TODO: remove - only used for printing, so only calculate when printing
 		double cart_coord[3]; 		// working [cart]esian (orthogonal) [coord]inates
 
-		// [ ]: why is this a double? when is it ever fractional?
 		int lattice[3];		// multiples of unit cell / lattice vectors
 
 		double bsradius;		// atom ball and stick radius // XXX: visualization, and should depend on atom type, not per atom
@@ -126,7 +126,19 @@ typedef struct
 		double frequency;				// rate constant * transition_count, for calculating probability of transition
 		int transition_count;           // number (count?) of this type of transition in transition_arr
 		int transition_start_idx; 		// index to first item in transition_arr with this rate constant 
+		unsigned char *atom_env; 	// can't do variable length arrays, so pointer instead
+		// pointer to start of 2D array num_element_combos*idx1 + idx2
+
+		// same format as nnE[][]: atom_env[num_nn_levels][num_element_combos]
+		// int env_hash; // hash of atom_env array, for comparison of environments - based on number of distinct environments?
+		// can't use memcmp bc atom_env[0] is char*, not char
+		int is_evaporation;
 	} Rate;
+
+typedef struct
+{
+
+} AtomicEnv;
 
 typedef struct
 	{
