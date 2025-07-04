@@ -181,7 +181,7 @@
 //got rid of command mnemonics :)
 
 /*error messages (not all used)*/
-#define NO_INPUT_ERROR 0
+#define SUCCESS 0
 #define ATOM_ARRAY_CLEARED 1
 #define BOND_ARRAY_CLEARED 2
 #define ATOM_ARRAY_FILLED 3

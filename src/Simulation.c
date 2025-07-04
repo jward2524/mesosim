@@ -379,11 +379,6 @@ int get_bond_index(int a, int b, struct SimulationEnv* se)
 	return (a * (se->num_elements)) + (b-a);
 }
 
-int get_env_index(int nn, int bond_idx, struct SimulationEnv* se)
-{
-	return nn * se->num_nn_levels + bond_idx;
-}
-
 /******************************************************************************/
 /******************************************************************************/
 // updates [atom_arr[atom_idx], transition_arr[i], rate_arr[i].transition_start_idx], initializes rate_arr
@@ -399,8 +394,8 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	int start_config[MAXIMUM_NUMBER_OF_NEIGHBORS]; // -1 if empty, type if filled
 	int end_config[MAXIMUM_NUMBER_OF_NEIGHBORS];
 	
-	unsigned char *atom_env = (unsigned char*) calloc(se->num_nn_levels * se->num_element_combos, sizeof(unsigned char));
-	// unsigned char env_hash[se->num_nn_levels * se->num_element_combos];
+	unsigned char *atom_env = (unsigned char*) calloc(se->num_nn_levels * se->num_bond_types, sizeof(unsigned char));
+	// unsigned char env_hash[se->num_nn_levels * se->num_bond_types];
 
 	// first, remove all mention of this atom from transition list
 	for (i=0; i < se->max_neighbors + se->dissolution; ++i) // extra 1 for evaporation

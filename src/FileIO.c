@@ -72,7 +72,7 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
 	
 	if (strcmp(outFile, "") == 0) {
 		//an out file name was not defined in input file, use starttime as filename
-        sprintf(outFile, "%ld.out", starttime);
+        sprintf(outFile, "%lld.out", starttime);
         fprintf(temp_log, "Log file name not defined, using \"%s\"", outFile);
     }
 	
@@ -100,7 +100,7 @@ bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState* s
 			// restart also needs an atom position file
 		}
 		errnum = parse_input(parameter_line, temp_log, ss, se, ls);
-		if (errnum != NO_INPUT_ERROR)
+		if (errnum != SUCCESS)
 		{
 			//should write to the temp
 			fprintf(temp_log, "ERROR! Had issue reading the following line: \"%s\"\n", parameter_line);
@@ -204,58 +204,69 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 			return FILE_COMMAND_IGNORED;
 		}
 	}
-	else if (strncmp(cmd, "nne", 3) == 0) {
-		// TODO: generalize - refer to spparks?
-		//set the nearest neighbor energies - returns number of formats read?
-		argsread = sscanf(params, "%lf %lf %lf %lf %lf %lf", se->nnE, se->nnE+1 ,se->nnE+2, se->nnE+3, se->nnE+4, se->nnE+5);
-		if (argsread == 1) {
-			//something with only A atoms!
-			fprintf(temp_log, "Read nearest-neighbor energies for unary system\n");
-			for (int i = 1; i <= 5; ++i)
-				se->nnE[i] = 0.;
-		}
-		if (argsread == 3) {
-			//something with only A and B atoms!
-			fprintf(temp_log, "Read nearest-neighbor energies for binary system\n");
-			se->nnE[3] = se->nnE[2];
-			se->nnE[2] = 0.; //ordering for nearest neighbor energies
-			se->nnE[4] = 0.;
-			se->nnE[5] = 0.;
-		}
-		else if (argsread == 6) {
-			//something with A, B, and C atoms!
-			fprintf(temp_log, "Read nearest-neighbor energies for ternary system\n");
-		}
-		else {
-			fprintf(temp_log, "ERROR! Read invalid number (%d) of nearest-neighbor energies %s\n", argsread, params);
+	else if (strncmp(cmd+1, "nne", 3) == 0) {
+		int nn_level;
+
+		if ((se->num_nn_levels == 0) || (se->num_bond_types == 0))
+		{
+			fprintf(
+				temp_log, 
+				"ERROR! Number of nearest neighbor levels and number of elements \
+				needs to be set before defining nearest neighbor energies\n"
+			);
 			return FILE_COMMAND_IGNORED;
 		}
+
+		int ret = sscanf(cmd, "%dnne", &nn_level);
+
+		if (ret == 0)
+		{
+			fprintf(temp_log, "ERROR! Expected nne command format of [level]nne, recieved %s\n", cmd);
+			return FILE_COMMAND_IGNORED;
+		}
+		
+		if (nn_level > se->num_nn_levels)
+		{
+			fprintf(
+				temp_log, 
+				"ERROR! NN energy provided for higher level than stated: \
+				%d stated nn levels, energies for %d level provided\n", 
+				se->num_nn_levels, nn_level
+			);
+			return FILE_COMMAND_IGNORED;
+		}
+
+		int len = strlen(params); // BUFFER_SIZE?
+		char tok_params[len];
+		snprintf(tok_params, len, "%s", params);
+		
+		// expect num_bond_types numbers
+		if (se->nnEa == NULL)
+			calloc_nnE(se);
+
+		int bond_index = get_env_index(nn_level, 0, se);
+		int count = 0;
+		char* token = strtok(tok_params, " \t");
+		while (token)
+		{
+			sscanf(token, "%lf", (se->nnEa)+bond_index);
+			token = strtok(NULL, " \t");
+			bond_index++;
+			count++;
+		}
+
+		if (count != se->num_bond_types)
+		{
+			fprintf(temp_log, "ERROR! Expected %d bond energies, recieved %d\n", se->num_bond_types, count);
+			return FILE_COMMAND_IGNORED;
+		}
+
 	}
-	else if (strncmp(cmd, "2nne", 4) == 0) {
-		//set the nearest neighbor energies
-		argsread = sscanf(params, "%lf %lf %lf %lf %lf %lf", se->nnnE, se->nnnE+1, se->nnnE+2, se->nnnE+3, se->nnnE+4, se->nnnE+5);
-		if (argsread == 1) {
-			//something with only A atoms!
-			fprintf(temp_log, "Read 2nd nearest-neighbor energies for unary system\n");
-			for (int i = 1; i <= 5; ++i)
-				se->nnnE[i] = 0.;
-		}
-		if (argsread == 3) {
-			//something with only A and B atoms!
-			fprintf(temp_log, "Read 2nd nearest-neighbor energies for binary system\n");
-			se->nnnE[3] = se->nnnE[2];
-			se->nnnE[2] = 0.; //ordering for nearest neighbor energies
-			se->nnnE[4] = 0.;
-			se->nnnE[5] = 0.;
-		}
-		else if (argsread == 6) {
-			//something with A, B, and C atoms!
-			fprintf(temp_log, "Read 2nd nearest-neighbor energies for ternary system\n");
-		}
-		else {
-			fprintf(temp_log, "ERROR! Read invalid number (%d) of 2nd nearest-neighbor energies %s\n", argsread, params);
-			return FILE_COMMAND_IGNORED;
-		}
+	else if (strncmp(cmd, "nnlevels", 8) == 0) 
+	{
+		argsread = sscanf(params, "%d", &(se->num_nn_levels));
+		// if (se->num_bond_types != 0)
+		// 	calloc_nnE(se);
 	}
 	else if (strncmp(cmd, "datalog", 4) == 0) { // ENHANCE: linear list and ln list do the same thing - improve semantics to eliminate this duplicity
 		// set time increments for data logging
@@ -350,6 +361,12 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		char type2[3];
 		char type3[3];
 		argsread = sscanf(params, "%s %s %s", type1, type2, type3);
+
+		se->num_elements = argsread;
+		se->num_bond_types = get_num_bond_types(se->num_elements);
+		// if (se->num_nn_levels != 0)
+		// 	calloc_nnE(se);
+
 		switch(argsread) {
 			case 1:
 				strcpy(se->atom_names[0], type1);
@@ -467,7 +484,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		fprintf(temp_log, "ERROR! keyword %s not recognized\n", cmd);
 		return FILE_COMMAND_IGNORED;
 	}
-	return NO_INPUT_ERROR;
+	return SUCCESS;
 }
 
 int parse_boolean(char *str) {
@@ -513,6 +530,50 @@ int parse_datalog_params(char* params, int cursor, struct LoggingState* ls, FILE
 	}
 }
 
+
+void calloc_nnE(struct SimulationEnv* se)
+{
+	se->nnEa = (double *)calloc(se->num_nn_levels * se->num_bond_types, sizeof(double));
+}
+
+// gets the index in atom_env, nnE arrays (nearest_neighbor - bond_type combo)
+int get_env_index(int nn, int bond_idx, struct SimulationEnv* se)
+{
+	return nn * se->num_bond_types + bond_idx;
+}
+
+// calculate the number of bond types
+int get_num_bond_types(int num_elements)
+{
+	return fact(num_elements + 2 - 1) / (fact(2) * fact(num_elements-1));
+}
+
+// returns the factorial of n
+int fact(int n)
+{
+	switch(n)
+	{
+		case 0:
+			return 1;
+		case 1:
+			return 1;
+		case 2:
+			return 2;
+		case 3:
+			return 6;
+		case 4:
+			return 24;
+		case 5:
+			return 120;
+		case 6:
+			return 720;
+		case 7:
+			return 5040;
+		default:
+			fprintf(stderr, "Factorial is too large (max n is 7): %d", n);
+			return -1;
+	}
+}
 /*******************************************************************************
 *******************************************************************************/
 

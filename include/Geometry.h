@@ -127,9 +127,9 @@ typedef struct
 		int transition_count;           // number (count?) of this type of transition in transition_arr
 		int transition_start_idx; 		// index to first item in transition_arr with this rate constant 
 		unsigned char *atom_env; 	// can't do variable length arrays, so pointer instead
-		// pointer to start of 2D array num_element_combos*idx1 + idx2
+		// pointer to start of 2D array num_bond_types*idx1 + idx2
 
-		// same format as nnE[][]: atom_env[num_nn_levels][num_element_combos]
+		// same format as nnE[][]: atom_env[num_nn_levels][num_bond_types]
 		// int env_hash; // hash of atom_env array, for comparison of environments - based on number of distinct environments?
 		// can't use memcmp bc atom_env[0] is char*, not char
 		int is_evaporation;

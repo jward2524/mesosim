@@ -38,7 +38,7 @@ struct SimulationEnv
     double *substrate_compotition;
     int num_nn_levels;
     int num_elements;
-    int num_element_combos; // C(num_elements,2)
+    int num_bond_types; // C(num_elements,2)
     int num_neighbor_types;
 
     double normal_x, normal_y, normal_z; // XXX: likely vistigal
@@ -48,7 +48,7 @@ struct SimulationEnv
 
     double nnE[6];
     double nnnE[6];
-    // double **nnE; // nnE[num_nn_levels][num_element_combos]
+    double *nnEa; // nnE[num_nn_levels][num_bond_types]
 
     
     bool solubility[3]; //all elements cannot dissolve by default
