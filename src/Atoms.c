@@ -136,7 +136,7 @@ void create_default_atom(int n, Atom** atom_arr) // n = position on atom list
 		atom_arr[n]->transition_indices[i] = -1;
 
 	for (i=0;i<MAXIMUM_NUMBER_OF_NEIGHBORS;++i)
-		atom_arr[n]->occupied_neighbor_sites[i] = -1;
+		atom_arr[n]->neighbor_atom_idxs[i] = -1;
 
 	// linked list structure // [ ]: but why
 
@@ -253,7 +253,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 	ss->atom_arr[pos]->lattice[2] = z;
 
 	ss->atom_arr[pos]->type = type;
-	strcpy(ss->atom_arr[ss->atom_cnt-1]->name, se->atom_names[type-1]); // TODO: use pos instead of atom_cnt-1
+	strcpy(ss->atom_arr[ss->atom_cnt-1]->name, se->atom_names[type]); // TODO: use pos instead of atom_cnt-1
 
 	/*if (x > 60) // XXX: commented prints
 		printf("copied the name: atom is type %s\n", atom[atom_cnt-1]->name);*/
@@ -299,15 +299,15 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 					printf("I'm in the normal case\n");
 					printf("atom at site %lf %lf %lf is number %d\n", checkx, checky, checkz, atom_at(checkx, checky, checkz));
 				}*/
-				ss->atom_arr[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz, ss->atom_arr, ss->zone_arr, se);
+				ss->atom_arr[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz, ss->atom_arr, ss->zone_arr, se);
 
 				/*if (x>60) // XXX: commented prints
-					printf("pos = %d, i = %d, atom[pos]->occupied[i] = %d\n", pos, i, atom[pos]->occupied_neighbor_sites[i]);*/
-				// if atom is present at potential jump site, fill position in occupied_neighbor_sites of this atom and the found neighbor atom
-				if (ss->atom_arr[pos]->occupied_neighbor_sites[i] >= 0 ) {
+					printf("pos = %d, i = %d, atom[pos]->occupied[i] = %d\n", pos, i, atom[pos]->neighbor_atom_idxs[i]);*/
+				// if atom is present at potential jump site, fill position in neighbor_atom_idxs of this atom and the found neighbor atom
+				if (ss->atom_arr[pos]->neighbor_atom_idxs[i] >= 0 ) {
 					/*if (x>60)
-						printf("reverse: index %d, opposite offset %d, pos %d\n", atom[pos]->occupied_neighbor_sites[i], opposite_offset[i], pos);*/
-					ss->atom_arr[ss->atom_arr[pos]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = pos;
+						printf("reverse: index %d, opposite offset %d, pos %d\n", atom[pos]->neighbor_atom_idxs[i], opposite_offset[i], pos);*/
+					ss->atom_arr[ss->atom_arr[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
 					/*if (x>60)
 						printf("uno reverse didn't break me\n");*/
 				}
@@ -319,66 +319,66 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 			/*case RANDOM_SURROUND:								// normal bonding considerations
 				// set occupied_neighbor_site[i] to the atom at that site.
 				// If there really is an atom there, cross-link it to our new atom.
-				atom[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz);
+				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
-				if (atom[pos]->occupied_neighbor_sites[i] >= 0 )
-					atom[atom[pos]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = pos;
+				if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
 				else
-					atom[pos]->occupied_neighbor_sites[i] = -3;
+					atom[pos]->neighbor_atom_idxs[i] = -3;
 				break;
 
 			case BONDED_BELOW:						// bond to bulk - all bonds downward are to buried atoms.
-				atom[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz);
+				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
-				if (atom[pos]->occupied_neighbor_sites[i] >= 0 )
-					atom[atom[pos]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = pos;
+				if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
 				else
 					if (jump_offset[i].dz < 0)
-						atom[pos]->occupied_neighbor_sites[i] = -2;
+						atom[pos]->neighbor_atom_idxs[i] = -2;
 				break;
 
 			case BURIED:
-				atom[pos]->occupied_neighbor_sites[i] = -2;
+				atom[pos]->neighbor_atom_idxs[i] = -2;
 				break;
 
 			case RANDOM_BELOW:						// bond to bulk - all bonds downward are to buried atoms.
-				atom[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz);
+				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
-				if (atom[pos]->occupied_neighbor_sites[i] >= 0 )
-					atom[atom[pos]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = pos;
+				if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
 				else if (jump_offset[i].dz < 0)
-					atom[pos]->occupied_neighbor_sites[i] = -3;
+					atom[pos]->neighbor_atom_idxs[i] = -3;
 				break;
 
 			case RANDOM_ALL_AROUND:						// bond to bulk - all bonds downward are to buried atoms.
 				if (i == opposite_offset[niod])
 				{
-					atom[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz);
+					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
-					if (atom[pos]->occupied_neighbor_sites[i] >= 0 )
-						atom[atom[pos]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = pos;
+					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
 					else
-						atom[pos]->occupied_neighbor_sites[i] = -1;
+						atom[pos]->neighbor_atom_idxs[i] = -1;
 				}
 				else
 				{
-					atom[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz);
+					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
-					if (atom[pos]->occupied_neighbor_sites[i] >= 0 )
-						atom[atom[pos]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = pos;
+					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
 					else
-						atom[pos]->occupied_neighbor_sites[i] = -3;
+						atom[pos]->neighbor_atom_idxs[i] = -3;
 				}
 
 				break;
 
 			case NOT_IN_ONE_DIRECTION:	  	// bond normally to what's actually nearby, -2 otherwise, except -1 in the no_bond_direction
-				atom[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz);
+				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
-				if (atom[pos]->occupied_neighbor_sites[i] >= 0)
-					atom[atom[pos]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = pos;
+				if (atom[pos]->neighbor_atom_idxs[i] >= 0)
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
 				else if (i != no_bond_direction)
-					atom[pos]->occupied_neighbor_sites[i] = -3;
+					atom[pos]->neighbor_atom_idxs[i] = -3;
 				break;
 
 			case RANDOM_INWARD:
@@ -393,20 +393,20 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 				{
 					// normal points inward, make buried
 
-					if ((atom[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz)) >= 0)
-						atom[atom[pos]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = pos;
+					if ((atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz)) >= 0)
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
 					else
-						atom[pos]->occupied_neighbor_sites[i] = -3;
+						atom[pos]->neighbor_atom_idxs[i] = -3;
 					break;
 				}
 				else
 				{
 					// normal points outward; make NORMAL
 
-					atom[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz);
+					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 	
-					if (atom[pos]->occupied_neighbor_sites[i] >= 0 )
-						atom[atom[pos]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = pos;
+					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
 					break;
 				}
 
@@ -422,26 +422,26 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 				{
 					// normal points inward, make buried
 
-					if ((atom[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz)) >= 0)
-						atom[atom[pos]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = pos;
+					if ((atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz)) >= 0)
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
 					else
-						atom[pos]->occupied_neighbor_sites[i] = -2;
+						atom[pos]->neighbor_atom_idxs[i] = -2;
 					break;
 				}
 				else
 				{
 					// normal points outward; make NORMAL
 
-					atom[pos]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz);
+					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 	
-					if (atom[pos]->occupied_neighbor_sites[i] >= 0 )
-						atom[atom[pos]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = pos;
+					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
 					break;
 				}
 			*/
 			case SPECIFIED: //only used when reading kmc files?
 				printf("I'm in specified\n");
-				// ss->atom_arr[pos]->occupied_neighbor_sites[i] = temp_atom.occupied_neighbor_sites[i];
+				// ss->atom_arr[pos]->neighbor_atom_idxs[i] = temp_atom.neighbor_atom_idxs[i];
 				break;
 			default:
 				//printf("I made it to the default????\n");
@@ -470,7 +470,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 	for (i=0; i < se->max_neighbors; ++i)
 	{
 		//printf("trying to refresh neighbor %d\n", i);
-		j = ss->atom_arr[pos]->occupied_neighbor_sites[i];
+		j = ss->atom_arr[pos]->neighbor_atom_idxs[i];
 
 		if (j >= 0)
 		{
@@ -527,10 +527,10 @@ void move_atom(int ia, int fa, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_
 
 	for (n=0;n < se->max_neighbors;++n)
 		{
-			atom_arr[fa]->occupied_neighbor_sites[n] =	atom_arr[ia]->occupied_neighbor_sites[n];
+			atom_arr[fa]->neighbor_atom_idxs[n] =	atom_arr[ia]->neighbor_atom_idxs[n];
 
-			n2 = atom_arr[ia]->occupied_neighbor_sites[n];
-			if (n2 >= 0) atom_arr[n2]->occupied_neighbor_sites[opposite_offset[n]] = fa;
+			n2 = atom_arr[ia]->neighbor_atom_idxs[n];
+			if (n2 >= 0) atom_arr[n2]->neighbor_atom_idxs[opposite_offset[n]] = fa;
 
 			atom_arr[fa]->transition_indices[n] = atom_arr[ia]->transition_indices[n];
 
@@ -590,7 +590,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 
 	for (i=0; i < se->max_neighbors; ++i)
 	{
-		j = ss->atom_arr[at]->occupied_neighbor_sites[i];
+		j = ss->atom_arr[at]->neighbor_atom_idxs[i];
 
 		switch(j) //might be irrelevant if burial removed // [ ]: burried
 		{
@@ -636,7 +636,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 				break;
 
 			default:	// make other atom see this spot as empty
-				ss->atom_arr[j]->occupied_neighbor_sites[opposite_offset[i]] = -1;
+				ss->atom_arr[j]->neighbor_atom_idxs[opposite_offset[i]] = -1;
 				nt[nnt] = j;
 				++nnt;
 				break;
@@ -837,10 +837,10 @@ int reincarnate(int x, int y, int z, int type, int vc, int buried) {
 
 	// 	adjust_pbc(&checkx, &checky, &checkz, se);
 
-	// 	atom_arr[atom_cnt]->occupied_neighbor_sites[i] = atom_at(checkx, checky, checkz);
+	// 	atom_arr[atom_cnt]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
-	// 	if ((atom_arr[atom_cnt]->occupied_neighbor_sites[i] == -1)&&(i != vc))
-	// 		atom_arr[atom_cnt]->occupied_neighbor_sites[i] = buried; //-2 for non-random, -3 for random
+	// 	if ((atom_arr[atom_cnt]->neighbor_atom_idxs[i] == -1)&&(i != vc))
+	// 		atom_arr[atom_cnt]->neighbor_atom_idxs[i] = buried; //-2 for non-random, -3 for random
 	// }
 
 	// // we'll have to add this atom to the transition lists, and also
@@ -848,8 +848,8 @@ int reincarnate(int x, int y, int z, int type, int vc, int buried) {
 
 	// for (i=0; i < max_neighbors; ++i)
 	// {
-	// 	if (atom_arr[atom_cnt]->occupied_neighbor_sites[i] >= 0)
-	// 		atom_arr[atom_arr[atom_cnt]->occupied_neighbor_sites[i]]->occupied_neighbor_sites[opposite_offset[i]] = atom_cnt;
+	// 	if (atom_arr[atom_cnt]->neighbor_atom_idxs[i] >= 0)
+	// 		atom_arr[atom_arr[atom_cnt]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = atom_cnt;
 
 	// 	atom_arr[atom_cnt]->transition_indices[i] = -1;		// initialization
 	// }
@@ -940,10 +940,10 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
 
 	for (i=0; i < se->max_neighbors; ++i)
 	{
-		if (ss->atom_arr[atom_number]->occupied_neighbor_sites[i] >= 0)
+		if (ss->atom_arr[atom_number]->neighbor_atom_idxs[i] >= 0)
 		{
-			j = ss->atom_arr[atom_number]->occupied_neighbor_sites[i];
-			ss->atom_arr[j]->occupied_neighbor_sites[opposite_offset[i]] = -1;
+			j = ss->atom_arr[atom_number]->neighbor_atom_idxs[i];
+			ss->atom_arr[j]->neighbor_atom_idxs[opposite_offset[i]] = -1;
 		}
 	}
 

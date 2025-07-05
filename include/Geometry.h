@@ -37,13 +37,13 @@ typedef struct
 
 		int transition_indices[MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION];		// add 1 for evaporation
 
-		// If occupied_neighbor_sites[i] >= 0, the site at vector offset i is occupied by an atom indexed by the
-		// value of occupied_neighbor_sites[i].  There are three special cases
+		// If neighbor_atom_idxs[i] >= 0, the site at vector offset i is occupied by an atom indexed by the
+		// value of neighbor_atom_idxs[i].  There are three special cases
 		//		-1: empty
       	//		-2: buried
 		//		-3: random
 		// position on this list relates to jump vector in jump_offset list
-		int occupied_neighbor_sites[MAXIMUM_NUMBER_OF_NEIGHBORS];
+		int neighbor_atom_idxs[MAXIMUM_NUMBER_OF_NEIGHBORS];
 		//int int_or_ext[MAXIMUM_NUMBER_OF_NEIGHBORS];
 
 		// linked list to nearby atoms within the same "zone" (macroscopic region of space)

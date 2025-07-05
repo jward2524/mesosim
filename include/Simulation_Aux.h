@@ -11,8 +11,8 @@ void initialize_jump_offsets(int lattice_type);
 void initialize_zones(Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv* se);
 void get_system_normal(void);
 void set_default_orientation(Atom** atom_arr, int atom_cnt, int lattice_type); //double check if this is used for anything other than graphicsw
-int get_initial_configuration2(int atom_index, int offset_index, int max_neighbors, Atom** atom_arr, int initial_config[]);
-int get_final_configuration2(int at, int offset_idx, struct SimulationState *ss, struct SimulationEnv *se, int final_config[]);
+int get_initial_configuration(int atom_index, int offset_index, int max_neighbors, Atom** atom_arr, int initial_config[]);
+int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, struct SimulationEnv *se, int final_config[]);
 void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz, struct SimulationEnv* se);
 void adjust_pbc(int *x, int *y, int *z, struct SimulationEnv* se);
 void set_primitive_basis(int lt);

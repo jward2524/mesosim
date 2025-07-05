@@ -680,7 +680,7 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 			fscanf(input_file, "%d\t", &temp_atom.transition_indices[j]);
 
 		for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS;++j)
-			fscanf(input_file, "%d\t", &temp_atom.occupied_neighbor_sites[j]);
+			fscanf(input_file, "%d\t", &temp_atom.neighbor_atom_idxs[j]);
 			
 		fscanf(input_file, "%d\t%d\t", &temp_atom.next_atom, &temp_atom.previous_atom);
 
@@ -911,7 +911,7 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 			fscanf(input_file, "%d\t", &temp_atom.transition_indices[j]);
 
 		for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS;++j)
-			fscanf(input_file, "%d\t", &temp_atom.occupied_neighbor_sites[j]);
+			fscanf(input_file, "%d\t", &temp_atom.neighbor_atom_idxs[j]);
 				
 		fscanf(input_file, "%d\t%d\t", &temp_atom.next_atom, &temp_atom.previous_atom);
 

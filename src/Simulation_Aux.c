@@ -429,7 +429,7 @@ void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double* total_inte
 		a_type = atom_arr[i]->type;
 		for (int j = 0; j < se->max_neighbors; ++j)
 		{
-			neighbor = atom_arr[i]->occupied_neighbor_sites[j];
+			neighbor = atom_arr[i]->neighbor_atom_idxs[j];
 
 			if (neighbor != -1) //site is not empty
 			{
@@ -507,21 +507,21 @@ void set_primitive_basis(int lattice_type) // lattice_type = crystal structure t
 /********************************************************************************/
 /********************************************************************************/
 // fills initial_config with type of neighbors to atom[at], before jump offset_idx
-int get_initial_configuration2(int atom_idx, int offset_idx, int max_neighbors, Atom** atom_arr, int initial_config[]) // atom_idx is position in atom list, offset_idx is index in jump_offset
+int get_initial_configuration(int atom_idx, int cur_offset_idx, int max_neighbors, Atom** atom_arr, int initial_config[]) // atom_idx is position in atom list, offset_idx is index in jump_offset
 {	// TODO: rename to remove the 2
-   	int i, j;
+   	int offset_idx, neighbor_idx;
 	int nn_count = 0; // nearest-neighbors
 
-	for (i=0; i<max_neighbors; ++i)
+	for (offset_idx=0; offset_idx<max_neighbors; ++offset_idx)
     {
-		j = atom_arr[atom_idx]->occupied_neighbor_sites[i];
+		neighbor_idx = atom_arr[atom_idx]->neighbor_atom_idxs[offset_idx];
 
-		if (j == -1)
-			initial_config[i] = -1;	// site is empty
+		if (neighbor_idx == -1)
+			initial_config[offset_idx] = -1;	// site is empty
 	    else
 		{
 			++nn_count;	// increment number of near neighbors
-			initial_config[i] = atom_arr[atom_idx]->type;	// site is occupied by some atom
+			initial_config[offset_idx] = atom_arr[neighbor_idx]->type;	// site is occupied by some atom
 		}
 	}
 
@@ -531,7 +531,7 @@ int get_initial_configuration2(int atom_idx, int offset_idx, int max_neighbors, 
 /********************************************************************************/
 /********************************************************************************/
 // fills initial_config with type of neighbors to atom[at], after jump in direction jump_offset[offset_idx]
-int get_final_configuration2(int at, int offset_idx, struct SimulationState *ss, struct SimulationEnv *se, int final_config[]) // offset_idx is position in offset list
+int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, struct SimulationEnv *se, int final_config[]) // offset_idx is position in offset list
 {
 	int i, j, k;
 	int new_x, new_y, new_z;
