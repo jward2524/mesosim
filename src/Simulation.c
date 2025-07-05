@@ -155,7 +155,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 				}
 				else				// dissolution
 				{
-					if (se->solubility[ss->atom_arr[atom_number]->type - 1] == true)	// atoms are dissolved based on input specs!
+					if (se->solubility[ss->atom_arr[atom_number]->type])	// atoms are dissolved based on input specs! // BUG: likely? type-1
 					{
 						++ss->total_atoms_dissolved;
 						remove_atom(atom_number, ss, se);	// evaporate the atom
