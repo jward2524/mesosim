@@ -725,20 +725,14 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 
 		subv = drandj(&rand_seed);
 
-        /*if (subv < substrate_percent_a)
-			nr[nnr] = random_reincarnate_atom(x,y,z,1,vc);
-		else if (subv < (substrate_percent_a + IMPURITY_CONCENTRATION))
-            nr[nnr] = random_reincarnate_atom(x,y,z,3,vc);
-		else
-			nr[nnr]= random_reincarnate_atom(x,y,z,2,vc);
-		*/
-
-		if (subv < se->substrate_percent_a)
-	        nr[nnr] = random_reincarnate_atom(x,y,z,1,vc);
-		else if (subv < (se->substrate_percent_a + se->substrate_percent_b))
-            nr[nnr] = random_reincarnate_atom(x,y,z,2,vc);
-		else
-			nr[nnr]= random_reincarnate_atom(x,y,z,3,vc);
+		double bar = 0;
+		int type = -1;
+		do {
+			type++;
+			bar += se->substrate_compotition[type];
+		}
+		while (bar < subv);
+		nr[nnr]= random_reincarnate_atom(x, y, z, type, vc);
 
         ++nnr;
         }

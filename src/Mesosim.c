@@ -151,23 +151,33 @@ int main(int argc, char* argv[]) {
             break;
     }
 
-    if (sim_env->substrate_percent_a >= 1.) {
-        //unary system
-        fprintf(log_state->sim_log_file, "Initializing atom type %s\n", sim_env->atom_names[0]);
-        fprintf(log_state->sim_log_file, "Atom %s:\tsolubility %d;\tnearest neighbor energy [eV] %lf\n", sim_env->atom_names[0], sim_env->solubility[0], sim_env->nnE[0]);
+    fprintf(log_state->sim_log_file, "Initializing atom types: ");
+    for (int i = 0; i < sim_env->num_elements; i++)
+    {
+        fprintf(log_state->sim_log_file, "%s ", sim_env->atom_names[i]);
     }
-    else if (sim_env->substrate_percent_a + sim_env->substrate_percent_b >= 1.-1e-4) {
-        //binary system
-        fprintf(log_state->sim_log_file, "Initializing atom types %s %s\n", sim_env->atom_names[0], sim_env->atom_names[1]);
-        fprintf(log_state->sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf\n", sim_env->atom_names[0], sim_env->solubility[0], sim_env->nnE[0], sim_env->nnE[1]);
-        fprintf(log_state->sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf\n", sim_env->atom_names[1], sim_env->solubility[1], sim_env->nnE[1], sim_env->nnE[3]);
+    fprintf(log_state->sim_log_file, "\nComposition: ");
+    for (int i = 0; i < sim_env->num_elements; i++)
+    {
+        fprintf(log_state->sim_log_file, "%lf ", sim_env->substrate_compotition[i]);
     }
-    else {
-        //ternary system
-        fprintf(log_state->sim_log_file, "Initializing atom types %s %s %s\n", sim_env->atom_names[0], sim_env->atom_names[1], sim_env->atom_names[2]);
-        fprintf(log_state->sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf %lf\n", sim_env->atom_names[0], sim_env->solubility[0], sim_env->nnE[0], sim_env->nnE[1], sim_env->nnE[2]);
-        fprintf(log_state->sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf %lf\n", sim_env->atom_names[1], sim_env->solubility[1], sim_env->nnE[1], sim_env->nnE[3], sim_env->nnE[4]);
-        fprintf(log_state->sim_log_file, "Atom %s:\tsolubility %d\tnearest neighbor energies [eV] %lf %lf %lf\n", sim_env->atom_names[2], sim_env->solubility[2], sim_env->nnE[2], sim_env->nnE[4], sim_env->nnE[5]);
+
+    fprintf(log_state->sim_log_file, "\nSolutility: ");
+    for (int i = 0; i < sim_env->num_elements; i++)
+    {
+        fprintf(log_state->sim_log_file, "%s ", sim_env->solubility[i] ? "false" : "true");
+    }
+
+    fprintf(log_state->sim_log_file, "\nBond energies\n");
+    int bond_idx, env_idx;
+    for (int i = 0; i < sim_env->num_elements; i++)
+    {
+        for (int j = i; j < sim_env->num_elements; j++)
+        {
+            bond_idx = get_bond_index(i, j, sim_env);
+            env_idx = get_env_index(1, bond_idx, sim_env);
+            fprintf(log_state->sim_log_file, "%s-%s: %lf\n", sim_env->atom_names[i], sim_env->atom_names[j], sim_env->nnEa[env_idx]);
+        }
     }
 
     fprintf(log_state->sim_log_file, "Temperature is %lf K\n", sim_env->temperature);

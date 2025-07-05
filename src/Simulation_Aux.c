@@ -597,13 +597,15 @@ void initialize_flat_sheet_1(struct SimulationState *ss, struct SimulationEnv *s
 			for (j=0;j < se->ssy; ++j)
 			{
 				nz = drandj(&rand_seed);
-				//printf("i, j, k = %d, %d, %d\n", i, j, k);
-				if (nz <= se->substrate_percent_a)
-					add_atom(i, j, k, 1, NORMAL, ss, se);
-				else if (nz <= se->substrate_percent_a + se->substrate_percent_b)
-					add_atom(i, j, k, 2, NORMAL, ss, se);
-				else
-					add_atom(i, j, k, 3, NORMAL, ss, se);
+				
+				double bar = 0;
+				int type = -1;
+				do {
+					type++;
+					bar += se->substrate_compotition[type];
+				}
+				while (bar < nz);
+				add_atom(i, j, k, type, NORMAL, ss, se);
 			}
 		}
 	}
@@ -710,12 +712,14 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
 					//particle is in bounds
  					random_num = drandj(&rand_seed);
 					// determining composition of atom to be placed
-					if (random_num < se->substrate_percent_a)
-						add_atom(u, v, w, 1, NORMAL, ss, se);
-					else if (random_num < se->substrate_percent_a + se->substrate_percent_b)
-						add_atom(u, v, w, 2, NORMAL, ss, se);
-					else
-						add_atom(u, v, w, 3, NORMAL, ss, se);
+					double bar = 0;
+					int type = -1;
+					do {
+						type++;
+						bar += se->substrate_compotition[type];
+					}
+					while (bar < random_num);
+					add_atom(u, v, w, type, NORMAL, ss, se);
 				}	
 			}
 		}

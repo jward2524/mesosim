@@ -4,8 +4,10 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <math.h>
 
 const int BUFFER_SIZE = 200;
+const int ARR_BUFFER_SIZE = 20;
 char outFile[260] = ""; //MAX_PATH variable Windows related, default 260
 
 int fact(int n);
@@ -239,16 +241,16 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 			return FILE_COMMAND_IGNORED;
 		}
 
-		int len = strlen(params); // BUFFER_SIZE?
-		char tok_params[len];
-		snprintf(tok_params, len, "%s", params);
-		
 		// expect num_bond_types numbers
 		if (se->nnEa == NULL)
 			calloc_nnE(se);
-
 		int bond_index = get_env_index(nn_level, 0, se);
 		int count = 0;
+
+		int len = strlen(params); // BUFFER_SIZE?
+		char tok_params[len];
+		snprintf(tok_params, len, "%s", params);
+
 		char* token = strtok(tok_params, " \t");
 		while (token)
 		{
@@ -360,105 +362,135 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 	}
 	else if (strncmp(cmd, "atomtype", 8) == 0) {
 		//this determines which elements are which types of atoms
-		char type1[3];
-		char type2[3];
-		char type3[3];
-		argsread = sscanf(params, "%s %s %s", type1, type2, type3);
 
-		se->num_elements = argsread;
+		char *types[ARR_BUFFER_SIZE];
+		int len = strlen(params); // BUFFER_SIZE?
+		char tok_params[len];
+		snprintf(tok_params, len, "%s", params);
+		char* token = strtok(tok_params, " \t");
+		int count = 0;
+		while (token)
+		{
+			types[count] = (char *)malloc(3 * sizeof(char)); // TODO: free // ENHANCE: 3 -> BUFFER_SIZE??
+			sscanf(token, "%s", types[count]);
+			token = strtok(NULL, " \t");
+			count++;
+		}
+
+		if (count == 0){
+			fprintf(temp_log, "ERROR! Couldn't read any atom type names %s\n", line);
+			return FILE_COMMAND_IGNORED;
+		}
+
+		se->num_elements = count;
 		se->num_bond_types = get_num_bond_types(se->num_elements);
+		
+		int size = count * sizeof(char*);
+		se->atom_names = (char **)malloc(size); // TODO: free
+		if (se->atom_names == NULL)
+		{
+			fprintf(stderr, "Couldn't allocate memory for atom names: %s", strerror(errno));
+			fprintf(temp_log, "Couldn't allocate memory for atom names: %s", strerror(errno));
+        	exit(errno);
+		}
+		memcpy(se->atom_names, types, size);
 		// if (se->num_nn_levels != 0)
 		// 	calloc_nnE(se);
 
-		switch(argsread) {
-			case 1:
-				strcpy(se->atom_names[0], type1);
-				break;
-			case 2:
-				strcpy(se->atom_names[0], type1);
-				strcpy(se->atom_names[1], type2);
-				break;
-			case 3:
-				strcpy(se->atom_names[0], type1);
-				strcpy(se->atom_names[1], type2);
-				strcpy(se->atom_names[2], type3);
-				break;
-			default:
-				fprintf(temp_log, "ERROR! Couldn't read any atom type names %s\n", params);
-				return FILE_COMMAND_IGNORED;
-		}
 	}
 	else if (strncmp(cmd, "dissolution", 11) == 0) {
 		//this determines which atoms dissolve
-		char type1[10];
-		char type2[10];
-		char type3[10];
-		int soluble[3];
-		argsread = sscanf(params, "%s %s %s", type1, type2, type3);
-		if (argsread < 1 || argsread > 3) {
-			fprintf(temp_log, "ERROR! Could not correctly read solubilities %s\n", params);
-			return FILE_COMMAND_IGNORED;
-		}
 
-		soluble[0] = parse_boolean(type1);
-		if (soluble[0] == -1) {
-			fprintf(temp_log, "ERROR! Could not correctly read solubility %s\n", type1);
-			return FILE_COMMAND_IGNORED;
-		}
-		se->solubility[0] = soluble[0];
-
-		if (argsread > 1) {
-			//only for 2ary and 3ary systems
-			soluble[1] = parse_boolean(type2);
-			if (soluble[1] == -1) {
-				fprintf(temp_log, "ERROR! Could not correctly read solubility %s\n", type2);
-				return FILE_COMMAND_IGNORED;	
-			}
-			se->solubility[1] = soluble[1];
-		}
-		if (argsread == 3) {
-			soluble[2] = parse_boolean(type3);
-			if (soluble[2] == -1) {
-				fprintf(temp_log, "ERROR! Could not correctly read solubility %s\n", type3);
+		bool solubility[ARR_BUFFER_SIZE];
+		int len = strlen(params); // BUFFER_SIZE?
+		char tok_params[len];
+		snprintf(tok_params, len, "%s", params);
+		char* token = strtok(tok_params, " \t");
+		int count = 0;
+		while (token)
+		{
+			char buf[BUFFER_SIZE];
+			sscanf(token, "%s", buf);
+			int b = parse_boolean(buf);
+			if (b < 0)
+			{
+				fprintf(temp_log, "ERROR! Could not correctly read solubility %s\n", buf);
 				return FILE_COMMAND_IGNORED;
 			}
-			se->solubility[2] = soluble[2];
+			solubility[count] = (bool) b;
+			token = strtok(NULL, " \t");
+			count++;
 		}
+
+		if (count == 0)
+		{
+			fprintf(temp_log, "ERROR! Could not read any solubilities %s\n", line);
+			return FILE_COMMAND_IGNORED;
+		}
+
+		if ((se->num_elements == 0) || (se->num_elements != count))
+		{
+			fprintf(temp_log, "ERROR! More values provided (%d) than number of elements %d\n", count, se->num_elements);
+			return FILE_COMMAND_IGNORED;
+		}
+
+		int size = count * sizeof(bool);
+		se->solubility = (bool *)malloc(size);
+		if (se->solubility == NULL)
+		{
+			fprintf(stderr, "Couldn't allocate memory for solubilities: %s", strerror(errno));
+			fprintf(temp_log, "Couldn't allocate memory for solubilities: %s", strerror(errno));
+        	exit(errno);
+		}
+		memcpy(se->solubility, solubility, size);
 	}
 	else if (strncmp(cmd, "composition", 11) == 0) {
-		//determines the composition of the atoms: must add up to 1
-		double comps[3];
-		argsread = sscanf(params, "%lf %lf %lf", comps, comps+1, comps+2);
-		if (argsread == 3) {
-			if (comps[0] + comps[1] + comps[2] > 1. + 1e-4 || comps[0] + comps[1] + comps[2] < 1. - 1e-4)
-			{
-				fprintf(temp_log, "ERROR! Compositions don't sum to 1 (%lf + %lf + %lf = %lf)\n", comps[0], comps[1], comps[2], comps[0] + comps[1] + comps[2]);
-				return FILE_COMMAND_IGNORED;
-			}
-			se->substrate_percent_a = comps[0];
-			se->substrate_percent_b = comps[1];
+
+		double comp[BUFFER_SIZE];
+		int len = strlen(params); // BUFFER_SIZE?
+		char tok_params[len];
+		snprintf(tok_params, len, "%s", params);
+		char* token = strtok(tok_params, " \t");
+		int count = 0;
+		double tot = 0;
+		double c;
+		while (token)
+		{
+			sscanf(token, "%lf", &c);
+			comp[count] = c;
+			tot += c;
+
+			token = strtok(NULL, " \t");
+			count++;
 		}
-		else if (argsread == 2) {
-			if (comps[0] + comps[1] > 1. + 1e-4 || comps[0] + comps[1] < 1. - 1e-4) {
-				fprintf(temp_log, "ERROR! Compositions don't sum to 1 (%lf + %lf = %lf)\n", comps[0], comps[1], comps[0] + comps[1]);
-				return FILE_COMMAND_IGNORED;
-			}
-			se->substrate_percent_a = comps[0];
-			se->substrate_percent_b = comps[1];
-		}
-		else if (argsread == 1) {
-			//if this isn't the number 1 I will be worried
-			if (comps[0] > 1. + 1e-4 || comps[0] < 1. - 1e-4) {
-				fprintf(temp_log, "ERROR! Unary system does not have composition 1 (%lf)\n", comps[0]);
-				return FILE_COMMAND_IGNORED;
-			}
-			se->substrate_percent_a = 1.;
-			se->substrate_percent_b = 0.;
-		}
-		else {
-			fprintf(temp_log, "ERROR! Could not correctly read composition %s\n", params);
+
+		if (count == 0)
+		{
+			fprintf(temp_log, "ERROR! Could not read any compositions %s\n", line);
 			return FILE_COMMAND_IGNORED;
 		}
+
+		if (count != se->num_elements)
+		{
+			fprintf(temp_log, "ERROR! More values provided (%d) than number of elements %d\n", count, se->num_elements);
+			return FILE_COMMAND_IGNORED;
+		}
+
+		if (fabs(tot - 1) > 1e-10)
+		{
+			fprintf(temp_log, "ERROR! Compositions must add up to 1 - current: %lf\n", tot);
+			return FILE_COMMAND_IGNORED;
+		}
+
+		int size = count * sizeof(double);
+		se->substrate_compotition = (double *)malloc(size);
+		if (se->substrate_compotition == NULL)
+		{
+			fprintf(stderr, "Couldn't allocate memory for compositions: %s", strerror(errno));
+			fprintf(temp_log, "Couldn't allocate memory for compositions: %s", strerror(errno));
+        	exit(errno);
+		}
+		memcpy(se->substrate_compotition, comp, size);
 	}
 	else if (strncmp(cmd, "run", 3) == 0) {
 		int cursor;
@@ -523,7 +555,13 @@ int parse_datalog_params(char* params, int cursor, struct LoggingState* ls, FILE
 		return 1;
 	}
 	else if (strncmp(params + cursor, "list", 4) == 0){
-		ls->log_list = (double*) malloc(BUFFER_SIZE * sizeof(double));
+		ls->log_list = (double*) malloc(ARR_BUFFER_SIZE * sizeof(double));
+		if (ls->log_list == NULL)
+		{
+			fprintf(stderr, "Couldn't allocate memory for log list: %s", strerror(errno));
+			fprintf(temp_log, "Couldn't allocate memory for log list: %s", strerror(errno));
+        	exit(errno);
+		}
 		parse_log_list(params + cursor + 5, ls->log_list, &ls->log_list_len);
 		return -1;
 	}

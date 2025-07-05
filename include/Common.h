@@ -33,8 +33,6 @@ struct SimulationEnv
     double overpotential_ramp_rate;
     double max_overpotential;
 
-    double substrate_percent_a;
-    double substrate_percent_b;
     double *substrate_compotition;
     int num_nn_levels;
     int num_elements;
@@ -46,18 +44,15 @@ struct SimulationEnv
     // the lattice coorinate limits in order to accomodate the "simulation box"
     int simbox_limits_lat[3][2];
 
-    double nnE[6];
-    double nnnE[6];
     double *nnEa; // nnE[num_nn_levels][num_bond_types]
-
     
-    bool solubility[3]; //all elements cannot dissolve by default
+    bool *solubility; // [num_elements] (implemented as always [8])
     
     double temperature;
     double overpotential;
 
     int dissolution; // flag for whether dissolution events can occur
-    char atom_names[3][3];
+    char **atom_names; // [num_elements][3]
 
 };
 

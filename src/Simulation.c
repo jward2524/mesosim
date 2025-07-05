@@ -550,17 +550,16 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct S
 	// make room for the new arrival
 
 	ss->transition_arr[ss->transition_cnt] = (Transition *)malloc(sizeof(Transition));	// adds entry to the end of the list
-	if ((unsigned int) ss->transition_cnt > se->max_transitions)
-	{
-		fprintf(stderr, "More transitions (%d) than allocated in transition array (%llu)\n", ss->transition_cnt, se->max_transitions);
-		exit(errno);
-	}
-
 	if (ss->transition_arr[ss->transition_cnt] == NULL)
 	{
 		// TODO: free mallocs before exiting
 		fprintf(stderr, "Couldn't allocate memory for atom %d: %s\n", ss->transition_cnt, strerror(errno));
-        exit(errno);
+		exit(errno);
+	}
+	if ((unsigned int) ss->transition_cnt > se->max_transitions)
+	{
+		fprintf(stderr, "More transitions (%d) than allocated in transition array (%llu)\n", ss->transition_cnt, se->max_transitions);
+		exit(errno);
 	}
 
 	// what is this
@@ -1019,7 +1018,7 @@ int calculate_evaporation_rate(
 	
 	int neighbor_type; //type of atom for nearest neighbor
 	int bond_idx, env_idx;
-	if (se->solubility[0]) 
+	if (se->solubility[atom_type])
 	{
 		//A can evaporate
 		for (i=0;i<se->max_neighbors;++i)
