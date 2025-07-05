@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
     sim_env->max_transitions = ((MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION) * sim_env->max_atoms) + 10;
     
     sim_state->atom_arr = (Atom**) malloc(sim_env->max_atoms * sizeof(Atom*));
-    sim_state->rate_arr = (Rate*) malloc(MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS * sizeof(Rate*));
+    sim_state->rate_arr = (Rate*) malloc(MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS * sizeof(Rate));
     sim_state->transition_arr = (Transition**) malloc(sim_env->max_transitions * sizeof(Transition*));
 
     // null pointer checks
