@@ -506,6 +506,8 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 
 	add_to_transition_list(rate_idx, atom_idx, se->max_neighbors, ss, se); // evaporation is considered to be last in jump_offset (not really in array but uses that index number)
 
+	free(atom_env);
+
 	return atom_rates_cnt;						// gives number of current transitions for that atom
 }
 
@@ -963,7 +965,7 @@ int calculate_surf_diffusion_rate(
 
 		if (neighbor_type >= 0) {
 			++neighbor_type_cnt_initial[neighbor_type]; //number of type A/B/C neighboring atoms in init configuration
-			energy += se->nnEa[env_idx] * b_anisotropy_factor[i]; //A-A/B/C bond - grab correct index of se->nnE array from se->nnE*_index array based on neighbor type
+			energy += se->nn_energy[env_idx] * b_anisotropy_factor[i]; //A-A/B/C bond - grab correct index of se->nnE array from se->nnE*_index array based on neighbor type
 		}
 
 		neighbor_type = final_configuration[i];
@@ -1030,7 +1032,7 @@ int calculate_evaporation_rate(
 			bond_idx = get_bond_index(atom_type, neighbor_type, se);
 			env_idx = get_env_index(1, bond_idx, se); // TODO: hard-coded 1st nn
 			if (neighbor_type >= 0)
-				energy += se->nnEa[env_idx] * b_anisotropy_factor[i]; //bonding with A
+				energy += se->nn_energy[env_idx] * b_anisotropy_factor[i]; //bonding with A
 		}
 	}
 	else

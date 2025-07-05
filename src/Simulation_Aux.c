@@ -439,7 +439,7 @@ void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double* total_inte
 				bond_idx = get_bond_index(a_type, b_type, se);
 				env_idx = get_env_index(1, bond_idx, se);
 
-				*total_internal_energy += se->nnEa[env_idx];
+				*total_internal_energy += se->nn_energy[env_idx];
 			}
 
 		}

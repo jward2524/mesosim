@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+// variables for simulation conditions
+// (generally) initialized and then never edited again, only read
 struct SimulationEnv
 {
     unsigned long long int max_atoms;
@@ -44,7 +46,7 @@ struct SimulationEnv
     // the lattice coorinate limits in order to accomodate the "simulation box"
     int simbox_limits_lat[3][2];
 
-    double *nnEa; // nnE[num_nn_levels][num_bond_types]
+    double *nn_energy; // nnE[num_nn_levels][num_bond_types]
     
     bool *solubility; // [num_elements] (implemented as always [8])
     
@@ -56,6 +58,8 @@ struct SimulationEnv
 
 };
 
+// variables that describe the simulation state
+// change on every iteration
 struct SimulationState
 {
     Bond bond[MAXIMUM_NUMBER_OF_BONDS];
@@ -96,6 +100,8 @@ struct SimulationState
     
 };
 
+// variables that describe state of logging
+// files and when to log
 struct LoggingState {
     char console_outstring[512];
     // char outFile[260];

@@ -176,7 +176,7 @@ int main(int argc, char* argv[]) {
         {
             bond_idx = get_bond_index(i, j, sim_env);
             env_idx = get_env_index(1, bond_idx, sim_env);
-            fprintf(log_state->sim_log_file, "%s-%s: %lf\n", sim_env->atom_names[i], sim_env->atom_names[j], sim_env->nnEa[env_idx]);
+            fprintf(log_state->sim_log_file, "%s-%s: %lf\n", sim_env->atom_names[i], sim_env->atom_names[j], sim_env->nn_energy[env_idx]);
         }
     }
 

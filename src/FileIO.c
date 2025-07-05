@@ -242,7 +242,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		}
 
 		// expect num_bond_types numbers
-		if (se->nnEa == NULL)
+		if (se->nn_energy == NULL)
 			calloc_nnE(se);
 		int bond_index = get_env_index(nn_level, 0, se);
 		int count = 0;
@@ -254,7 +254,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		char* token = strtok(tok_params, " \t");
 		while (token)
 		{
-			sscanf(token, "%lf", (se->nnEa)+bond_index);
+			sscanf(token, "%lf", (se->nn_energy)+bond_index);
 			token = strtok(NULL, " \t");
 			bond_index++;
 			count++;
@@ -574,7 +574,7 @@ int parse_datalog_params(char* params, int cursor, struct LoggingState* ls, FILE
 // allocates space for nnE array
 void calloc_nnE(struct SimulationEnv* se)
 {
-	se->nnEa = (double *)calloc(se->num_nn_levels * se->num_bond_types, sizeof(double));
+	se->nn_energy = (double *)calloc(se->num_nn_levels * se->num_bond_types, sizeof(double));
 }
 
 // gets the index in atom_env, nnE arrays (nearest_neighbor - bond_type combo)
