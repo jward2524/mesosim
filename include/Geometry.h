@@ -8,7 +8,7 @@
 typedef struct
 	{
 		char name[24]; 			// name, 24 characters long
-		char type;				// up to 255 atom types
+		unsigned char type;				// up to 255 atom types
 		// TODO: remove - only used for printing, so only calculate when printing
 		double cart_coord[3]; 		// working [cart]esian (orthogonal) [coord]inates
 
@@ -110,7 +110,7 @@ typedef struct
 
 typedef struct
 	{
-		int listnum[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS];
+		int rate_arr_index[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS]; // contains the index in rate_arr that gives the upper bound after adding frequency/frequency_sum
 		double lbound[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS]; // ENHANCE: lbound and ubound are duplicating info
 		double ubound[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS]; // lbound[i] = ubound[i+1] ?
 	} TransProb;
@@ -129,16 +129,11 @@ typedef struct
 		unsigned char *atom_env; 	// can't do variable length arrays, so pointer instead
 		// pointer to start of 2D array num_bond_types*idx1 + idx2
 
-		// same format as nnE[][]: atom_env[num_nn_levels][num_bond_types]
+		// same format as se->nn_energy[][]: atom_env[num_nn_levels][num_bond_types]
 		// int env_hash; // hash of atom_env array, for comparison of environments - based on number of distinct environments?
 		// can't use memcmp bc atom_env[0] is char*, not char
-		int is_evaporation;
+		unsigned char is_evaporation;
 	} Rate;
-
-typedef struct
-{
-
-} AtomicEnv;
 
 typedef struct
 	{

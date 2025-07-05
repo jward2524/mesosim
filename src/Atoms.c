@@ -254,7 +254,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 
 	ss->atom_arr[pos]->type = type;
 	strcpy(ss->atom_arr[ss->atom_cnt-1]->name, se->atom_names[type]); // TODO: use pos instead of atom_cnt-1
-
+	// TODO: use snprintf instead of strcpy
 	/*if (x > 60) // XXX: commented prints
 		printf("copied the name: atom is type %s\n", atom[atom_cnt-1]->name);*/
 
@@ -585,7 +585,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 	number_of_new_random_atoms = 0;
 
 	// destroy cross-references to neighboring atoms.  Mark this spot as empty
-
+	// [ ]: isn't this done in refresh_transitions too?
   	type = ss->atom_arr[at]->type;
 
 	for (i=0; i < se->max_neighbors; ++i)
@@ -694,6 +694,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 	}
 
 	free(ss->atom_arr[ss->atom_cnt-1]);
+	ss->atom_arr[ss->atom_cnt-1] = NULL;
 	--ss->atom_cnt;
 
 	// re-incarnate the buried atoms of the same type
@@ -729,7 +730,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 		int type = -1;
 		do {
 			type++;
-			bar += se->substrate_compotition[type];
+			bar += se->substrate_composition[type];
 		}
 		while (bar < subv);
 		nr[nnr]= random_reincarnate_atom(x, y, z, type, vc);
@@ -955,6 +956,7 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
 	copy_atom(atom_number, ss->atom_cnt-1, ss->atom_arr); //TODO: does this realistically need to happen?
 
 	free(ss->atom_arr[ss->atom_cnt-1]);
+	ss->atom_arr[ss->atom_cnt-1] = NULL;
 	--ss->atom_cnt;
 
 	return;

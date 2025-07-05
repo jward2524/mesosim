@@ -76,9 +76,10 @@ int main(int argc, char* argv[]) {
 
     sim_env->max_atoms = sim_env->ssx * sim_env->ssy * sim_env->ssz;
     sim_env->max_transitions = ((MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION) * sim_env->max_atoms) + 10;
+    sim_env->max_rates = MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS;
     
     sim_state->atom_arr = (Atom**) malloc(sim_env->max_atoms * sizeof(Atom*));
-    sim_state->rate_arr = (Rate*) malloc(MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS * sizeof(Rate));
+    sim_state->rate_arr = (Rate*) malloc(sim_env->max_rates * sizeof(Rate));
     sim_state->transition_arr = (Transition**) malloc(sim_env->max_transitions * sizeof(Transition*));
 
     // null pointer checks
@@ -159,13 +160,13 @@ int main(int argc, char* argv[]) {
     fprintf(log_state->sim_log_file, "\nComposition: ");
     for (int i = 0; i < sim_env->num_elements; i++)
     {
-        fprintf(log_state->sim_log_file, "%lf ", sim_env->substrate_compotition[i]);
+        fprintf(log_state->sim_log_file, "%lf ", sim_env->substrate_composition[i]);
     }
 
     fprintf(log_state->sim_log_file, "\nSolutility: ");
     for (int i = 0; i < sim_env->num_elements; i++)
     {
-        fprintf(log_state->sim_log_file, "%s ", sim_env->solubility[i] ? "false" : "true");
+        fprintf(log_state->sim_log_file, "%s ", sim_env->is_soluble[i] ? "false" : "true");
     }
 
     fprintf(log_state->sim_log_file, "\nBond energies\n");
@@ -223,22 +224,35 @@ int main(int argc, char* argv[]) {
 
     //free the malloc'ed memory
     for (int i = sim_state->transition_cnt; i > 0; --i)
+    {
         free(sim_state->transition_arr[i-1]);
+        sim_state->transition_arr[i-1] = NULL;
+    }
     for (int i = sim_state->atom_cnt; i > 0; --i)
+    {
         free(sim_state->atom_arr[i-1]);
+        sim_state->atom_arr[i-1] = NULL;
+    }
+
     
     free(sim_state->atom_arr);
     free(sim_state->rate_arr);
     free(sim_state->transition_arr);
+    sim_state->atom_arr = NULL;
+    sim_state->rate_arr = NULL;
+    sim_state->transition_arr = NULL;
 
     free(sim_state);
     free(sim_env);
+    sim_state = NULL;
+    sim_env = NULL;
     
     time(&endtime);
     fprintf(log_state->sim_log_file, "Finished! Total time taken: %d seconds\n", (int)(endtime-starttime));
     fclose(log_state->sim_log_file);
 
     free(log_state);
+    log_state = NULL;
 
     return 0;
 }

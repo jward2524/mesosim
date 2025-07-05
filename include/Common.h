@@ -11,6 +11,7 @@ struct SimulationEnv
 {
     unsigned long long int max_atoms;
     unsigned long long int max_transitions;
+    unsigned long long int max_rates;
 
     int simulation_type;
     bool evaporation_flag;
@@ -35,11 +36,12 @@ struct SimulationEnv
     double overpotential_ramp_rate;
     double max_overpotential;
 
-    double *substrate_compotition;
+    double *substrate_composition;
     int num_nn_levels;
     int num_elements;
-    int num_bond_types; // C(num_elements,2)
+    int num_bond_types; // Cr(num_elements,2), combination with replacement
     int num_neighbor_types;
+    int num_nn_types;  // number of distinct bond types, se->num_nn_levels * se->num_bond_types
 
     double normal_x, normal_y, normal_z; // XXX: likely vistigal
 
@@ -48,13 +50,13 @@ struct SimulationEnv
 
     double *nn_energy; // nnE[num_nn_levels][num_bond_types]
     
-    bool *solubility; // [num_elements] (implemented as always [8])
+    bool *is_soluble; // [num_elements] (implemented as always [8])
     
     double temperature;
     double overpotential;
 
     int dissolution; // flag for whether dissolution events can occur
-    char **atom_names; // [num_elements][3]
+    char **atom_names; // [num_elements][BUFFER_SIZE or 3 or something]
 
 };
 

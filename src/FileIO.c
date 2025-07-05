@@ -371,7 +371,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		int count = 0;
 		while (token)
 		{
-			types[count] = (char *)malloc(3 * sizeof(char)); // TODO: free // ENHANCE: 3 -> BUFFER_SIZE??
+			types[count] = (char *)malloc(BUFFER_SIZE * sizeof(char)); // TODO: free // ENHANCE: 3 -> BUFFER_SIZE??
 			sscanf(token, "%s", types[count]);
 			token = strtok(NULL, " \t");
 			count++;
@@ -385,15 +385,14 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		se->num_elements = count;
 		se->num_bond_types = get_num_bond_types(se->num_elements);
 		
-		int size = count * sizeof(char*);
-		se->atom_names = (char **)malloc(size); // TODO: free
+		se->atom_names = (char **)calloc(count, sizeof(char*)); // TODO: free
 		if (se->atom_names == NULL)
 		{
 			fprintf(stderr, "Couldn't allocate memory for atom names: %s", strerror(errno));
 			fprintf(temp_log, "Couldn't allocate memory for atom names: %s", strerror(errno));
         	exit(errno);
 		}
-		memcpy(se->atom_names, types, size);
+		memcpy(se->atom_names, types, count * sizeof(char*));
 		// if (se->num_nn_levels != 0)
 		// 	calloc_nnE(se);
 
@@ -401,7 +400,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 	else if (strncmp(cmd, "dissolution", 11) == 0) {
 		//this determines which atoms dissolve
 
-		bool solubility[ARR_BUFFER_SIZE];
+		bool is_soluble[ARR_BUFFER_SIZE];
 		int len = strlen(params); // BUFFER_SIZE?
 		char tok_params[len];
 		snprintf(tok_params, len, "%s", params);
@@ -417,7 +416,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 				fprintf(temp_log, "ERROR! Could not correctly read solubility %s\n", buf);
 				return FILE_COMMAND_IGNORED;
 			}
-			solubility[count] = (bool) b;
+			is_soluble[count] = (bool) b;
 			token = strtok(NULL, " \t");
 			count++;
 		}
@@ -435,18 +434,18 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		}
 
 		int size = count * sizeof(bool);
-		se->solubility = (bool *)malloc(size);
-		if (se->solubility == NULL)
+		se->is_soluble = (bool *)malloc(size);
+		if (se->is_soluble == NULL)
 		{
 			fprintf(stderr, "Couldn't allocate memory for solubilities: %s", strerror(errno));
 			fprintf(temp_log, "Couldn't allocate memory for solubilities: %s", strerror(errno));
         	exit(errno);
 		}
-		memcpy(se->solubility, solubility, size);
+		memcpy(se->is_soluble, is_soluble, size);
 	}
 	else if (strncmp(cmd, "composition", 11) == 0) {
 
-		double comp[BUFFER_SIZE];
+		double comp[ARR_BUFFER_SIZE];
 		int len = strlen(params); // BUFFER_SIZE?
 		char tok_params[len];
 		snprintf(tok_params, len, "%s", params);
@@ -483,14 +482,15 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		}
 
 		int size = count * sizeof(double);
-		se->substrate_compotition = (double *)malloc(size);
-		if (se->substrate_compotition == NULL)
+		se->substrate_composition = (double *)malloc(size);
+		if (se->substrate_composition == NULL)
 		{
 			fprintf(stderr, "Couldn't allocate memory for compositions: %s", strerror(errno));
 			fprintf(temp_log, "Couldn't allocate memory for compositions: %s", strerror(errno));
         	exit(errno);
 		}
-		memcpy(se->substrate_compotition, comp, size);
+		for (int i = 0; i < count; i++)
+			se->substrate_composition[i] = comp[i];
 	}
 	else if (strncmp(cmd, "run", 3) == 0) {
 		int cursor;
@@ -574,7 +574,8 @@ int parse_datalog_params(char* params, int cursor, struct LoggingState* ls, FILE
 // allocates space for nnE array
 void calloc_nnE(struct SimulationEnv* se)
 {
-	se->nn_energy = (double *)calloc(se->num_nn_levels * se->num_bond_types, sizeof(double));
+	se->num_nn_types = se->num_nn_levels * se->num_bond_types;
+	se->nn_energy = (double *)calloc(se->num_nn_types, sizeof(double));
 }
 
 // gets the index in atom_env, nnE arrays (nearest_neighbor - bond_type combo)
@@ -776,8 +777,10 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 
 		if (atype == -1) //check to see if atom type is successfully added
 		{
-			for (int i = 0; i < ntypes; ++i)
+			for (int i = 0; i < ntypes; ++i){
 				free(typenames[i]);
+				typenames[i] = NULL;
+			}
 			//organize(atoms, atom_cnt) //???
 			return false;
 		}
@@ -838,7 +841,10 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 
 	//TODO: does this now just get turned into the atom name array?
 	for (int i = 0; i < ntypes; ++i)
+	{
 		free(typenames[i]);
+		typenames[i] = NULL;
+	}
 	
 	fprintf(temp_log, "Successfully read %d atoms from .xyz file\n", ss->atom_cnt);
 	fclose(input_file);

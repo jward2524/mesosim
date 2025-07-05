@@ -418,6 +418,7 @@ void initialize_jump_offsets(int lattice_type)	// lattice_type = crystal lattice
 
 /********************************************************************************/
 /********************************************************************************/
+// sum of all bond energies in system
 void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double* total_internal_energy, struct SimulationEnv* se)
 {
 	int neighbor, a_type, b_type, bond_idx, env_idx;
@@ -444,6 +445,7 @@ void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double* total_inte
 
 		}
 	}
+	// double counting all bonds, so divide by 2
 	*total_internal_energy /= 2.;
 	return;
 }
@@ -536,47 +538,39 @@ int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, 
 	int i, j, k;
 	int new_x, new_y, new_z;
 	int neighbor_x, neighbor_y, neighbor_z;
-	//int n = 0; // XXX:
+	
 	int nn_cnt = 0; // nearest-neighbors
 	// atom position after jump offset_idx
 	new_x = ss->atom_arr[at]->lattice[0] + jump_offset[offset_idx].dx;
 	new_y = ss->atom_arr[at]->lattice[1] + jump_offset[offset_idx].dy;
 	new_z = ss->atom_arr[at]->lattice[2] + jump_offset[offset_idx].dz;
 
-	//printf("before pbc xyz %lf %lf %lf\n", x, y, z); // XXX: commented print
 	adjust_pbc(&new_x, &new_y, &new_z, se);
 
-	//printf("after pbc xyz %lf %lf %lf\n", x, y, z);
 	for (i=0; i<se->max_neighbors; ++i)
-      	{
-			//printf("offset_idx = %d, i = %d\n", offset_idx, i);
-			if (i == opposite_offset[offset_idx]) { // if direction is where the jump came from, set as empty 
-				final_config[i] = -1; //hardcode this? // [ ]: is there a case where it won't be empty?
-				//printf("opposite offset! final_config[i] = %d\n", final_config[i]);
-				continue;
-			}
-			// location of neighbor
-      		neighbor_x = new_x + jump_offset[i].dx;
-			neighbor_y = new_y + jump_offset[i].dy;
-	        neighbor_z = new_z + jump_offset[i].dz;
-
-			//printf("before pbc nxyz %lf %lf %lf\n", neighbor_x, neighbor_y, neighbor_z);
-			adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
-			//printf("after pbc nxyz %lf %lf %lf\n", neighbor_x, neighbor_y, neighbor_z);
-	        j = atom_at(neighbor_x, neighbor_y, neighbor_z, ss->atom_arr, ss->zone_arr, se);
-			//printf("j = %d\n", j);
-	        if (j != -1)
-		        { // if there is an atom present, 'return' its type
-					final_config[i] = ss->atom_arr[at]->type;
-					//printf("at = %d, atom[at]->type = %d, atom[j]->type = %d\n", at, atom[at]->type, atom[j]->type);
-					++nn_cnt;
-				}
-			else final_config[i] = -1;
+	{
+		if (i == opposite_offset[offset_idx]) {
+			// if direction is where the jump came from, set as empty
+			final_config[i] = -1; //hardcode this? // [ ]: is there a case where it won't be empty?
+			continue;
 		}
-	/*printf("final config: "); // XXX: commented print
-	for (i=0;i<max_neighbors;++i)
-		printf("%d ", final_config[i]);
-	printf("\n");*/
+		// location of neighbor
+		neighbor_x = new_x + jump_offset[i].dx;
+		neighbor_y = new_y + jump_offset[i].dy;
+		neighbor_z = new_z + jump_offset[i].dz;
+
+		adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
+
+		j = atom_at(neighbor_x, neighbor_y, neighbor_z, ss->atom_arr, ss->zone_arr, se);
+
+		if (j != -1)
+		{ // if there is an atom present, 'return' its type
+			final_config[i] = ss->atom_arr[at]->type;
+			++nn_cnt;
+		}
+		else 
+			final_config[i] = -1;
+	}
 
 	return nn_cnt;
 }
@@ -602,7 +596,7 @@ void initialize_flat_sheet_1(struct SimulationState *ss, struct SimulationEnv *s
 				int type = -1;
 				do {
 					type++;
-					bar += se->substrate_compotition[type];
+					bar += se->substrate_composition[type];
 				}
 				while (bar < nz);
 				add_atom(i, j, k, type, NORMAL, ss, se);
@@ -694,6 +688,8 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
 	}
 
 	// iterates through the bounding box of the sphere to identify positions in cluster // ENHANCE: only 52% of loops will be successful - make it more efficient
+	int type;
+	double bar;
 	for (int u = bblimits_lattice[0][0]; u <= bblimits_lattice[0][1]; u++) {
 		for (int v = bblimits_lattice[1][0]; v <= bblimits_lattice[1][1]; v++) {
 			for (int w = bblimits_lattice[2][0]; w <= bblimits_lattice[2][1]; w++) {
@@ -712,11 +708,11 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
 					//particle is in bounds
  					random_num = drandj(&rand_seed);
 					// determining composition of atom to be placed
-					double bar = 0;
-					int type = -1;
+					bar = 0;
+					type = -1;
 					do {
 						type++;
-						bar += se->substrate_compotition[type];
+						bar += se->substrate_composition[type];
 					}
 					while (bar < random_num);
 					add_atom(u, v, w, type, NORMAL, ss, se);
