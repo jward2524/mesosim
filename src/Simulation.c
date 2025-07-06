@@ -18,7 +18,7 @@ bool checkpoint_reached = false;
 unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls) //potentially FILE* as arguments
 {
 	//printf("Simulation starting\n");
-	long int i;
+	// long int i;
 	int j, k;
 
 	double cur_stime, prev_stime; // prev and current times, for overpotential moving
@@ -27,9 +27,9 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 	//double vap;
 
-	int which_one;
+	int selected_transition_idx;
 	int transitioning_atom_idx, transition_jump_vector;
-	int natn; //changed from nan bc keyword
+	int transitioned_atom_idx; //changed from nan bc keyword
 	int atype;
 
 	int moved_flag = true;
@@ -78,6 +78,16 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	
 	bool simulation_end = false;
 
+	// start with everything current to the current state
+	// choose a transition
+	// perform the transition
+	// update time
+	// update rates
+	// next iteration
+
+	int old_x, old_y, old_z;
+	int neighbor_x, neighbor_y, neighbor_z, neighbor_idx;
+
 	while (!simulation_end)
 	{
 		if (ss->simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
@@ -95,9 +105,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 			return 1; //return 1 b/c error
 		}
-
-		// increment time 1
-		// ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
 
 		// pick the type of transition to occur
 		transition_type_probability = drandj(&rand_seed);
@@ -120,18 +127,23 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 				// pick the lucky atom
 				// [ ]: third random number?
 				// picks a type of transition and then which atom that has that transition will it act on?
-				which_one = ss->rate_arr[k].transition_start_idx + (int)(drandj(&rand_seed) * (double)ss->rate_arr[k].transition_count);
+				selected_transition_idx = ss->rate_arr[k].transition_start_idx + (int)(drandj(&rand_seed) * (double)ss->rate_arr[k].transition_count);
 
-				// which_one gives the location of the transition_arr, which gives
+				// selected_transition_idx gives the location of the transition_arr, which gives
 				// the info about the specific atom
-				transitioning_atom_idx = ss->transition_arr[which_one]->atom_idx;
-				transition_jump_vector = ss->transition_arr[which_one]->offset_idx;
+				transitioning_atom_idx = ss->transition_arr[selected_transition_idx]->atom_idx;
+				transition_jump_vector = ss->transition_arr[selected_transition_idx]->offset_idx;
 
 				// if jump_vector == se->max_neighbors then the atom is going to evaporate
 				moved_flag = true;
 
 				adatom_before = 0;
 
+				old_x = ss->atom_arr[transitioning_atom_idx]->lattice[0];
+				old_y = ss->atom_arr[transitioning_atom_idx]->lattice[1];
+				old_z = ss->atom_arr[transitioning_atom_idx]->lattice[2];
+
+				// perform transition
 				if (transition_jump_vector != se->max_neighbors)
 				{
 					//diffusion
@@ -147,7 +159,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 					// moves atom?
 					remove_atom(transitioning_atom_idx, ss, se);
-					natn = add_atom(lastxt, lastyt, lastzt, atype, NORMAL, ss, se);
+					transitioned_atom_idx = add_atom(lastxt, lastyt, lastzt, atype, NORMAL, ss, se);
 				}
 				else
 				{
@@ -161,7 +173,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 					}
 					++ss->total_atoms_dissolved;
 					remove_atom(transitioning_atom_idx, ss, se);	// evaporate the atom
-					natn = -1;
+					transitioned_atom_idx = -1;
 				}
 				// end of performing transition
 			}
@@ -186,67 +198,13 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 		if (moved_flag == false) // ? only happens iff jump_vector == se->max_neighbors? (dissolution?)
 		{
-			printf("for some reason I didn't transition\n");
-			//deposition is vestigial and we don't want it!
-			//what happens if we get to this point then?
-			/*if (deposition_type == DEPOSITION_TYPE_RAINFALL)
-			{
-				get_vapor_deposition_site(&dep_x, &dep_y, &dep_z);
-
-				vap = drandj(&rand_seed);
-				if (vap < deposition_rate_of_a/(deposition_rate_of_a + deposition_rate_of_b + deposition_rate_of_c))
-					atype = 1; 
-				else if (vap < (deposition_rate_of_a + deposition_rate_of_b)/(deposition_rate_of_a + deposition_rate_of_b + deposition_rate_of_c))
-					atype = 2;
-				else atype = 3;
-
-				natn = add_atom(dep_x, dep_y, dep_z, atype, NORMAL);
-			}
-			else if (deposition_type == DEPOSITION_TYPE_RANDOM_WALKER)
-			{
-				vap = drandj(&rand_seed);
-				if (vap < deposition_rate_of_a/(deposition_rate_of_a + deposition_rate_of_b + deposition_rate_of_c))
-					atype = 1; 
-				else if (vap < (deposition_rate_of_a + deposition_rate_of_b)/(deposition_rate_of_a + deposition_rate_of_b + deposition_rate_of_c))
-					atype = 2;
-				else atype = 3;
-
-				// start random walker from sphere touching edge of system.
-				// it will then diffuse according to normal diffusion physics (zero bonds) as given by calcrate
-
-				//newt:
-				do
-				{
-					ta1 = 2.*PI*drandj(&rand_seed);
-					ta2 = 2.*PI*drandj(&rand_seed);
-
-					rrp[0] = ssr*cos(ta2)*cos(ta1);
-					rrp[1] = ssr*cos(ta2)*sin(ta1);
-					rrp[2] = ssr*sin(ta2);
-
-					// now invert xr, yr, zr into lattice vectors;
-
-					vecmul(rrp, invert_primitive_basis, rw);
-
-					rwx = (int)rw[0] + ssx/2;
-					rwy = (int)rw[1] + ssy/2;
-					rwz = (int)rw[2] + ssz/2;
-
-				} while (atom_at(rwx, rwy, rwz) >= 0);
-
-				//if (atom_at(rwx, rwy, rwz) >= 0) goto newt; (made redundant with do while)
-
-				natn = add_atom(rwx, rwy, rwz, atype, NORMAL);
-			}*/
+			fprintf(stderr, "for some reason I didn't transition\n");
+			exit(1);
 		}
-
-		// increment the elapsed time 3
+		
+		// increment the elapsed time
 		ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
 
-		// if (ss->elapsed_stime >= ss->run_stime) // simulation has gone past time
-			// break; //get outta here before I make a new transition
-
-		
 		// update rates
 		if (se->overpotential_ramp_rate != 0.0)
 		{
@@ -255,19 +213,45 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			prev_stime = ss->elapsed_stime;
 		}
 
-		// TODO: only do this for the atom that was changed and its neighbors
-		for (j=0; j < ss->atom_cnt; ++j)
-			refresh_transitions(j, ss, se); // resets all kinetic paramters
-		//does this need to happen? - yes, overpotential/temperature changes
+		// refresh neighbors of previous atom
+		for (int i = 0; i < se->max_neighbors; i++)
+		{
+			neighbor_x = old_x + jump_offset[i].dx;
+			neighbor_y = old_y + jump_offset[i].dy;
+			neighbor_z = old_z + jump_offset[i].dz;
+
+			adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
+
+			neighbor_idx = atom_at(neighbor_x, neighbor_y, neighbor_z, ss->atom_arr, ss->zone_arr, se);
+
+			if (neighbor_idx >= 0)
+				refresh_transitions(neighbor_idx, ss, se);
+		}
+
+		// if transition was not evaporation
+		if (transitioned_atom_idx >= 0)
+		{
+			// refresh moved atom
+			refresh_transitions(transitioned_atom_idx, ss, se);
+	
+			// refresh neighbors of moved atom
+			for (int i = 0; i < se->max_neighbors; i++)
+			{
+				neighbor_idx = ss->atom_arr[transitioned_atom_idx]->neighbor_atom_idxs[i];
+	
+				if (neighbor_idx >= 0)
+					refresh_transitions(neighbor_idx, ss, se);
+			}
+		}
 		
 		// ENHANCE - not all are necessary if overpotential/temperature don't change?
 		compute_transition_array(ss, se);
-
 		// end of updating rates
 		
+
 		// after iteration, log if necessary
 		if (iter % 100 == 0)
-			printf("iteration %ld, time %lf\n", iter, ss->elapsed_stime);
+			printf("iteration %ld, time %le\n", iter, ss->elapsed_stime);
 
 			// TODO: implement the checkpoint lists
 		if ((ls->analysis_type == REGULAR_TIME_INTERVALS) || (ls->analysis_type == LN_TIME_INTERVALS))
@@ -303,7 +287,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 				ls->next_log_checkpoint += ls->log_interval;
 			}
 
-			
 			++framenum;
 		}
 
@@ -345,6 +328,7 @@ void compute_transition_array(struct SimulationState* ss, struct SimulationEnv* 
 	
 	int rate_const;
 	Rate *r;
+	// ENHANCE: parallelize
 	for (int rate_idx=0; rate_idx < ss->rate_cnt; ++rate_idx)
 	{
 		r = &ss->rate_arr[rate_idx];
@@ -407,10 +391,10 @@ int get_bond_index(int a, int b, struct SimulationEnv* se)
 
 /******************************************************************************/
 /******************************************************************************/
-// updates [atom_arr[atom_idx], transition_arr[i], rate_arr[i].transition_start_idx], initializes rate_arr
+// updates [atom_arr[atom_idx], neighbor_atom_idxs, transition_arr[i], rate_arr[i].transition_start_idx], initializes rate_arr
 int refresh_transitions(int atom_idx, struct SimulationState* ss, struct SimulationEnv* se) // atom_idx = index on atom list
 {
-	int i, j;
+	int i, neighbor_idx;
 	int rate_idx; // position of rate rate in rate list rate_arr[]
 	double rate, evap_rate; // rate constant from bond-breaking model
 	int next_x, next_y, next_z;
@@ -434,20 +418,21 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	for (i=0;i < se->max_neighbors;++i)
 	{
 		ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] = -1;
+
    		next_x = ss->atom_arr[atom_idx]->lattice[0] + jump_offset[i].dx;
 		next_y = ss->atom_arr[atom_idx]->lattice[1] + jump_offset[i].dy;
         next_z = ss->atom_arr[atom_idx]->lattice[2] + jump_offset[i].dz;
 
 		adjust_pbc(&next_x, &next_y, &next_z, se);
 
-        j = atom_at(next_x, next_y, next_z, ss->atom_arr, ss->zone_arr, se);
+        neighbor_idx = atom_at(next_x, next_y, next_z, ss->atom_arr, ss->zone_arr, se);
 
 		// update atom_env
-		if (j >= 0)
+		if (neighbor_idx >= 0)
 		{
-			ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] = j;
+			ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] = neighbor_idx;
 			
-			int bond_idx = get_bond_index(ss->atom_arr[atom_idx]->type, ss->atom_arr[j]->type, se);
+			int bond_idx = get_bond_index(ss->atom_arr[atom_idx]->type, ss->atom_arr[neighbor_idx]->type, se);
 			int env_idx = get_env_index(1, bond_idx, se); // 1 for 1st nn
 			
 			atom_env[env_idx]++;
@@ -481,17 +466,6 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 				// these types are handled by evaporation
 				continue;
 			}
-			
-			// TODO: remove
-			// calculate_surf_diffusion_rate(
-			// 	start_config, // ENHANCE: make this look prettier
-			// 	end_config,
-			// 	ss->atom_arr[atom_idx]->type,
-			// 	ss->temperature,
-			// 	ss->overpotential,
-			// 	&rate,
-			// 	se
-			// );
 					
 			++atom_rates_cnt;
 
@@ -504,16 +478,6 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 			add_to_transition_list(rate_idx, atom_idx, neighbor_idx, ss, se);
 		}
 	}	
-
-	// TODO: remove
-	// calculate_evaporation_rate(	
-	// 	start_config,
-	// 	ss->atom_arr[atom_idx]->type,
-	// 	ss->temperature,
-	// 	ss->overpotential,
-	// 	&rate,
-	// 	se
-	// );
 
 	if (se->is_soluble[ss->atom_arr[atom_idx]->type])
 	{

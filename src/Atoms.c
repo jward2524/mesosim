@@ -467,7 +467,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 
 	// now set the transition rates
 	// ENHANCE: remove this call from function - instead, do it manually when needed (don't need to call after initializing every atom for the first time)
-	refresh_transitions(pos, ss, se); // [ ]: why doing this now, after every atom, when neighbors haven't been created yet?
+	// refresh_transitions(pos, ss, se); // [ ]: why doing this now, after every atom, when neighbors haven't been created yet?
 
 	//printf("my transition refreshed\n");
 	// cycle through the nearest neighbors, refresh their transitions [or bury as necessary]
@@ -477,11 +477,11 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 		//printf("trying to refresh neighbor %d\n", i);
 		j = ss->atom_arr[pos]->neighbor_atom_idxs[i];
 
-		if (j >= 0)
-		{
-			k = refresh_transitions(j, ss, se);	// refresh transitions of neighbor
-			//we don't want to bury our atoms: this is removed from this point
-		}
+		// if (j >= 0)
+		// {
+		// 	k = refresh_transitions(j, ss, se);	// refresh transitions of neighbor
+		// 	//we don't want to bury our atoms: this is removed from this point
+		// }
 	}
 
 	//printf("neighbor transition refreshed\n");
@@ -745,14 +745,14 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 
 	// all atoms have now been incarnated, so refresh transitions of new atoms
 
-	for (i=0;i<nnt;++i)
-		refresh_transitions(nt[i], ss, se);
+	// for (i=0;i<nnt;++i)
+	// 	refresh_transitions(nt[i], ss, se);
 
-	for (i=0;i<nnb;++i)
-		refresh_transitions(nb[i], ss, se);
+	// for (i=0;i<nnb;++i)
+	// 	refresh_transitions(nb[i], ss, se);
 
-	for (i=0;i<nnr;++i)
-		refresh_transitions(nr[i], ss, se);
+	// for (i=0;i<nnr;++i)
+	// 	refresh_transitions(nr[i], ss, se);
 
 	return;
 }
