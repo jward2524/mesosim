@@ -52,9 +52,13 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	// initialize simulation kinetics, and draw a picture
 
 	//printf("transition time!\n");
-	for (i=0; i < ss->atom_cnt; ++i)	
+	for (int i=0; i < ss->atom_cnt; ++i)
+	{
 		// resets all kinetic paramters
 		refresh_transitions(i, ss, se);
+	}
+	compute_transition_array(ss, se);
+	
 	// TODO: move this out from here, to only where output is necessary
 	organize(ss->atom_arr, ss->atom_cnt); //replacement for copy_xyz_to_coord but might not be necessary
 	
@@ -76,8 +80,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 	while (!simulation_end)
 	{
-		if (iter % 100 == 0)
-			printf("iteration %ld, time %lf\n", iter, ss->elapsed_stime);
 		if (ss->simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
 		{
 			//find_average_curvature(); // XXX: no longer valid
@@ -93,23 +95,17 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 			return 1; //return 1 b/c error
 		}
-		
-		// TODO: only do this for the atom that was changed and its neighbors
-		for (j=0; j < ss->atom_cnt; ++j)
-			refresh_transitions(j, ss, se); // resets all kinetic paramters
-		//does this need to happen? - yes, overpotential/temperature changes
-		
-		// increment the elapsed time
-		compute_transition_array(ss, se);
-		ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
 
-		// if (ss->elapsed_stime >= ss->run_stime) // simulation has gone past time
-			// break; //get outta here before I make a new transition
+		// increment time 1
+		// ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
 
 		// pick the type of transition to occur
 		transition_type_probability = drandj(&rand_seed);
 		rate_skip = ss->rate_cnt / 2;
 		j = rate_skip;
+		
+		// increment time 2
+		// ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
 
 		//change structure to see if the move gets made or not
 
@@ -156,13 +152,18 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 				else
 				{
 					// dissolution
-					if (se->is_soluble[ss->atom_arr[transitioning_atom_idx]->type])
+
+					// if not solube, then there was an issue somewhere
+					if (!(se->is_soluble[ss->atom_arr[transitioning_atom_idx]->type]))
 					{
-						++ss->total_atoms_dissolved;
-						remove_atom(transitioning_atom_idx, ss, se);	// evaporate the atom
-						
+						fprintf(stderr, "Attempting to dissolve an insoluble atom - Terminatin\n");
+       					exit(errno);
 					}
+					++ss->total_atoms_dissolved;
+					remove_atom(transitioning_atom_idx, ss, se);	// evaporate the atom
+					natn = -1;
 				}
+				// end of performing transition
 			}
 			else if (transition_type_probability < (ss->transition_probability.lbound[j]))
 			{
@@ -238,9 +239,37 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 				natn = add_atom(rwx, rwy, rwz, atype, NORMAL);
 			}*/
 		}
-		 
+
+		// increment the elapsed time 3
+		ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
+
+		// if (ss->elapsed_stime >= ss->run_stime) // simulation has gone past time
+			// break; //get outta here before I make a new transition
+
+		
+		// update rates
+		if (se->overpotential_ramp_rate != 0.0)
+		{
+			cur_stime = ss->elapsed_stime;
+			ss->overpotential += (cur_stime-prev_stime) * se->overpotential_ramp_rate;
+			prev_stime = ss->elapsed_stime;
+		}
+
+		// TODO: only do this for the atom that was changed and its neighbors
+		for (j=0; j < ss->atom_cnt; ++j)
+			refresh_transitions(j, ss, se); // resets all kinetic paramters
+		//does this need to happen? - yes, overpotential/temperature changes
+		
+		// ENHANCE - not all are necessary if overpotential/temperature don't change?
+		compute_transition_array(ss, se);
+
+		// end of updating rates
+		
 		// after iteration, log if necessary
-		// TODO: implement the checkpoint lists
+		if (iter % 100 == 0)
+			printf("iteration %ld, time %lf\n", iter, ss->elapsed_stime);
+
+			// TODO: implement the checkpoint lists
 		if ((ls->analysis_type == REGULAR_TIME_INTERVALS) || (ls->analysis_type == LN_TIME_INTERVALS))
 			checkpoint_reached = (ss->elapsed_stime >= ls->next_log_checkpoint);
 		else if (ls->analysis_type == ITERATION_INTERVALS)
@@ -274,15 +303,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 				ls->next_log_checkpoint += ls->log_interval;
 			}
 
-			if (se->overpotential_ramp_rate != 0.0)
-			{
-				cur_stime = ss->elapsed_stime;
-				ss->overpotential += (cur_stime-prev_stime) * se->overpotential_ramp_rate;
-				prev_stime = ss->elapsed_stime;
-				for (j=0; j < ss->atom_cnt; ++j)	
-					refresh_transitions(j, ss, se); // resets all kinetic paramters
-
-			}
 			
 			++framenum;
 		}
