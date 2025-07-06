@@ -58,6 +58,20 @@ struct SimulationEnv
     int dissolution; // flag for whether dissolution events can occur
     char **atom_names; // [num_elements][BUFFER_SIZE or 3 or something]
 
+    /* symmetry related variables */
+    double rmat[3][3]; // visualization?
+    double centroid[3]; // coordinates for center of gravity
+    
+    // possible atom jumps in simulation
+    CrystalOffset *jump_offset;
+    
+    // index in jump_offset that has the jump in the opposite direction in simulation; opposite_offset[0]=11 means the opposite direction of se->jump_offset[0] is se->jump_offset[11]
+    int *opposite_offset;
+    
+    double primitive_basis[3][3];
+    double invert_primitive_basis[3][3]; 
+    double ucell_params[6]; // unit cell parameters; a b c alpha beta gamma // TODO: this is never used except for printing?
+
 };
 
 // variables that describe the simulation state

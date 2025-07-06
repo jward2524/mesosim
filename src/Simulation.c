@@ -45,7 +45,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 	/*if (num_sims > 0) //this probably will not happen
 	{
-		do_initialize_simulation(simulation_type);
+		initialize_initial_structure(simulation_type);
 		elapsed_stime = 0.0;
 	}*/ 
 
@@ -60,7 +60,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	compute_transition_array(ss, se);
 	
 	// TODO: move this out from here, to only where output is necessary
-	organize(ss->atom_arr, ss->atom_cnt); //replacement for copy_xyz_to_coord but might not be necessary
+	organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); //replacement for copy_xyz_to_coord but might not be necessary
 	
 	ss->total_atoms_dissolved = 0;
 
@@ -73,8 +73,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 	unsigned long int iter = 1; // iteration count
 
-	prev_stime = 0.0; //needs to happen outside of loop
-	//printf("about to start the loop\n");
+	prev_stime = 0.0;
 	
 	bool simulation_end = false;
 
@@ -101,7 +100,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			ss->simulation_should_kill_itself = false;
 
 			// TODO: remove from here
-			organize(ss->atom_arr, ss->atom_cnt); // XXX: remove from here
+			organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); // XXX: remove from here
 
 			return 1; //return 1 b/c error
 		}
@@ -110,11 +109,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 		transition_type_probability = drandj(&rand_seed);
 		rate_skip = ss->rate_cnt / 2;
 		j = rate_skip;
-		
-		// increment time 2
-		// ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
-
-		//change structure to see if the move gets made or not
 
 		// binary search to select transition
 		moved_flag = false; //used to track diffusion/evaporation vs deposition
@@ -149,9 +143,9 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 					//diffusion
 
 					// coordinates atom is jumping to
-					lastxt = ss->atom_arr[transitioning_atom_idx]->lattice[0] + jump_offset[transition_jump_vector].dx;
-					lastyt = ss->atom_arr[transitioning_atom_idx]->lattice[1] + jump_offset[transition_jump_vector].dy;
-					lastzt = ss->atom_arr[transitioning_atom_idx]->lattice[2] + jump_offset[transition_jump_vector].dz;
+					lastxt = ss->atom_arr[transitioning_atom_idx]->lattice[0] + se->jump_offset[transition_jump_vector].dx;
+					lastyt = ss->atom_arr[transitioning_atom_idx]->lattice[1] + se->jump_offset[transition_jump_vector].dy;
+					lastzt = ss->atom_arr[transitioning_atom_idx]->lattice[2] + se->jump_offset[transition_jump_vector].dz;
 
 					adjust_pbc(&lastxt, &lastyt, &lastzt, se);
 
@@ -165,7 +159,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 				{
 					// dissolution
 
-					// if not solube, then there was an issue somewhere
+					// if not soluble, then there was an issue somewhere
 					if (!(se->is_soluble[ss->atom_arr[transitioning_atom_idx]->type]))
 					{
 						fprintf(stderr, "Attempting to dissolve an insoluble atom - Terminatin\n");
@@ -203,6 +197,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 		}
 		
 		// increment the elapsed time
+		// whether this is the 1st, 2nd, or 3rd random number in the loop affects the time (diff random numbers)
 		ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
 
 		// update rates
@@ -216,9 +211,9 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 		// refresh neighbors of previous atom
 		for (int i = 0; i < se->max_neighbors; i++)
 		{
-			neighbor_x = old_x + jump_offset[i].dx;
-			neighbor_y = old_y + jump_offset[i].dy;
-			neighbor_z = old_z + jump_offset[i].dz;
+			neighbor_x = old_x + se->jump_offset[i].dx;
+			neighbor_y = old_y + se->jump_offset[i].dy;
+			neighbor_z = old_z + se->jump_offset[i].dz;
 
 			adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
 
@@ -248,6 +243,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 		compute_transition_array(ss, se);
 		// end of updating rates
 		
+		++iter; //sanity check to avoid ending in an infinite cycle // [ ]: what?
 
 		// after iteration, log if necessary
 		if (iter % 100 == 0)
@@ -261,7 +257,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 		if (checkpoint_reached)
 		{
-			organize(ss->atom_arr, ss->atom_cnt); //replaced but do i really need it
+			organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); //replaced but do i really need it
 			
 			//record the elapsed time in a file here
 			printf("writing file %d: elapsed_stime = %lf\n", framenum, ss->elapsed_stime);
@@ -290,8 +286,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			++framenum;
 		}
 
-		++iter; //sanity check to avoid ending in an infinite cycle // [ ]: what?
-
 		// check if simulation is over
 		if (ss->sim_end_type == SIM_END_BY_STIME){
 			simulation_end = (ss->elapsed_stime >= ss->run_stime);
@@ -301,14 +295,15 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 		}
 	}
 
-	if (iter == ss->final_iteration)
-		fprintf(ls->sim_log_file, "reached final iteration and terminated\n");
 	
 	//write elapsed_stime to mark finish
 	//TODO: finish IO
 	calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 	output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 	write_xyz_file(ss, ls->position_log_prefix, framenum);
+	
+	if (iter == ss->final_iteration)
+		fprintf(ls->sim_log_file, "reached final iteration and terminated\n");
 
 	printf("Finished simulation\n"); //move this to the log file
 		
@@ -400,7 +395,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	int next_x, next_y, next_z;
 	Atom *cur_atom = ss->atom_arr[atom_idx];
 
-	int atom_rates_cnt;	// this is returned as the number of transitions (jump_offsets) this atom can undergo, excluding evaporation
+	int atom_rates_cnt;	// this is returned as the number of transitions (se->jump_offsets) this atom can undergo, excluding evaporation
 	int start_config[MAXIMUM_NUMBER_OF_NEIGHBORS]; // -1 if empty, type if filled
 	int end_config[MAXIMUM_NUMBER_OF_NEIGHBORS];
 	
@@ -419,9 +414,9 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	{
 		ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] = -1;
 
-   		next_x = ss->atom_arr[atom_idx]->lattice[0] + jump_offset[i].dx;
-		next_y = ss->atom_arr[atom_idx]->lattice[1] + jump_offset[i].dy;
-        next_z = ss->atom_arr[atom_idx]->lattice[2] + jump_offset[i].dz;
+   		next_x = ss->atom_arr[atom_idx]->lattice[0] + se->jump_offset[i].dx;
+		next_y = ss->atom_arr[atom_idx]->lattice[1] + se->jump_offset[i].dy;
+        next_z = ss->atom_arr[atom_idx]->lattice[2] + se->jump_offset[i].dz;
 
 		adjust_pbc(&next_x, &next_y, &next_z, se);
 
@@ -488,7 +483,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 			// if rate doesn't already exist, make new one
 			rate_idx = create_new_rate(atom_env, 1, ss, se);
 		}
-		// evaporation is considered to be last in jump_offset (not really in array but uses that index number)
+		// evaporation is considered to be last in se->jump_offset (not really in array but uses that index number)
 		add_to_transition_list(rate_idx, atom_idx, se->max_neighbors, ss, se);
 	}
 
@@ -548,7 +543,7 @@ int create_new_rate(unsigned char *atom_env, unsigned char is_evaporation, struc
 
 // add to rate_arr[rate_idx] the atom atom_idx going in direction offset_idx
 // updates transition_arr, rate_arr[rate_idx].transition_count, atom_arr[atom_idx]->transition_indices[offset_idx]
-void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct SimulationState* ss, struct SimulationEnv* se) // rate_arr index, atom_arr index, jump_offset index
+void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct SimulationState* ss, struct SimulationEnv* se) // rate_arr index, atom_arr index, se->jump_offset index
 { // 0 2920 11
 	int i; // loop variable
 	int n;
@@ -609,7 +604,7 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct S
 /******************************************************************************/
 /******************************************************************************/
 // updates atom_arr[atom_idx], transition_arr[i], rate_arr[i].transition_start_idx
-void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationState* ss)	// removes atom jumping in the jump_offset[offset_idx] direction
+void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationState* ss)	// removes atom jumping in the se->jump_offset[offset_idx] direction
 {
 	int i;
 	int rate_idx, transition_idx, transition_end_idx;
@@ -746,9 +741,9 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 	for (int j = 0; j < ss->atom_cnt; ++j)
 		for (int i=0; i < se->max_neighbors;++i)
 		{
-   			next_x = ss->atom_arr[j]->lattice[0] + jump_offset[i].dx;
-			next_y = ss->atom_arr[j]->lattice[1] + jump_offset[i].dy;
-	        next_z = ss->atom_arr[j]->lattice[2] + jump_offset[i].dz;
+   			next_x = ss->atom_arr[j]->lattice[0] + se->jump_offset[i].dx;
+			next_y = ss->atom_arr[j]->lattice[1] + se->jump_offset[i].dy;
+	        next_z = ss->atom_arr[j]->lattice[2] + se->jump_offset[i].dz;
 
 			adjust_pbc(&next_x, &next_y, &next_z, se);
 
@@ -759,7 +754,7 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 				// an atom has been found atom_idx this neighbor site.
 
 				ss->atom_arr[j]->neighbor_atom_idxs[i] = k;
-				ss->atom_arr[k]->neighbor_atom_idxs[opposite_offset[i]] = j;
+				ss->atom_arr[k]->neighbor_atom_idxs[se->opposite_offset[i]] = j;
 			}
 		}
 
@@ -776,17 +771,17 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 			{
 				// find coordinate of buried atom
 
-				next_x = ss->atom_arr[j]->lattice[0] + jump_offset[i].dx;
-				next_y = ss->atom_arr[j]->lattice[1] + jump_offset[i].dy;
-		        next_z = ss->atom_arr[j]->lattice[2] + jump_offset[i].dz;
+				next_x = ss->atom_arr[j]->lattice[0] + se->jump_offset[i].dx;
+				next_y = ss->atom_arr[j]->lattice[1] + se->jump_offset[i].dy;
+		        next_z = ss->atom_arr[j]->lattice[2] + se->jump_offset[i].dz;
 
 				adjust_pbc(&next_x, &next_y, &next_z, se);
 
 				for (k=0;k<se->max_neighbors;++k)
 				{
-					nnx = next_x + jump_offset[k].dx;
-					nny = next_y + jump_offset[k].dy;
-					nnz = next_z + jump_offset[k].dz;
+					nnx = next_x + se->jump_offset[k].dx;
+					nny = next_y + se->jump_offset[k].dy;
+					nnz = next_z + se->jump_offset[k].dz;
 
 					adjust_pbc(&nnx, &nny, &nnz, se);
 
@@ -797,11 +792,11 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 						// another atom (m) is connected to this atom.  If it sees this position as 
 						// a buried atom, great.  Otherwise, reconcile
 
-						n = ss->atom_arr[m]->neighbor_atom_idxs[opposite_offset[k]];
+						n = ss->atom_arr[m]->neighbor_atom_idxs[se->opposite_offset[k]];
 						if (n != -2)
 						{
 							if (n == -1) 
-								ss->atom_arr[m]->neighbor_atom_idxs[opposite_offset[k]] = -2;
+								ss->atom_arr[m]->neighbor_atom_idxs[se->opposite_offset[k]] = -2;
 							if (n == -3)
 								ss->atom_arr[j]->neighbor_atom_idxs[i] = -3;		// random trumps buried
 
@@ -827,17 +822,17 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 				{
 					// find coordinate of buried atom
 
-					next_x = ss->atom_arr[j]->lattice[0] + jump_offset[i].dx;
-					next_y = ss->atom_arr[j]->lattice[1] + jump_offset[i].dy;
-					next_z = ss->atom_arr[j]->lattice[2] + jump_offset[i].dz;
+					next_x = ss->atom_arr[j]->lattice[0] + se->jump_offset[i].dx;
+					next_y = ss->atom_arr[j]->lattice[1] + se->jump_offset[i].dy;
+					next_z = ss->atom_arr[j]->lattice[2] + se->jump_offset[i].dz;
 
 					adjust_pbc(&next_x, &next_y, &next_z, se);
 
 					for (k=0;k<se->max_neighbors;++k)
 					{
-						nnx = next_x + jump_offset[k].dx;
-						nny = next_y + jump_offset[k].dy;
-						nnz = next_z + jump_offset[k].dz;
+						nnx = next_x + se->jump_offset[k].dx;
+						nny = next_y + se->jump_offset[k].dy;
+						nnz = next_z + se->jump_offset[k].dz;
 
 						adjust_pbc(&nnx, &nny, &nnz, se);
 
@@ -848,10 +843,10 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 							// another atom (m) is connected to this atom.  If it sees this position as 
 							// a buried atom, great.  Otherwise, reconcile
 
-							n = ss->atom_arr[m]->neighbor_atom_idxs[opposite_offset[k]];
+							n = ss->atom_arr[m]->neighbor_atom_idxs[se->opposite_offset[k]];
 							if (n != -3)
 							{
-								ss->atom_arr[m]->neighbor_atom_idxs[opposite_offset[k]] = -3;
+								ss->atom_arr[m]->neighbor_atom_idxs[se->opposite_offset[k]] = -3;
 								++errors;
 							}
 						
@@ -889,7 +884,7 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 			{
 				m = atom[j]->neighbor_atom_idxs[i];
 				if (m >= 0)
-					atom[m]->neighbor_atom_idxs[opposite_offset[i]] = -2;
+					atom[m]->neighbor_atom_idxs[se->opposite_offset[i]] = -2;
 			}
 				
 			// remove the atom from the atom list
@@ -972,7 +967,7 @@ int calculate_surf_diffusion_rate(
 	int neighbor_type_cnt_final[] = {0, 0, 0};
 
 	// [ ]: why is this static, not const? it should also be a simulation input
-	static double b_anisotropy_factor[12] = {1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.}; // "optional" anistropy factor, indices match jump_offset
+	static double b_anisotropy_factor[12] = {1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.}; // "optional" anistropy factor, indices match se->jump_offset
 	
 	int neighbor_type; //type of atom for nearest neighbor
 
@@ -1038,7 +1033,7 @@ double calculate_surf_diffusion_rate2(
 	double energy = 0.0;
 	
 	// why is this static, not const? it should also be a simulation input
-	// "optional" anistropy factor, indices match jump_offset
+	// "optional" anistropy factor, indices match se->jump_offset
 	// static double b_anisotropy_factor[12] = {1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.}; 
 
 	int neighbor_cnt_initial = 0;

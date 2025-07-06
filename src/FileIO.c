@@ -646,14 +646,14 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 
 	//read in the lattice and rotation matrices
 	fscanf(input_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
-		&primitive_basis[0][0], &primitive_basis[0][1], &primitive_basis[0][2], 
-		&primitive_basis[1][0], &primitive_basis[1][1], &primitive_basis[1][2], 
-		&primitive_basis[2][0], &primitive_basis[2][1], &primitive_basis[2][2]); 
+		&se->primitive_basis[0][0], &se->primitive_basis[0][1], &se->primitive_basis[0][2], 
+		&se->primitive_basis[1][0], &se->primitive_basis[1][1], &se->primitive_basis[1][2], 
+		&se->primitive_basis[2][0], &se->primitive_basis[2][1], &se->primitive_basis[2][2]); 
 		
 	fscanf(input_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
-		&rmat[0][0], &rmat[0][1], &rmat[0][2], 
-		&rmat[1][0], &rmat[1][1], &rmat[1][2], 
-		&rmat[2][0], &rmat[2][1], &rmat[2][2]); 
+		&se->rmat[0][0], &se->rmat[0][1], &se->rmat[0][2], 
+		&se->rmat[1][0], &se->rmat[1][1], &se->rmat[1][2], 
+		&se->rmat[2][0], &se->rmat[2][1], &se->rmat[2][2]); 
 
 	fscanf(input_file, "%d %d %d", &se->ssx, &se->ssy, &se->ssz);
 
@@ -711,8 +711,8 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 		}
 	}
 
-	primitive_basis2ucell_params(primitive_basis, ucell_params);
-	organize(ss->atom_arr, ss->atom_cnt);
+	primitive_basis2ucell_params(se->primitive_basis, se->ucell_params);
+	organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis);
 
 	fclose(input_file);
 	return true;
@@ -893,14 +893,14 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 	int x,y,z;
 
 	fscanf(input_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
-		&primitive_basis[0][0], &primitive_basis[0][1], &primitive_basis[0][2], 
-		&primitive_basis[1][0], &primitive_basis[1][1], &primitive_basis[1][2], 
-		&primitive_basis[2][0], &primitive_basis[2][1], &primitive_basis[2][2]); 
+		&se->primitive_basis[0][0], &se->primitive_basis[0][1], &se->primitive_basis[0][2], 
+		&se->primitive_basis[1][0], &se->primitive_basis[1][1], &se->primitive_basis[1][2], 
+		&se->primitive_basis[2][0], &se->primitive_basis[2][1], &se->primitive_basis[2][2]); 
 			
 	fscanf(input_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
-		&rmat[0][0], &rmat[0][1], &rmat[0][2], 
-		&rmat[1][0], &rmat[1][1], &rmat[1][2], 
-		&rmat[2][0], &rmat[2][1], &rmat[2][2]); 
+		&se->rmat[0][0], &se->rmat[0][1], &se->rmat[0][2], 
+		&se->rmat[1][0], &se->rmat[1][1], &se->rmat[1][2], 
+		&se->rmat[2][0], &se->rmat[2][1], &se->rmat[2][2]); 
 
 	fscanf(input_file, "%d %d %d", &se->ssx, &se->ssy, &se->ssz);
 
@@ -939,8 +939,8 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 		}
 	}
 
-	primitive_basis2ucell_params(primitive_basis, ucell_params);
-	organize(ss->atom_arr, ss->atom_cnt);
+	primitive_basis2ucell_params(se->primitive_basis, se->ucell_params);
+	organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis);
 
 
 	fclose(input_file);

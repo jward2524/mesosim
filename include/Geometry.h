@@ -30,7 +30,7 @@ typedef struct
 		// simulation data
 
 		// atom lives multiple times on the transition list transition_arr
-		// index of this list refers to the transition vector in jump_offset[index]
+		// index of this list refers to the transition vector in se->jump_offset[index]
 		// in the implementation here, the maximum number of times the atom may live on the transition list
 		// equals the number of directions it may diffuse, plus one more special transition such as dissolution
 		// or transformation into another kind of atom
@@ -42,7 +42,7 @@ typedef struct
 		//		-1: empty
       	//		-2: buried
 		//		-3: random
-		// position on this list relates to jump vector in jump_offset list
+		// position on this list relates to jump vector in se->jump_offset list
 		int neighbor_atom_idxs[MAXIMUM_NUMBER_OF_NEIGHBORS];
 		//int int_or_ext[MAXIMUM_NUMBER_OF_NEIGHBORS];
 
@@ -106,7 +106,7 @@ typedef struct
 		int dx;
 		int dy;
 		int dz;
-   } crystal_offset;
+   } CrystalOffset;
 
 typedef struct
 	{
@@ -138,7 +138,7 @@ typedef struct
 typedef struct
 	{
 		int atom_idx;		// index in atom_arr of atom that the transition belongs to / is acting on
-		unsigned char offset_idx;   	// this represents the translation vector, as the index in jump_offset
+		unsigned char offset_idx;   	// this represents the translation vector, as the index in se->jump_offset
 
 	} Transition;
 

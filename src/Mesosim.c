@@ -73,33 +73,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    sim_state->transition_probability.rate_arr_index = (int *)malloc(sim_env->max_rates * sizeof(int));
-    sim_state->transition_probability.lbound = (double *)malloc(sim_env->max_rates * sizeof(double));
-    sim_state->transition_probability.ubound = (double *)malloc(sim_env->max_rates * sizeof(double));
-
-    sim_env->max_transitions = ((MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION) * sim_env->max_atoms) + 10;
-    
-    sim_state->atom_arr = (Atom**) malloc(sim_env->max_atoms * sizeof(Atom*));
-    sim_state->rate_arr = (Rate*) malloc(sim_env->max_rates * sizeof(Rate));
-    sim_state->transition_arr = (Transition**) malloc(sim_env->max_transitions * sizeof(Transition*));
-
-    // null pointer checks
-    if (!sim_state->atom_arr)
-    {
-        perror("Couldn't allocate memory for atom array");
-        exit(errno);
-    }
-    if (!sim_state->rate_arr)
-    {
-        perror("Couldn't allocate memory for rate array");
-        exit(errno);
-    }
-    if (!sim_state->transition_arr)
-    {
-        perror("Couldn't allocate memory for transition array");
-        exit(errno);
-    }
-
     printf("Read file successfully\n");
     //pre-process the file information and fill in the gaps with defaults
 
@@ -115,7 +88,7 @@ int main(int argc, char* argv[]) {
     // get_shifts()
     // initialize_zones()
 
-    do_initialize_simulation(sim_state, sim_env);
+    initialize_initial_structure(sim_state, sim_env);
 
 
     // if (strcmp(outFile, "") == 0) {
@@ -268,14 +241,15 @@ void initialize_lattice_geometry(struct SimulationEnv* sim_env)
 	// 	for (j=0;j<3;++j)
 	// 		if (i == j) primitive_basis[i][j] = 1.0; else primitive_basis[i][j] = 0.0;
 
-    double primitive_basis[3][3] = {
+    double pb[3][3] = {
         {1., 0., 0.},
         {0., 1., 0.},
         {0., 0., 1.},
     };
+    memcpy(sim_env->primitive_basis, pb, 3*3*sizeof(double));
 
-	inver(primitive_basis, invert_primitive_basis);
-	primitive_basis2ucell_params(primitive_basis, ucell_params);
+	inver(sim_env->primitive_basis, sim_env->invert_primitive_basis);
+	primitive_basis2ucell_params(sim_env->primitive_basis, sim_env->ucell_params);
 
 	sim_env->ssx = 1;
 	sim_env->ssy = 1;

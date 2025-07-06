@@ -10,25 +10,10 @@
 #include <errno.h>
 
 // [ ]: atoms, zones, orientation
-
-/* symmetry related variables */
-double rmat[3][3]; // visualization?
-double centroid[3]={(double)0.,(double)0.,(double)0.}; // coordinates for center of gravity
-crystal_offset jump_offset[MAXIMUM_NUMBER_OF_NEIGHBORS]; // possible atom jumps in simulation
-int opposite_offset[MAXIMUM_NUMBER_OF_NEIGHBORS]; // index in jump_offset that has the jump in the opposite direction in simulation; opposite_offset[0]=11 means the opposite direction of jump_offset[0] is jump_offset[11]
-
-// primitive unit cell basis vectors + inverted; primitive_basis[*][0] = basis1, primitive_basis[0][*] = x component of basises
-// is also transformation matrix for [lattice to cartesian coordinates] [cartesian to lattice coordinates] respectively
-double primitive_basis[3][3], invert_primitive_basis[3][3]; 
-double ucell_params[6]={1.,1.,1.,90.,90.,90.}; // unit cell parameters; a b c alpha beta gamma // TODO: this is never used except for printing?
-double dax, day, daz;
-crystal_offset lattice_first_offset[24];
-crystal_offset lattice_second_offset[24];
-
 // Atom_Color atom_color[10];
 
 // direction of possible atom jumps for each crystal lattice type
-const crystal_offset BCC_OFFSET[8] = 
+const CrystalOffset BCC_OFFSET[8] = 
 		{ // not normalized, in lattice coordinates
 		{-1, -1, -1},
 		{0, 0, -1},
@@ -40,7 +25,7 @@ const crystal_offset BCC_OFFSET[8] =
 		{1, 1, 1}
 		};
 
-const crystal_offset FCC_OFFSET[12] = 
+const CrystalOffset FCC_OFFSET[12] = 
 		{
 		{0, 1, -1},
 		{1, 0, -1},
@@ -56,7 +41,7 @@ const crystal_offset FCC_OFFSET[12] =
 		{0, -1, 1}
 };
 
-const crystal_offset SC_OFFSET[6] = 
+const CrystalOffset SC_OFFSET[6] = 
 		{
 		{0, 0, -1},
 		{0, 0, 1},
@@ -65,7 +50,7 @@ const crystal_offset SC_OFFSET[6] =
 		{1, 0, 0},
 		{-1, 0, 0}};
 
-const crystal_offset SC_OFFSET_2[12] = 
+const CrystalOffset SC_OFFSET_2[12] = 
 		{{1, 1, 0},
 		{1, -1, 0},
 		{-1, 1, 0},
@@ -79,7 +64,7 @@ const crystal_offset SC_OFFSET_2[12] =
 		{0, 1, -1},
 		{0, -1, -1}};
 
-const crystal_offset FCC_OFFSET_2[6] = 
+const CrystalOffset FCC_OFFSET_2[6] = 
 		{{1, -1, 1},
 		{-1, 1, 1},
 		{-1, -1, 1},
@@ -87,7 +72,7 @@ const crystal_offset FCC_OFFSET_2[6] =
 		{1, 1, -1},
 		{1, -1, -1}};
 
-const crystal_offset BCC_OFFSET_2[6] = 
+const CrystalOffset BCC_OFFSET_2[6] = 
 		{{1, 0, 1},
 		{-1, 0, -1},
 		{1, 1, 0},
@@ -275,7 +260,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 
 		ss->atom_arr[pos]->transition_indices[i] = -1;
 		// [ ]: if system size is still 1 (in z direction?) and jump isn't zero, skip it?
-		// if ((ssz == 1)&&(jump_offset[i].dz != 0))
+		// if ((ssz == 1)&&(se->jump_offset[i].dz != 0))
 		// {
 		// 	/*if (x > 60) // XXX: commented prints
 		// 		printf("met the corner case\n");*/
@@ -285,9 +270,9 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 		// checkx, checky, checkz point to the neighboring site
 		// so update occupied neighbor site according to atom_at(checkx, checky, checkz);
 
-		checkx = x + jump_offset[i].dx;
-		checky = y + jump_offset[i].dy;
-		checkz = z + jump_offset[i].dz;
+		checkx = x + se->jump_offset[i].dx;
+		checky = y + se->jump_offset[i].dy;
+		checkz = z + se->jump_offset[i].dz;
 		/*if (x > 60) // XXX: commented prints
 			printf("before pbc xyz %lf %lf %lf\n", checkx, checky, checkz);*/
 		adjust_pbc(&checkx, &checky, &checkz, se);
@@ -311,8 +296,8 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 				// if atom is present at potential jump site, fill position in neighbor_atom_idxs of this atom and the found neighbor atom
 				if (ss->atom_arr[pos]->neighbor_atom_idxs[i] >= 0 ) {
 					/*if (x>60)
-						printf("reverse: index %d, opposite offset %d, pos %d\n", atom[pos]->neighbor_atom_idxs[i], opposite_offset[i], pos);*/
-					ss->atom_arr[ss->atom_arr[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
+						printf("reverse: index %d, opposite offset %d, pos %d\n", atom[pos]->neighbor_atom_idxs[i], se->opposite_offset[i], pos);*/
+					ss->atom_arr[ss->atom_arr[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
 					/*if (x>60)
 						printf("uno reverse didn't break me\n");*/
 				}
@@ -327,7 +312,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 				if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
 				else
 					atom[pos]->neighbor_atom_idxs[i] = -3;
 				break;
@@ -336,9 +321,9 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 				if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
 				else
-					if (jump_offset[i].dz < 0)
+					if (se->jump_offset[i].dz < 0)
 						atom[pos]->neighbor_atom_idxs[i] = -2;
 				break;
 
@@ -350,18 +335,18 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 				if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
-				else if (jump_offset[i].dz < 0)
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
+				else if (se->jump_offset[i].dz < 0)
 					atom[pos]->neighbor_atom_idxs[i] = -3;
 				break;
 
 			case RANDOM_ALL_AROUND:						// bond to bulk - all bonds downward are to buried atoms.
-				if (i == opposite_offset[niod])
+				if (i == se->opposite_offset[niod])
 				{
 					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
 					else
 						atom[pos]->neighbor_atom_idxs[i] = -1;
 				}
@@ -370,7 +355,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
 					else
 						atom[pos]->neighbor_atom_idxs[i] = -3;
 				}
@@ -381,15 +366,15 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 				if (atom[pos]->neighbor_atom_idxs[i] >= 0)
-					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
 				else if (i != no_bond_direction)
 					atom[pos]->neighbor_atom_idxs[i] = -3;
 				break;
 
 			case RANDOM_INWARD:
-				sp[0] = jump_offset[i].dx;
-				sp[1] = jump_offset[i].dy;
-				sp[2] = jump_offset[i].dz;
+				sp[0] = se->jump_offset[i].dx;
+				sp[1] = se->jump_offset[i].dy;
+				sp[2] = se->jump_offset[i].dz;
 					
 				vecmul(sp, primitive_basis, spo);
 				unit(spo, spo);
@@ -399,7 +384,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 					// normal points inward, make buried
 
 					if ((atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz)) >= 0)
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
 					else
 						atom[pos]->neighbor_atom_idxs[i] = -3;
 					break;
@@ -411,14 +396,14 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 	
 					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
 					break;
 				}
 
 			case BURIED_INWARD:
-				sp[0] = jump_offset[i].dx;
-				sp[1] = jump_offset[i].dy;
-				sp[2] = jump_offset[i].dz;
+				sp[0] = se->jump_offset[i].dx;
+				sp[1] = se->jump_offset[i].dy;
+				sp[2] = se->jump_offset[i].dz;
 					
 				vecmul(sp, primitive_basis, spo);
 				unit(spo, spo);
@@ -428,7 +413,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 					// normal points inward, make buried
 
 					if ((atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz)) >= 0)
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
 					else
 						atom[pos]->neighbor_atom_idxs[i] = -2;
 					break;
@@ -440,7 +425,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 	
 					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
 					break;
 				}
 			*/
@@ -535,7 +520,7 @@ void move_atom(int ia, int fa, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_
 			atom_arr[fa]->neighbor_atom_idxs[n] =	atom_arr[ia]->neighbor_atom_idxs[n];
 
 			n2 = atom_arr[ia]->neighbor_atom_idxs[n];
-			if (n2 >= 0) atom_arr[n2]->neighbor_atom_idxs[opposite_offset[n]] = fa;
+			if (n2 >= 0) atom_arr[n2]->neighbor_atom_idxs[se->opposite_offset[n]] = fa;
 
 			atom_arr[fa]->transition_indices[n] = atom_arr[ia]->transition_indices[n];
 
@@ -605,11 +590,11 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 				// only after we remove the existence of the current atom
 							
 
-				new_atom[number_of_new_atoms].x = ss->atom_arr[at]->lattice[0] + jump_offset[i].dx;
-				new_atom[number_of_new_atoms].y = ss->atom_arr[at]->lattice[1] + jump_offset[i].dy;
-				new_atom[number_of_new_atoms].z = ss->atom_arr[at]->lattice[2] + jump_offset[i].dz;
+				new_atom[number_of_new_atoms].x = ss->atom_arr[at]->lattice[0] + se->jump_offset[i].dx;
+				new_atom[number_of_new_atoms].y = ss->atom_arr[at]->lattice[1] + se->jump_offset[i].dy;
+				new_atom[number_of_new_atoms].z = ss->atom_arr[at]->lattice[2] + se->jump_offset[i].dz;
 
-				new_atom[number_of_new_atoms].vc = opposite_offset[i];	// only allowed direction
+				new_atom[number_of_new_atoms].vc = se->opposite_offset[i];	// only allowed direction
 
 				adjust_pbc(&new_atom[number_of_new_atoms].x,
 							&new_atom[number_of_new_atoms].y,
@@ -621,11 +606,11 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 			case -3:
 				// incarnate a random atom
 
-				new_random_atom[number_of_new_random_atoms].x = ss->atom_arr[at]->lattice[0] + jump_offset[i].dx;
-				new_random_atom[number_of_new_random_atoms].y = ss->atom_arr[at]->lattice[1] + jump_offset[i].dy;
-				new_random_atom[number_of_new_random_atoms].z = ss->atom_arr[at]->lattice[2] + jump_offset[i].dz;
+				new_random_atom[number_of_new_random_atoms].x = ss->atom_arr[at]->lattice[0] + se->jump_offset[i].dx;
+				new_random_atom[number_of_new_random_atoms].y = ss->atom_arr[at]->lattice[1] + se->jump_offset[i].dy;
+				new_random_atom[number_of_new_random_atoms].z = ss->atom_arr[at]->lattice[2] + se->jump_offset[i].dz;
 
-				new_random_atom[number_of_new_random_atoms].vc = opposite_offset[i];	// only allowed direction
+				new_random_atom[number_of_new_random_atoms].vc = se->opposite_offset[i];	// only allowed direction
 
 				adjust_pbc(&new_random_atom[number_of_new_random_atoms].x,
                      		&new_random_atom[number_of_new_random_atoms].y,
@@ -641,7 +626,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 				break;
 
 			default:	// make other atom see this spot as empty
-				ss->atom_arr[j]->neighbor_atom_idxs[opposite_offset[i]] = -1;
+				ss->atom_arr[j]->neighbor_atom_idxs[se->opposite_offset[i]] = -1;
 				nt[nnt] = j;
 				++nnt;
 				break;
@@ -837,9 +822,9 @@ int reincarnate(int x, int y, int z, int type, int vc, int buried) {
 
 	// for (i=0;i < max_neighbors; ++i)
 	// {
-	// 	checkx = x + jump_offset[i].dx;
-	// 	checky = y + jump_offset[i].dy;
-	// 	checkz = z + jump_offset[i].dz;
+	// 	checkx = x + se->jump_offset[i].dx;
+	// 	checky = y + se->jump_offset[i].dy;
+	// 	checkz = z + se->jump_offset[i].dz;
 
 	// 	adjust_pbc(&checkx, &checky, &checkz, se);
 
@@ -855,7 +840,7 @@ int reincarnate(int x, int y, int z, int type, int vc, int buried) {
 	// for (i=0; i < max_neighbors; ++i)
 	// {
 	// 	if (atom_arr[atom_cnt]->neighbor_atom_idxs[i] >= 0)
-	// 		atom_arr[atom_arr[atom_cnt]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[opposite_offset[i]] = atom_cnt;
+	// 		atom_arr[atom_arr[atom_cnt]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = atom_cnt;
 
 	// 	atom_arr[atom_cnt]->transition_indices[i] = -1;		// initialization
 	// }
@@ -949,7 +934,7 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
 		if (ss->atom_arr[atom_number]->neighbor_atom_idxs[i] >= 0)
 		{
 			j = ss->atom_arr[atom_number]->neighbor_atom_idxs[i];
-			ss->atom_arr[j]->neighbor_atom_idxs[opposite_offset[i]] = -1;
+			ss->atom_arr[j]->neighbor_atom_idxs[se->opposite_offset[i]] = -1;
 		}
 	}
 
@@ -1032,12 +1017,12 @@ void copy_atom(int i, int j, Atom** atom_arr)
 /******************************************************************************/
 /******************************************************************************/
 // conversion from aotm->lattice to cartesian and store in atom->cart_coord
-void organize(Atom** atom_arr, int atom_cnt) // atom_cnt=number of atoms
+void organize(Atom** atom_arr, int atom_cnt, double primitive_basis[3][3]) // atom_cnt=number of atoms
 {
 	// like copy_xyz_to_coord, [but adjusts center of gravity, too, if not commented out]
 
 	orthomol(atom_arr, atom_cnt, primitive_basis);	// use the cell dimensions to orthogonalize
-	//centerg(a, atom_cnt); //don't do this!
+	//centerg(a, atom_cnt, centroid); //don't do this!
 }
 
 // Orthogonalize all the lattice coordinates according to the cell orthogonalization matrix (com)
@@ -1054,8 +1039,9 @@ void orthomol(Atom** atom_arr, int atom_cnt, double basis[3][3])
 
 // Translate the coordinates of the atoms so that their center of gravity is on the origin
 
-void centerg(Atom** atom_arr, int atom_cnt)
+void centerg(Atom** atom_arr, int atom_cnt, double centroid[3])
 {
+	static double dax, day, daz;
 	int i,j;
 
 	for (i=0;i<3;++i)

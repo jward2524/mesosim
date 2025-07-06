@@ -16,9 +16,9 @@ void bury_atom(int at, int *pos); //no longer relevant
 
 // rotation and molecule orientation
 // void rotmat(Atom* atm[], int na, double rtmat[3][3]);
-void organize(Atom** atom_arr, int atom_cnt); //keep for now but need to retool
+void organize(Atom** atom_arr, int atom_cnt, double primitive_basis[3][3]); //keep for now but need to retool
 void orthomol(Atom** atom_arr, int atom_cnt, double basis[3][3]);
-void centerg(Atom** atom_arr, int atom_cnt); //not really relevant now (visualization)
+void centerg(Atom** atom_arr, int atom_cnt, double centroid[3]); //not really relevant now (visualization)
 
 // general atom and bond handling routines
 void copy_atom(int i, int j, Atom** atom_arr);
@@ -34,22 +34,12 @@ void lattice2cartesian(int clattice[3], double primitive_basis[3][3], double cca
 
 int round_towards(double val, int target);
 
-/* symmetry related variables */
 // TODO: into SimulationEnv
-extern double rmat[3][3];
-extern double centroid[3];
-extern crystal_offset jump_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
-extern int opposite_offset[MAXIMUM_NUMBER_OF_NEIGHBORS];
-extern double primitive_basis[3][3], invert_primitive_basis[3][3];
-extern double ucell_params[6];
-extern double dax, day, daz;
-extern crystal_offset lattice_first_offset[24];
-extern crystal_offset lattice_second_offset[24];
-extern const crystal_offset BCC_OFFSET[8];
-extern const crystal_offset FCC_OFFSET[12];
-extern const crystal_offset SC_OFFSET[6];
-extern const crystal_offset SC_OFFSET_2[12];
-extern const crystal_offset FCC_OFFSET_2[6];
-extern const crystal_offset BCC_OFFSET_2[6];
+extern const CrystalOffset BCC_OFFSET[8];
+extern const CrystalOffset FCC_OFFSET[12];
+extern const CrystalOffset SC_OFFSET[6];
+extern const CrystalOffset SC_OFFSET_2[12];
+extern const CrystalOffset FCC_OFFSET_2[6];
+extern const CrystalOffset BCC_OFFSET_2[6];
 
 #endif // ATOMS_H
