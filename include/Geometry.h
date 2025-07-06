@@ -110,9 +110,9 @@ typedef struct
 
 typedef struct
 	{
-		int rate_arr_index[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS]; // contains the index in rate_arr that gives the upper bound after adding frequency/frequency_sum
-		double lbound[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS]; // ENHANCE: lbound and ubound are duplicating info
-		double ubound[MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS]; // lbound[i] = ubound[i+1] ?
+		int *rate_arr_index; // contains the index in rate_arr that gives the upper bound after adding frequency/frequency_sum
+		double *lbound; // ENHANCE: lbound and ubound are duplicating info
+		double *ubound; // lbound[i] = ubound[i+1] ?
 	} TransProb;
 
 typedef struct

@@ -73,6 +73,10 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    sim_state->transition_probability.rate_arr_index = (int *)malloc(sim_env->max_rates * sizeof(int));
+    sim_state->transition_probability.lbound = (double *)malloc(sim_env->max_rates * sizeof(double));
+    sim_state->transition_probability.ubound = (double *)malloc(sim_env->max_rates * sizeof(double));
+
     sim_env->max_transitions = ((MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION) * sim_env->max_atoms) + 10;
     
     sim_state->atom_arr = (Atom**) malloc(sim_env->max_atoms * sizeof(Atom*));
