@@ -550,6 +550,11 @@ int create_new_rate(unsigned char *atom_env, unsigned char is_evaporation, struc
 	r->is_evaporation = is_evaporation;
 
 	++ss->rate_cnt;
+	if (ss->rate_cnt > se->max_rates)
+	{
+		fprintf(stderr, "Number of rates (%d) is exceeding set maximum (%lld)", ss->rate_cnt, se->max_rates);
+        exit(errno);
+	}
 
 	return (ss->rate_cnt-1);
 }
@@ -608,6 +613,11 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct S
 	ss->atom_arr[atom_idx]->transition_indices[offset_idx] = n;
 
 	++ss->transition_cnt;
+	if (ss->transition_cnt > se->max_transitions)
+	{
+		fprintf(stderr, "Number of transitions (%d) is exceeding set maximum (%lld)", ss->transition_cnt, se->max_transitions);
+        exit(errno);
+	}
 
 	return;
 }
@@ -636,6 +646,11 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 	ss->atom_arr[atom_idx]->transition_indices[offset_idx] = -1;
 	// TODO: do these later, after it's been removed and transition_arr has been rearranged
 	--ss->transition_cnt;
+	if (ss->atom_cnt < 0)
+	{
+		fprintf(stderr, "Number of transitions (%d) has dropped below zero", ss->transition_cnt);
+        exit(errno);
+	}
 
 	// rate_idx points to the current rate list it's on.  decrement the number of atoms in that list
 	// and clean up.  If the list is empty, remove it.
@@ -671,6 +686,11 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 		}
 
 		--ss->rate_cnt;
+		if (ss->rate_cnt < 0)
+		{
+			fprintf(stderr, "Number of rates (%d) has dropped below zero", ss->rate_cnt);
+			exit(errno);
+		}
 
 		return;
 	}

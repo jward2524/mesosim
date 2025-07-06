@@ -114,6 +114,7 @@ bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState* s
 		}
 	}
 	fclose(input_file);
+	se->max_rates = (unsigned long long int) pow(se->max_neighbors + se->dissolution, se->num_nn_types);
 	return true;
 }
 
@@ -166,6 +167,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 			fprintf(temp_log, "ERROR! Could not correctly read system size parameters %s\n", params);
 			return FILE_COMMAND_IGNORED;
 		}
+		se->max_atoms = se->ssx * se->ssy * se->ssz;
 	}
 	else if (strncmp(cmd, "temp", 4) == 0) {
 		// set the system temperature
@@ -324,6 +326,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 			fprintf(temp_log, "ERROR! Structure type %s not valid\n", structtype);
 			return FILE_COMMAND_IGNORED;
 		}
+		se->max_neighbors = MAXIMUM_NUMBER_OF_NEIGHBORS;
 	}
 	else if (strncmp(cmd, "output", 6) == 0) {
 		//set file name for log output
@@ -836,6 +839,11 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 	    }*/
 
 		++ss->atom_cnt;
+		if (ss->atom_cnt > se->max_atoms)
+		{
+			fprintf(stderr, "Number of atoms (%d) is exceeding set maximum (%lld)", ss->atom_cnt, se->max_atoms);
+			exit(errno);
+		}
 		
 	}
 

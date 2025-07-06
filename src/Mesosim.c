@@ -42,7 +42,6 @@ int main(int argc, char* argv[]) {
     sim_env->ziy = TTS;
     sim_env->ziz = TTS;
     sim_env->dissolution = DISSOLUTION; // holy shit, when not =DISSOLUTION[=1], it breaks some shit heavy
-    // sim_env->max_neighbors = 12;
     // initialize_lattice_geometry(); //this gets overwritten by info from the input file
     sim_env->simulation_type = -1; //TODO: need to define in globals!!
     
@@ -74,9 +73,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    sim_env->max_atoms = sim_env->ssx * sim_env->ssy * sim_env->ssz;
     sim_env->max_transitions = ((MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION) * sim_env->max_atoms) + 10;
-    sim_env->max_rates = MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS;
     
     sim_state->atom_arr = (Atom**) malloc(sim_env->max_atoms * sizeof(Atom*));
     sim_state->rate_arr = (Rate*) malloc(sim_env->max_rates * sizeof(Rate));

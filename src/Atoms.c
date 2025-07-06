@@ -210,6 +210,11 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 	atom[atom_cnt]->color[2] = atom_color[type].b;*/
 
 	++ss->atom_cnt;
+	if (ss->atom_cnt > se->max_atoms)
+	{
+		fprintf(stderr, "Number of atoms (%d) is exceeding set maximum (%lld)", ss->atom_cnt, se->max_atoms);
+        exit(errno);
+	}
 
 	findzone(&xzone, &yzone, &zzone, x, y, z, se); // TODO: this is already done in atom_at - why repeat it
 	// XXX: commended code
@@ -958,6 +963,11 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
 	free(ss->atom_arr[ss->atom_cnt-1]);
 	ss->atom_arr[ss->atom_cnt-1] = NULL;
 	--ss->atom_cnt;
+	if (ss->atom_cnt < 0)
+	{
+		fprintf(stderr, "Number of atoms (%d) has dropped below zero", ss->atom_cnt);
+        exit(errno);
+	}
 
 	return;
 }
