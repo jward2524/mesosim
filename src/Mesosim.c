@@ -137,10 +137,10 @@ int main(int argc, char* argv[]) {
         fprintf(log_state->sim_log_file, "%lf ", sim_env->substrate_composition[i]);
     }
 
-    fprintf(log_state->sim_log_file, "\nSolutility: ");
+    fprintf(log_state->sim_log_file, "\nSolubility: ");
     for (int i = 0; i < sim_env->num_elements; i++)
     {
-        fprintf(log_state->sim_log_file, "%s ", sim_env->is_soluble[i] ? "false" : "true");
+        fprintf(log_state->sim_log_file, "%s ", sim_env->is_soluble[i] ? "true" : "false");
     }
 
     fprintf(log_state->sim_log_file, "\nBond energies\n");
