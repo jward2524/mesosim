@@ -403,9 +403,11 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	// unsigned char env_hash[se->num_nn_levels * se->num_bond_types];
 
 	// first, remove all mention of this atom from transition list
-	for (i=0; i < se->max_neighbors + se->dissolution; ++i) // extra 1 for evaporation
+	// extra 1 for evaporation
+	for (i=0; i < se->max_neighbors + se->dissolution; ++i) 
 	{
-		if (ss->atom_arr[atom_idx]->transition_indices[i] != -1) // something can happen in the "i" direction
+		// transition can happen in the "i" direction
+		if (ss->atom_arr[atom_idx]->transition_indices[i] != -1) 
 			take_off_transition_list(atom_idx, i, ss);
 	}
 
@@ -439,18 +441,20 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	}
 
 	// cycle through the neighbor sites.  if there's an empty one, calculate the transition rate to it
-
 	atom_rates_cnt = 0;
 
 	// ENHANCE: redundant - already calculated initial config in j loop
 	int intial_config_neighbor_cnt = get_initial_configuration(atom_idx, 0, se->max_neighbors, ss->atom_arr, start_config);		// k is number of near neighbors
 
-	if (intial_config_neighbor_cnt == se->max_neighbors) // skip calculating a rate of a fully coordinated atom
+	// skip calculating a rate of a fully coordinated atom
+	if (intial_config_neighbor_cnt == se->max_neighbors) 
 		return atom_rates_cnt;
 
-	for (int neighbor_idx=0; neighbor_idx < se->max_neighbors; ++neighbor_idx) // create transitions to each unoccupied neighbor
+	// create transitions to each unoccupied neighbor
+	for (int neighbor_idx=0; neighbor_idx < se->max_neighbors; ++neighbor_idx) 
 	{
-		if (ss->atom_arr[atom_idx]->neighbor_atom_idxs[neighbor_idx] == -1) // if unoccupied, consider transition
+		// if unoccupied, consider transition
+		if (ss->atom_arr[atom_idx]->neighbor_atom_idxs[neighbor_idx] == -1) 
 		{ 
 			// end_config is only used to identify the transitions that are functionally evaporations (no neighbors in end configuration)
 			int final_config_neighbor_cnt = get_final_configuration(atom_idx, neighbor_idx, ss, se, end_config);
@@ -474,6 +478,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 		}
 	}	
 
+	// if atom type is soluble, add dissolution transition
 	if (se->is_soluble[ss->atom_arr[atom_idx]->type])
 	{
 		// dissolution / evaporation transition

@@ -633,7 +633,10 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 		}
 	}
 
-	take_off_transition_list(at, se->max_neighbors, ss);			// dissolution
+	// dissolution - if not soluble, won't have dissolution transition
+	// TODO: if dissolution is even possible
+	if (ss->atom_arr[at]->transition_indices[se->max_neighbors] != -1)
+		take_off_transition_list(at, se->max_neighbors, ss);
 
 	// now get rid of the atom.  This is almost equivalent to burying it.
 	// find out what zone we're in
