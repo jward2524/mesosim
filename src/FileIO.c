@@ -1,6 +1,7 @@
 ﻿#include "FileIO.h"
 #include "Random.h"
 #include "Atoms.h"
+#include "Mesosim.h"
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -17,7 +18,7 @@ bool fopen_error(char* filename, FILE* file, char* base_msg){
 	if (file == NULL) 
 	{
 		fprintf(stderr, "%s%s: %s\n", base_msg, filename, strerror(errno));
-        exit(errno);
+        clean_and_exit(errno);
     }
 	return true;
 }
@@ -393,7 +394,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		{
 			fprintf(stderr, "Couldn't allocate memory for atom names: %s", strerror(errno));
 			fprintf(temp_log, "Couldn't allocate memory for atom names: %s", strerror(errno));
-        	exit(errno);
+        	clean_and_exit(errno);
 		}
 		memcpy(se->atom_names, types, count * sizeof(char*));
 		// if (se->num_nn_levels != 0)
@@ -442,7 +443,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		{
 			fprintf(stderr, "Couldn't allocate memory for solubilities: %s", strerror(errno));
 			fprintf(temp_log, "Couldn't allocate memory for solubilities: %s", strerror(errno));
-        	exit(errno);
+        	clean_and_exit(errno);
 		}
 		memcpy(se->is_soluble, is_soluble, size);
 	}
@@ -490,7 +491,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		{
 			fprintf(stderr, "Couldn't allocate memory for compositions: %s", strerror(errno));
 			fprintf(temp_log, "Couldn't allocate memory for compositions: %s", strerror(errno));
-        	exit(errno);
+        	clean_and_exit(errno);
 		}
 		for (int i = 0; i < count; i++)
 			se->substrate_composition[i] = comp[i];
@@ -563,7 +564,7 @@ int parse_datalog_params(char* params, int cursor, struct LoggingState* ls, FILE
 		{
 			fprintf(stderr, "Couldn't allocate memory for log list: %s", strerror(errno));
 			fprintf(temp_log, "Couldn't allocate memory for log list: %s", strerror(errno));
-        	exit(errno);
+        	clean_and_exit(errno);
 		}
 		parse_log_list(params + cursor + 5, ls->log_list, &ls->log_list_len);
 		return -1;
@@ -842,7 +843,7 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 		if (ss->atom_cnt > se->max_atoms)
 		{
 			fprintf(stderr, "Number of atoms (%d) is exceeding set maximum (%lld)", ss->atom_cnt, se->max_atoms);
-			exit(errno);
+			clean_and_exit(errno);
 		}
 		
 	}

@@ -12,6 +12,10 @@
 time_t starttime = 0;
 time_t endtime = 0;
 
+struct SimulationState *sim_state;
+struct SimulationEnv *sim_env;
+struct LoggingState *log_state;
+
 void usage(){
     printf(
         "Usage: mesosim [FILE]\n"
@@ -22,7 +26,6 @@ void usage(){
     );
     exit(0);
 }
-// TODO: create full/safe exit function that closes files somewhere (closes files + deletes temp)
 
 //use main function to run everything
 int main(int argc, char* argv[]) {
@@ -34,9 +37,9 @@ int main(int argc, char* argv[]) {
     //start the time
     time(&starttime);
     
-    struct SimulationState *sim_state = calloc(1, sizeof(struct SimulationState));
-    struct SimulationEnv *sim_env = calloc(1, sizeof(struct SimulationEnv));
-    struct LoggingState *log_state = calloc(1, sizeof(struct LoggingState));
+    sim_state = calloc(1, sizeof(struct SimulationState));
+    sim_env = calloc(1, sizeof(struct SimulationEnv));
+    log_state = calloc(1, sizeof(struct LoggingState));
 
     sim_env->zix = TTS;
     sim_env->ziy = TTS;
@@ -51,7 +54,7 @@ int main(int argc, char* argv[]) {
     printf("Temporary log created\n");
     if (temp_log == NULL) {
         perror("Failed to make temp file");
-        exit(errno);
+        clean_and_exit(errno);
     }
     fputs("MESOSIM 2024\n", temp_log);
     fprintf(temp_log, "Start time: %lld\n", starttime);
@@ -196,40 +199,83 @@ int main(int argc, char* argv[]) {
 
     //finalize everything
 
-    //free the malloc'ed memory
-    for (int i = sim_state->transition_cnt; i > 0; --i)
-    {
-        free(sim_state->transition_arr[i-1]);
-        sim_state->transition_arr[i-1] = NULL;
-    }
-    for (int i = sim_state->atom_cnt; i > 0; --i)
-    {
-        free(sim_state->atom_arr[i-1]);
-        sim_state->atom_arr[i-1] = NULL;
-    }
-
-    
-    free(sim_state->atom_arr);
-    free(sim_state->rate_arr);
-    free(sim_state->transition_arr);
-    sim_state->atom_arr = NULL;
-    sim_state->rate_arr = NULL;
-    sim_state->transition_arr = NULL;
-
-    free(sim_state);
-    free(sim_env);
-    sim_state = NULL;
-    sim_env = NULL;
-    
     time(&endtime);
     fprintf(log_state->sim_log_file, "Finished! Total time taken: %d seconds\n", (int)(endtime-starttime));
-    fclose(log_state->sim_log_file);
-
-    free(log_state);
-    log_state = NULL;
+    
+    clean_and_exit(0);
 
     return 0;
 }
+
+// frees pointer only if it isn't NULL and sets pointer to NULL after free
+void free_if_exists(void **pointer)
+{
+    if (*pointer == NULL)
+    {
+        return;
+    }
+        
+    free(*pointer);
+    *pointer = NULL;
+    return;
+}
+
+// emits generic error message to log file, frees allocated memory, and exits
+void clean_and_exit(int error)
+{
+    // errors during: reading input, m/calloc'ing, usage(), making temp file
+    
+    if (error != 0)
+    {
+        fprintf(log_state->sim_log_file, "Error encountered - check stderr\n");
+        fprintf(log_state->sim_log_file, "%s", strerror(errno));
+    }
+
+    // SimulationState
+    if (sim_state != NULL)
+    {
+        for (int i = 0; i < sim_state->atom_cnt; i++)
+        {
+            free_if_exists((void **)&(sim_state->atom_arr[i]));
+        }
+        free_if_exists((void **)&sim_state->atom_arr);
+        
+        for (int i = 0; i < sim_state->transition_cnt; i++)
+        {
+            free_if_exists((void **)&sim_state->transition_arr[i]);
+        }
+        free_if_exists((void **)&sim_state->transition_arr);
+
+        free_if_exists((void **)&sim_state->rate_arr);
+        free_if_exists((void **)&sim_state); // we know it exists, but still useful
+    }
+
+    // SimulationEnv
+    if (sim_env != NULL)
+    {
+        free_if_exists((void **)&sim_env->atom_names);
+        free_if_exists((void **)&sim_env->substrate_composition);
+        free_if_exists((void **)&sim_env->nn_energy);
+        free_if_exists((void **)&sim_env->is_soluble);
+        free_if_exists((void **)&sim_env->jump_offset);
+        free_if_exists((void **)&sim_env->opposite_offset);
+        free_if_exists((void **)&sim_env);
+    }
+
+    // LoggingState
+    if (log_state != NULL)
+    {
+        fclose(log_state->sim_log_file);
+        free_if_exists((void **)&log_state->log_list);
+        free_if_exists((void **)&log_state);
+    }
+
+    if (error !=0) 
+    {
+        exit(error);
+    }
+}
+
 // initializes primitve_basis, ucell_params, ss*
 void initialize_lattice_geometry(struct SimulationEnv* sim_env)
 {

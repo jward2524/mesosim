@@ -4,6 +4,7 @@
 #include "Atoms.h"
 #include "Simulation.h"
 #include "FileIO.h"
+#include "Mesosim.h"
 #include <math.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -87,6 +88,7 @@ void get_system_normal(double basis[3][3]) // XXX: supposedly only for vizualiza
 	return 0;
 }*/
 
+
 /******************************************************************************/
 /******************************************************************************/
 // updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; zone_arr, rmat; normal_x, normal_y, normal_z; max_neighbors, se->jump_offset, se->opposite_offset; zi*, zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_stime, overpotential, next_log_checkpoint
@@ -108,17 +110,17 @@ void general_simulation_initialization(struct SimulationState* ss, struct Simula
     if (!ss->atom_arr)
     {
         perror("Couldn't allocate memory for atom array");
-        exit(errno);
+        clean_and_exit(errno);
     }
     if (!ss->rate_arr)
     {
         perror("Couldn't allocate memory for rate array");
-        exit(errno);
+        clean_and_exit(errno);
     }
     if (!ss->transition_arr)
     {
         perror("Couldn't allocate memory for transition array");
-        exit(errno);
+        clean_and_exit(errno);
     }
 
 	ss->rate_cnt = 0;	// initialize global transition variables
@@ -147,12 +149,12 @@ void general_simulation_initialization(struct SimulationState* ss, struct Simula
 	if (!se->jump_offset)
     {
         perror("Couldn't allocate memory for jump offset array");
-        exit(errno);
+        clean_and_exit(errno);
     }
 	if (!se->opposite_offset)
     {
         perror("Couldn't allocate memory for jump offset array");
-        exit(errno);
+        clean_and_exit(errno);
     }
 
 	// // XXX: redundant

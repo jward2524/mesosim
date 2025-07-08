@@ -3,6 +3,7 @@
 #include "Random.h"
 #include "Simulation.h"
 #include "Simulation_Aux.h"
+#include "Mesosim.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -91,9 +92,9 @@ void create_default_atom(int n, Atom** atom_arr) // n = position on atom list
 	if (atom_arr[n] == NULL)
 	{
 		// TODO: free mallocs before exiting
-		printf("ERROR! Not enough memory to allocate atom %d\n", n);
+		fprintf(stderr, "ERROR! Not enough memory to allocate atom %d\n", n);
 		fprintf(stderr, "Couldn't allocate memory for atom %d: %s", n, strerror(errno));
-        exit(errno);
+        clean_and_exit(errno);
 	}
 
 	strcpy(atom_arr[n]->name, DEFAULT_ATOM_NAME);
@@ -182,7 +183,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 	if ((unsigned long long int) pos > se->max_atoms)
 	{
 		fprintf(stderr, "More atoms (%d) than allocated in atom array (%lld)\n", pos, se->max_atoms);
-		exit(1);
+		clean_and_exit(1);
 	}
 	create_default_atom(ss->atom_cnt, ss->atom_arr);
 
@@ -198,7 +199,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 	if (ss->atom_cnt > se->max_atoms)
 	{
 		fprintf(stderr, "Number of atoms (%d) is exceeding set maximum (%lld)", ss->atom_cnt, se->max_atoms);
-        exit(errno);
+        clean_and_exit(errno);
 	}
 
 	findzone(&xzone, &yzone, &zzone, x, y, z, se); // TODO: this is already done in atom_at - why repeat it
@@ -854,7 +855,7 @@ int reincarnate(int x, int y, int z, int type, int vc, int buried) {
 
 	// return atom_cnt++; //or do in 2 lines if this doesn't work
 	printf("reincarnated something");
-	exit(0);
+	clean_and_exit(1);
 }
 
 
@@ -954,7 +955,7 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
 	if (ss->atom_cnt < 0)
 	{
 		fprintf(stderr, "Number of atoms (%d) has dropped below zero", ss->atom_cnt);
-        exit(errno);
+        clean_and_exit(errno);
 	}
 
 	return;
