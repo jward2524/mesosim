@@ -11,7 +11,7 @@ void initialize_jump_offsets(int lattice_type, CrystalOffset *jump_offset, int *
 void initialize_zones(Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv* se);
 void get_system_normal(double basis[3][3]);
 void set_default_orientation(Atom** atom_arr, int atom_cnt, int lattice_type, double rmat[3][3], double basis[3][3]); //double check if this is used for anything other than graphicsw
-int get_initial_configuration(int atom_index, int offset_index, int max_neighbors, Atom** atom_arr, int initial_config[]);
+int get_initial_configuration(int atom_index, int max_neighbors, Atom** atom_arr, int initial_config[]);
 int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, struct SimulationEnv *se, int final_config[]);
 void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz, struct SimulationEnv* se);
 void adjust_pbc(int *x, int *y, int *z, struct SimulationEnv* se);
@@ -21,7 +21,7 @@ void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double* total_inte
 
 void initialize_initial_structure(struct SimulationState* ss, struct SimulationEnv* se);
 
-void general_simulation_initialization(struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls); //will probably need to change arguments
+void general_simulation_initialization(struct SimulationState* ss, struct SimulationEnv* se);
 
 void initialize_flat_sheet_1(struct SimulationState *ss, struct SimulationEnv* se);
 void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationEnv* se);

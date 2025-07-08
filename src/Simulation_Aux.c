@@ -92,7 +92,7 @@ void get_system_normal(double basis[3][3]) // XXX: supposedly only for vizualiza
 /******************************************************************************/
 /******************************************************************************/
 // updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; zone_arr, rmat; normal_x, normal_y, normal_z; max_neighbors, se->jump_offset, se->opposite_offset; zi*, zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_stime, overpotential, next_log_checkpoint
-void general_simulation_initialization(struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls)
+void general_simulation_initialization(struct SimulationState* ss, struct SimulationEnv* se)
 {
 	// finish initializing structs
 
@@ -326,7 +326,6 @@ void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz, struct Simul
 // updates rmat
 void set_default_orientation(Atom** atom_arr, int atom_cnt, int lattice_type, double rmat[3][3], double basis[3][3]) // supposedly for viewing
 {
-	static int index[3] = {1,1,1};
 	double axis[3], pnormal[3], axis_mag;
 	double zero_point[3] = {0.,0.,0.}, a_a[3];
 	double zaxis[3]={0.,0.,1.};
@@ -567,7 +566,7 @@ void set_primitive_basis(struct SimulationEnv *se) // lattice_type = crystal str
 /********************************************************************************/
 /********************************************************************************/
 // fills initial_config with type of neighbors to atom[at], before jump offset_idx
-int get_initial_configuration(int atom_idx, int cur_offset_idx, int max_neighbors, Atom** atom_arr, int initial_config[]) // atom_idx is position in atom list, offset_idx is index in se->jump_offset
+int get_initial_configuration(int atom_idx, int max_neighbors, Atom** atom_arr, int initial_config[]) // atom_idx is position in atom list, offset_idx is index in se->jump_offset
 {	// TODO: rename to remove the 2
    	int offset_idx, neighbor_idx;
 	int nn_count = 0; // nearest-neighbors
@@ -593,7 +592,7 @@ int get_initial_configuration(int atom_idx, int cur_offset_idx, int max_neighbor
 // fills initial_config with type of neighbors to atom[at], after jump in direction se->jump_offset[offset_idx]
 int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, struct SimulationEnv *se, int final_config[]) // offset_idx is position in offset list
 {
-	int i, j, k;
+	int atom_idx;
 	int new_x, new_y, new_z;
 	int neighbor_x, neighbor_y, neighbor_z;
 	
@@ -605,7 +604,7 @@ int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, 
 
 	adjust_pbc(&new_x, &new_y, &new_z, se);
 
-	for (i=0; i<se->max_neighbors; ++i)
+	for (int i=0; i<se->max_neighbors; ++i)
 	{
 		if (i == se->opposite_offset[offset_idx]) {
 			// if direction is where the jump came from, set as empty
@@ -619,9 +618,9 @@ int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, 
 
 		adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
 
-		j = atom_at(neighbor_x, neighbor_y, neighbor_z, ss->atom_arr, ss->zone_arr, se);
+		atom_idx = atom_at(neighbor_x, neighbor_y, neighbor_z, ss->atom_arr, ss->zone_arr, se);
 
-		if (j != -1)
+		if (atom_idx != -1)
 		{ // if there is an atom present, 'return' its type
 			final_config[i] = ss->atom_arr[at]->type;
 			++nn_cnt;

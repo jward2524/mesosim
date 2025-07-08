@@ -336,7 +336,7 @@ void compute_transition_array(struct SimulationState* ss, struct SimulationEnv* 
 			}
 			else
 			{
-				rate_const = calculate_surf_diffusion_rate2(r->atom_env, ss->temperature, ss->overpotential, se);
+				rate_const = calculate_surf_diffusion_rate2(r->atom_env, ss->temperature, se);
 			}
 			r->k = rate_const;
 			r->frequency = r->k*(double)r->transition_count;
@@ -371,7 +371,8 @@ int get_bond_index(int a, int b, struct SimulationEnv* se)
 	// assume 0-indexed
 	int first, second;
 
-	if (a > b)
+	// larger number (later element) is second
+	if (a < b)
 	{
 		first = a;
 		second = b;
@@ -382,7 +383,7 @@ int get_bond_index(int a, int b, struct SimulationEnv* se)
 	}
 	
 	// a=1, b=2 -> (1*3)+(2-1)=4
-	return (a * (se->num_elements)) + (b-a);
+	return (first * (se->num_elements)) + (second-first);
 }
 
 /******************************************************************************/
@@ -392,9 +393,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 {
 	int i, neighbor_idx;
 	int rate_idx; // position of rate rate in rate list rate_arr[]
-	double rate, evap_rate; // rate constant from bond-breaking model
 	int next_x, next_y, next_z;
-	Atom *cur_atom = ss->atom_arr[atom_idx];
 
 	int atom_rates_cnt;	// this is returned as the number of transitions (se->jump_offsets) this atom can undergo, excluding evaporation
 	int start_config[MAXIMUM_NUMBER_OF_NEIGHBORS]; // -1 if empty, type if filled
@@ -445,7 +444,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	atom_rates_cnt = 0;
 
 	// ENHANCE: redundant - already calculated initial config in j loop
-	int intial_config_neighbor_cnt = get_initial_configuration(atom_idx, 0, se->max_neighbors, ss->atom_arr, start_config);		// k is number of near neighbors
+	int intial_config_neighbor_cnt = get_initial_configuration(atom_idx, se->max_neighbors, ss->atom_arr, start_config);		// k is number of near neighbors
 
 	// skip calculating a rate of a fully coordinated atom
 	if (intial_config_neighbor_cnt == se->max_neighbors) 
@@ -537,7 +536,7 @@ int create_new_rate(unsigned char *atom_env, unsigned char is_evaporation, struc
 	++ss->rate_cnt;
 	if (ss->rate_cnt > se->max_rates)
 	{
-		fprintf(stderr, "Number of rates (%d) is exceeding set maximum (%lld)", ss->rate_cnt, se->max_rates);
+		fprintf(stderr, "Number of rates (%lld) is exceeding set maximum (%lld)", ss->rate_cnt, se->max_rates);
         clean_and_exit(errno);
 	}
 
@@ -560,12 +559,12 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct S
 	if (ss->transition_arr[ss->transition_cnt] == NULL)
 	{
 		// TODO: free mallocs before exiting
-		fprintf(stderr, "Couldn't allocate memory for atom %d: %s\n", ss->transition_cnt, strerror(errno));
+		fprintf(stderr, "Couldn't allocate memory for atom %lld: %s\n", ss->transition_cnt, strerror(errno));
 		clean_and_exit(errno);
 	}
 	if ((unsigned int) ss->transition_cnt > se->max_transitions)
 	{
-		fprintf(stderr, "More transitions (%d) than allocated in transition array (%llu)\n", ss->transition_cnt, se->max_transitions);
+		fprintf(stderr, "More transitions (%lld) than allocated in transition array (%llu)\n", ss->transition_cnt, se->max_transitions);
 		clean_and_exit(errno);
 	}
 
@@ -600,7 +599,7 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct S
 	++ss->transition_cnt;
 	if (ss->transition_cnt > se->max_transitions)
 	{
-		fprintf(stderr, "Number of transitions (%d) is exceeding set maximum (%lld)", ss->transition_cnt, se->max_transitions);
+		fprintf(stderr, "Number of transitions (%lld) is exceeding set maximum (%lld)", ss->transition_cnt, se->max_transitions);
         clean_and_exit(errno);
 	}
 
@@ -633,7 +632,7 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 	--ss->transition_cnt;
 	if (ss->atom_cnt < 0)
 	{
-		fprintf(stderr, "Number of transitions (%d) has dropped below zero", ss->transition_cnt);
+		fprintf(stderr, "Number of transitions (%lld) has dropped below zero", ss->transition_cnt);
         clean_and_exit(errno);
 	}
 
@@ -673,7 +672,7 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 		--ss->rate_cnt;
 		if (ss->rate_cnt < 0)
 		{
-			fprintf(stderr, "Number of rates (%d) has dropped below zero", ss->rate_cnt);
+			fprintf(stderr, "Number of rates (%lld) has dropped below zero", ss->rate_cnt);
 			clean_and_exit(errno);
 		}
 
@@ -717,17 +716,12 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 
 void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 {
-	int k, m, n, mm;
+	int k, m, n;
 	int errors;
 
 	int next_x, next_y, next_z;
 
 	int nnx, nny, nnz;
-
-	int xzone, yzone, zzone;
-
-	double xx1[3], xx2[3], xx3[3];
-	double yy1[3], yy2[3], yy3[3];
 
 	// does a careful check to make sure that a system is ready to be simulated.
 	// assumptions:  (1) all real atoms are in the places they think they are
@@ -955,12 +949,11 @@ int calculate_surf_diffusion_rate(
 	int final_configuration[],				// final configuration array
 	int atom_type,							// type of atom in consideration for transition
 	double temperature,						// system temperature
-	double overpotential,					// system overpotential
+	// double overpotential,					// system overpotential
 	double *rate,							// return value - rate constant k
 	struct SimulationEnv* se
 )
-{ // ENHANCE: pass the number of nearest neighbors? (best practice)
-	int i;
+{ 
 	double energy = 0.0;
 	
 	// [ ]: why are these doubles? presumably so they don't get implicitly cast as such when used in calculation
@@ -978,7 +971,7 @@ int calculate_surf_diffusion_rate(
 	int neighbor_type; //type of atom for nearest neighbor
 
 	int bond_idx, env_idx;
-	for (i=0; i<se->max_neighbors; ++i)
+	for (int i=0; i<se->max_neighbors; ++i)
 	{
 		neighbor_type = initial_configuration[i];
 
@@ -997,7 +990,7 @@ int calculate_surf_diffusion_rate(
 		}
 	}
 
-	for (i=0;i<3;++i)
+	for (int i=0;i<3;++i)
 	{
 		neighbor_cnt_initial += neighbor_type_cnt_initial[i];
 		neighbor_cnt_final += neighbor_type_cnt_final[i];
@@ -1031,11 +1024,11 @@ int calculate_surf_diffusion_rate(
 double calculate_surf_diffusion_rate2(
 	unsigned char* atom_env,
 	double temperature,						// system temperature
-	double overpotential,					// system overpotential
+	// double overpotential,					// system overpotential
 	struct SimulationEnv* se
 )
-{ // ENHANCE: pass the number of nearest neighbors? (best practice)
-	int i;
+{ 
+	// ENHANCE: pass the number of nearest neighbors? (best practice)
 	double energy = 0.0;
 	
 	// why is this static, not const? it should also be a simulation input
@@ -1113,7 +1106,7 @@ double calculate_evaporation_rate2(
 {
 	double energy = 0.0;
 	
-	static double b_anisotropy_factor[12] = {1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.};			// optional anistropy factor
+	// static double b_anisotropy_factor[12] = {1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.};			// optional anistropy factor
 
 	for (int i = 0; i < se->num_nn_types; i++)
 	{

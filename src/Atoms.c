@@ -82,66 +82,37 @@ const CrystalOffset BCC_OFFSET_2[6] =
 		{0, -1, -1}};
 
 // updates atom_arr // [ ]: but doesn't update atom_cnt?
-void create_default_atom(int n, Atom** atom_arr) // n = position on atom list
+void create_default_atom(int atom_idx, Atom** atom_arr, struct SimulationEnv *se)
 {
-	int i,j;
-	char errorstring[256]; // XXX: unused
+	atom_arr[atom_idx] = (Atom *)malloc(sizeof(Atom));
 
-	atom_arr[n] = (Atom *)malloc(sizeof(Atom));
-
-	if (atom_arr[n] == NULL)
+	if (atom_arr[atom_idx] == NULL)
 	{
 		// TODO: free mallocs before exiting
-		fprintf(stderr, "ERROR! Not enough memory to allocate atom %d\n", n);
-		fprintf(stderr, "Couldn't allocate memory for atom %d: %s", n, strerror(errno));
+		fprintf(stderr, "ERROR! Not enough memory to allocate atom %d\n", atom_idx);
+		fprintf(stderr, "Couldn't allocate memory for atom %d: %s", atom_idx, strerror(errno));
         clean_and_exit(errno);
 	}
 
-	strcpy(atom_arr[n]->name, DEFAULT_ATOM_NAME);
-	atom_arr[n]->type = 1;
+	strcpy(atom_arr[atom_idx]->name, DEFAULT_ATOM_NAME);
+	atom_arr[atom_idx]->type = 1;
 		
-	for (i=0;i<3;++i)
+	for (int i=0; i<3; ++i)
 	{
-		atom_arr[n]->cart_coord[i] = 0.0;
-		atom_arr[n]->lattice[i] = 0.0;
+		atom_arr[atom_idx]->cart_coord[i] = 0.0;
+		atom_arr[atom_idx]->lattice[i] = 0.0;
 	}
 
-	atom_arr[n]->bsradius = DEFAULT_BS_RADIUS; //set or optional // XXX: vis + commented code
-	//atom_arr[n]->sfradius = DEFAULT_SF_RADIUS; //set or optional
-		
-	//atom_arr[n]->visible = true; //can remove
-	//atom_arr[n]->selected = false; //can remove
+	for (int i=0; i<se->max_neighbors + se->dissolution; ++i)
+		atom_arr[atom_idx]->transition_indices[i] = -1;
 
-	//atom_arr[n]->style = DEFAULT_ATOM_STYLE; //can remove
+	for (int i=0; i<se->max_neighbors; ++i)
+		atom_arr[atom_idx]->neighbor_atom_idxs[i] = -1;
 
-	/*atom_arr[n]->color[0] = DEFAULT_ATOM_COLOR_R; //can remove
-	atom_arr[n]->color[1] = DEFAULT_ATOM_COLOR_G; //can remove
-	atom_arr[n]->color[2] = DEFAULT_ATOM_COLOR_B; //can remove*/
+	// linked list structure, for faster finding of atoms by position
 
-	for (i=0;i<MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION;++i)
-		atom_arr[n]->transition_indices[i] = -1;
-
-	for (i=0;i<MAXIMUM_NUMBER_OF_NEIGHBORS;++i)
-		atom_arr[n]->neighbor_atom_idxs[i] = -1;
-
-	// linked list structure // [ ]: but why
-
-	atom_arr[n]->next_atom = -1;
-	atom_arr[n]->previous_atom = -1;
-	
-	// bonding // XXX: commented code
-	/*for (i=0;i<MAXIMUM_NUMBER_OF_COSMETIC_BONDS;++i) //can remove this part?
-		atom_arr[n]->bond[i] = -1;								// links to the bond drawing list
-	atom_arr[n]->nob = 0;*/										// number_of_bonds
-
-	// things specific to x-ray structures
-
-	/*atom_arr[n]->biso = 0.0; //can remove all of this
-	for (i=0;i<3;++i)
-		for (j=0;j<3;++j)
-			atom_arr[n]->ecos[i][j] = 0.0;
-	for (i=0;i<3;++i)
-		atom_arr[n]->erms[i] = 0.0;*/
+	atom_arr[atom_idx]->next_atom = -1;
+	atom_arr[atom_idx]->previous_atom = -1;
 
 	return;
 }
@@ -151,61 +122,46 @@ void create_default_atom(int n, Atom** atom_arr) // n = position on atom list
 // updates [atom_arr], atom_arr[i]->lattice, [atom_arr[n]->cart_coord], atom_cnt, zone_arr[xzone][yzone][zzone].offset, atom_arr[pos]->next_atom/prev_atom, atom_arr[pos]->transition_indices; returns index in atom_arr
 int add_atom(int x, int y, int z, int type, int special, struct SimulationState* ss, struct SimulationEnv* se) // lattice coordinates xyz, atom type, special atom conditions (unused)
 { // XXX: special isn't really used
-	/*if (x > 60)
-		printf("made it in!\n");*/
-	int i, j, k, m, n1;
+
+	int atom_idx;
 
 	int xzone, yzone, zzone;
 	int checkx, checky, checkz; // position of potential move
 
-	int pos, ct, n2; // position in atom array, presumably; // XXX: ct n2 are unused
+	long long int pos;
 
-	double sp[3], spo[3];
 	// [ ]: this is a sanity check? iterating over atom list instead of zone (like atom_at)
 	if (atom_at(x,y,z, ss->atom_arr, ss->zone_arr, se) >= 0)
 	{
 		int num_overlapping = 0;
-		for (i=0; i < ss->atom_cnt;++i)
+		for (int i=0; i < ss->atom_cnt;++i)
 		{
 			if ((ss->atom_arr[i]->lattice[0] == x)&&(ss->atom_arr[i]->lattice[1] == y)&&(ss->atom_arr[i]->lattice[2] == z))
 				++num_overlapping;
 		}
 
-		printf("ERROR! Unable to add atom %d; %d other atoms found at (%d, %d, %d)\n", ss->atom_cnt, num_overlapping, x, y, z);
+		printf("ERROR! Unable to add atom %lld; %d other atoms found at (%d, %d, %d)\n", ss->atom_cnt, num_overlapping, x, y, z);
 		ss->simulation_should_kill_itself = true;
 		return ss->atom_cnt;
 	}
 
 	// allocate memory pointed to by the last element of the atom list
-	/*if (x > 60)
-		printf("atom of type %d being added at %lf %lf %lf\n", type, x, y, z);*/
 	pos = ss->atom_cnt; // position in atom array, presumably
-	if ((unsigned long long int) pos > se->max_atoms)
+	if (pos > se->max_atoms)
 	{
-		fprintf(stderr, "More atoms (%d) than allocated in atom array (%lld)\n", pos, se->max_atoms);
+		fprintf(stderr, "More atoms (%lld) than allocated in atom array (%lld)\n", pos, se->max_atoms);
 		clean_and_exit(1);
 	}
-	create_default_atom(ss->atom_cnt, ss->atom_arr);
+	create_default_atom(ss->atom_cnt, ss->atom_arr, se);
 
-	/*if (x > 60)
-		printf("made it past making a default: atom_cnt = %d\n", atom_cnt+1);*/
-	// set atom color by type
-		
-	/*atom[atom_cnt]->color[0] = atom_color[type].r;
-	atom[atom_cnt]->color[1] = atom_color[type].g;
-	atom[atom_cnt]->color[2] = atom_color[type].b;*/
-
-	++ss->atom_cnt;
 	if (ss->atom_cnt > se->max_atoms)
 	{
-		fprintf(stderr, "Number of atoms (%d) is exceeding set maximum (%lld)", ss->atom_cnt, se->max_atoms);
+		fprintf(stderr, "Number of atoms (%lld) is exceeding set maximum (%lld)", ss->atom_cnt, se->max_atoms);
         clean_and_exit(errno);
 	}
 
 	findzone(&xzone, &yzone, &zzone, x, y, z, se); // TODO: this is already done in atom_at - why repeat it
-	// XXX: commended code
-	/*if (x > 60)
-		printf("found zone\n");*/
+	
 	// xzone, yzone, zzone now have a position open at the end of the zone
 	// pos points to this location.  mark the spot and increment the number of atoms
 	// in the zone.
@@ -224,20 +180,17 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 	{
 		// link this atom to the others in the zone linked list
 
-		j = ss->zone_arr[xzone][yzone][zzone].offset;				// first element of list
+		atom_idx = ss->zone_arr[xzone][yzone][zzone].offset;				// first element of list
 
-		while (ss->atom_arr[j]->next_atom != -1)
-			j = ss->atom_arr[j]->next_atom;
+		while (ss->atom_arr[atom_idx]->next_atom != -1)
+			atom_idx = ss->atom_arr[atom_idx]->next_atom;
 
 		// j points to the previous last atom in the zone linked list and points to nothing
 
-		ss->atom_arr[j]->next_atom = pos;
-		ss->atom_arr[pos]->previous_atom = j;
+		ss->atom_arr[atom_idx]->next_atom = pos;
+		ss->atom_arr[pos]->previous_atom = atom_idx;
 		ss->atom_arr[pos]->next_atom = -1;
 	}
-
-	/*if (x > 60) // XXX: commented prints
-		printf("other zone logic done\n");*/
 
 	ss->atom_arr[pos]->lattice[0] = x;
 	ss->atom_arr[pos]->lattice[1] = y;
@@ -246,14 +199,12 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 	ss->atom_arr[pos]->type = type;
 	strcpy(ss->atom_arr[ss->atom_cnt-1]->name, se->atom_names[type]); // TODO: use pos instead of atom_cnt-1
 	// TODO: use snprintf instead of strcpy
-	/*if (x > 60) // XXX: commented prints
-		printf("copied the name: atom is type %s\n", atom[atom_cnt-1]->name);*/
 
 	// find (or set) the occupied neighbor sites
 
 	// [ ]: saturate all the bonds, except it doesn't?
 
-	for (i=0; i < se->max_neighbors; ++i)
+	for (int i=0; i < se->max_neighbors; ++i)
 	{
 		// mark that this atom cannot yet jump in direction i
 		/*if (x > 60) // XXX: commented prints
@@ -458,10 +409,10 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 	//printf("my transition refreshed\n");
 	// cycle through the nearest neighbors, refresh their transitions [or bury as necessary]
 
-	for (i=0; i < se->max_neighbors; ++i)
+	for (int i=0; i < se->max_neighbors; ++i)
 	{
 		//printf("trying to refresh neighbor %d\n", i);
-		j = ss->atom_arr[pos]->neighbor_atom_idxs[i];
+		atom_idx = ss->atom_arr[pos]->neighbor_atom_idxs[i];
 
 		// if (j >= 0)
 		// {
@@ -585,6 +536,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 
 		switch(j) //might be irrelevant if burial removed // [ ]: burried
 		{
+			// -2 and -1 are not used - reincarnation and incarnation?
 			case -2:
 				// re-incarnate the buried atom.  this atom will be of type "type"
 				// we'll have to add an atom at this point, but we'll do this
@@ -732,17 +684,6 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
         ++nnr;
         }
 
-	// all atoms have now been incarnated, so refresh transitions of new atoms
-
-	// for (i=0;i<nnt;++i)
-	// 	refresh_transitions(nt[i], ss, se);
-
-	// for (i=0;i<nnb;++i)
-	// 	refresh_transitions(nb[i], ss, se);
-
-	// for (i=0;i<nnr;++i)
-	// 	refresh_transitions(nr[i], ss, se);
-
 	return;
 }
 
@@ -856,6 +797,7 @@ int reincarnate(int x, int y, int z, int type, int vc, int buried) {
 	// return atom_cnt++; //or do in 2 lines if this doesn't work
 	printf("reincarnated something");
 	clean_and_exit(1);
+	return 1;
 }
 
 
@@ -954,7 +896,7 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
 	--ss->atom_cnt;
 	if (ss->atom_cnt < 0)
 	{
-		fprintf(stderr, "Number of atoms (%d) has dropped below zero", ss->atom_cnt);
+		fprintf(stderr, "Number of atoms (%lld) has dropped below zero", ss->atom_cnt);
         clean_and_exit(errno);
 	}
 
@@ -968,7 +910,7 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
 
 void copy_atom(int i, int j, Atom** atom_arr)
 {
-	int m, bn;
+	int m;
 
 	strncpy(atom_arr[i]->name, atom_arr[j]->name, 24); //limited to 24 bc buffer size
 	atom_arr[i]->type = atom_arr[j]->type;
@@ -1001,7 +943,7 @@ void copy_atom(int i, int j, Atom** atom_arr)
 	atom_arr[i]->previous_atom = atom_arr[j]->previous_atom;
 
 	/*if (generic_flag == 1) return;
-
+	int bn;
 	for (m=0;m<atom[j]->nob;++m)
 		{
 			atom[i]->bond[m] = atom[j]->bond[m];

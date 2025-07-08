@@ -9,9 +9,9 @@
 // (generally) initialized and then never edited again, only read
 struct SimulationEnv
 {
-    unsigned long long int max_atoms;
-    unsigned long long int max_transitions;
-    unsigned long long int max_rates;
+    long long int max_atoms;
+    long long int max_transitions;
+    long long int max_rates;
 
     int simulation_type;
     bool evaporation_flag;
@@ -83,19 +83,19 @@ struct SimulationState
     // array of Atom structs, initialized in ____
     // contains all atoms in the simulation, in the first atom_cnt indices
     Atom **atom_arr;
-    int atom_cnt;
+    long long int atom_cnt;
 
     // array of Rate structs, initialized in ____
     // contains all the unique rate constants and number of transitions with that rate const
     Rate *rate_arr;
-    int rate_cnt;
+    long long int rate_cnt;
 
     // array of Transition structs, initialized in ____
     // the list of possible transitions with atom and transition direction
     // all transitions of same Rate are next to each other
     // they live between rate.transition_start_idx and
     Transition **transition_arr;
-    int transition_cnt;
+    long long int transition_cnt;
 
     // array of zones, to help find atoms based on position
     Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z]; // TODO: change to malloc

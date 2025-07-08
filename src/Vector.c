@@ -238,7 +238,7 @@ double inver (double a[3][3], double b[3][3])
 
 		double x[4][3];
 
-		int j=0,i;
+		int i;
 
 		for (i=0;i<3;++i)
 			{

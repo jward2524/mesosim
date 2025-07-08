@@ -117,7 +117,7 @@ typedef struct
 
 typedef struct
 	{
-		int offset;				// index of the linked list for this zone
+		int offset;				// atom array index of first element in this linked list
 	} Zone;
 
 typedef struct

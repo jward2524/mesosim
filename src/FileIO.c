@@ -675,7 +675,7 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 			%lf\t%lf\t%lf\t\
 			%d\t%d\t%d\t\
 			%lf\t\
-			%*lf\t%*d\t%*d\t%*d\t%*lf\t%*lf\t%*lf\t", // these are not assigned to anything
+			%*f\t%*d\t%*d\t%*d\t%*f\t%*f\t%*f\t", // these are not assigned to anything
 			&temp_atom.type,
 			&temp_atom.cart_coord[0], &temp_atom.cart_coord[1], &temp_atom.cart_coord[2],
 			&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2],
@@ -694,13 +694,13 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 
 		fscanf(input_file, "%d\t", &tempint);
 
-		fscanf(input_file, "%*lf\t", tempdouble);
+		fscanf(input_file, "%lf\t", &(tempdouble[0][0]));
 
 		for (j=0;j<3;++j)
 			for (k=0;k<3;++k)
-				fscanf(input_file, "%*lf\t", tempdouble[j][k]);
+				fscanf(input_file, "%lf\t", &(tempdouble[j][k]));
 		
-		fscanf(input_file, "%*lf\t%*lf\t%*lf\n", tempdouble[0], tempdouble[1], tempdouble[2]);
+		fscanf(input_file, "%lf\t%lf\t%lf\n", tempdouble[0], tempdouble[1], tempdouble[2]);
 
 		x = temp_atom.lattice[0];
 		y = temp_atom.lattice[1];
@@ -765,7 +765,13 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 
 		i = ss->atom_cnt;	
 				
-		create_default_atom(i, ss->atom_arr);
+		create_default_atom(i, ss->atom_arr, se);
+		++ss->atom_cnt;
+		if (ss->atom_cnt > se->max_atoms)
+		{
+			fprintf(stderr, "Number of atoms (%lld) is exceeding set maximum (%lld)", ss->atom_cnt, se->max_atoms);
+			clean_and_exit(errno);
+		}
 
 		if ((argsread = sscanf(command_string, "%s %lf %lf %lf %lf", xyz_type, xyz_pos, xyz_pos+1, xyz_pos+2, &radius)) != 5)
 		{
@@ -793,58 +799,6 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 		ss->atom_arr[i]->bsradius = radius;
 
 		//vecmul(atom[i]->cart_coord, invert_primitive_basis, atom[i]->lattice); // TODO: need to do this later now!
-
-        /*switch(atom[i]->type)
-        {
-			case 0:  				// white
-				atom[i]->color[0] = 1.;
-   				atom[i]->color[1] = 1.;
-      		   	atom[i]->color[2] = 1.;
-				break;
-
-			case 1:					// red	
-		   	    atom[i]->color[0] = 1.;
-	   			atom[i]->color[1] = 0.;
-		  		atom[i]->color[2] = 0.;
-               	break;
-
-			case 2:					// green
-			   	atom[i]->color[0] = 0.;
-	   			atom[i]->color[1] = 1.;
-      			atom[i]->color[2] = 0.;
-				break;
-			
-			case 3:					// blue
-				atom[i]->color[0] = 0.;
-   				atom[i]->color[1] = 0.;
-      			atom[i]->color[2] = 1.;
-				break;
-
-			case 4:					// cyan
-				atom[i]->color[0] = 0.;
-			   	atom[i]->color[1] = 1.;
-      			atom[i]->color[2] = 1.;
-		        break;
-        
-			case 5:					// gray
-				atom[i]->color[0] = .5;
-				atom[i]->color[1] = .5;
-				atom[i]->color[2] = .5;
-				break;
-
-			case 6:					// yellow
-				atom[i]->color[0] = 1.;
-				atom[i]->color[1] = 1.;
-				atom[i]->color[2] = 0.;
-				break;
-	    }*/
-
-		++ss->atom_cnt;
-		if (ss->atom_cnt > se->max_atoms)
-		{
-			fprintf(stderr, "Number of atoms (%d) is exceeding set maximum (%lld)", ss->atom_cnt, se->max_atoms);
-			clean_and_exit(errno);
-		}
 		
 	}
 
@@ -855,7 +809,7 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 		typenames[i] = NULL;
 	}
 	
-	fprintf(temp_log, "Successfully read %d atoms from .xyz file\n", ss->atom_cnt);
+	fprintf(temp_log, "Successfully read %lld atoms from .xyz file\n", ss->atom_cnt);
 	fclose(input_file);
 	//organize(atom, atom_cnt); //???
 	return true;
@@ -890,7 +844,6 @@ int match_atom_type(char* type, char* types[], int* num_types, FILE* temp_log) {
 
 bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls) {
 	int newnat;
-	int i,j,k;
 	int x,y,z;
 
 	fscanf(input_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
@@ -910,7 +863,7 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 	fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", se->ssx, se->ssy, se->ssz, newnat);
 		
 	Atom temp_atom;
-	for (i=0;i<newnat;++i)
+	for (int i=0; i<newnat; ++i)
 	{
 		fscanf(input_file, "%s\t", temp_atom.name);
 
@@ -922,10 +875,10 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 			&temp_atom.cart_coord[0], &temp_atom.cart_coord[1], &temp_atom.cart_coord[2],
 			&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2]); //get rid of lattice coords too?
 
-		for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS+DISSOLUTION;++j) //when do we pick lattice?
+		for (int j=0; j<se->max_neighbors + se->dissolution; ++j) //when do we pick lattice?
 			fscanf(input_file, "%d\t", &temp_atom.transition_indices[j]);
 
-		for (j=0;j<MAXIMUM_NUMBER_OF_NEIGHBORS;++j)
+		for (int j=0; j<se->max_neighbors; ++j)
 			fscanf(input_file, "%d\t", &temp_atom.neighbor_atom_idxs[j]);
 				
 		fscanf(input_file, "%d\t%d\t", &temp_atom.next_atom, &temp_atom.previous_atom);
@@ -936,7 +889,7 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 
 		if (atom_at(x, y, z, ss->atom_arr, ss->zone_arr, se) == -1)
 		{
-			j = add_atom(x,y,z,temp_atom.type, SPECIFIED, ss, se);
+			add_atom(x,y,z,temp_atom.type, SPECIFIED, ss, se);
 		}
 	}
 
@@ -978,7 +931,7 @@ bool write_xyz_file(struct SimulationState* ss, char* xyz_filename, int frame_nu
 		[element] [x] [y] [z]
 	*/
 	// TODO: use extended XYZ format (https://docs.ovito.org/reference/file_formats/input/xyz.html#file-formats-input-xyz-extended-format)
-	fprintf(fileid, "%d\n", ss->atom_cnt); //start with number of atoms
+	fprintf(fileid, "%lld\n", ss->atom_cnt); //start with number of atoms
 	fprintf(fileid, "time = %lf, temperature = %lf, potential = %lf, energy = %lf\n", ss->elapsed_stime, ss->temperature, ss->overpotential, ss->total_internal_energy); //need to compute energy here!
 
 	Atom **atoms = ss->atom_arr;

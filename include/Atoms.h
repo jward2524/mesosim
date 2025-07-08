@@ -22,7 +22,7 @@ void centerg(Atom** atom_arr, int atom_cnt, double centroid[3]); //not really re
 
 // general atom and bond handling routines
 void copy_atom(int i, int j, Atom** atom_arr);
-void create_default_atom(int na, Atom** atom_arr); //can modify this to remove things like color?
+void create_default_atom(int atom_idx, Atom** atom_arr, struct SimulationEnv *se); //can modify this to remove things like color?
 
 void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv *se);
 void cell_to_latmat(double c[6], double ltmt[3][3]);

@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
 
     //finish_preprocessing();   //only called when deposition matters
 
-    general_simulation_initialization(sim_state, sim_env, log_state);
+    general_simulation_initialization(sim_state, sim_env);
     
     initialize_simulation_box(sim_env);
     // get_shifts()
@@ -185,7 +185,7 @@ int main(int argc, char* argv[]) {
             break;
     }
 
-    fprintf(log_state->sim_log_file, "Atoms created, %d total\n", sim_state->atom_cnt);
+    fprintf(log_state->sim_log_file, "Atoms created, %lld total\n", sim_state->atom_cnt);
     
     printf("Beginning simulation\n");
     //perform simulations

@@ -17,7 +17,7 @@ int calculate_surf_diffusion_rate(
     int final_configuration[],
     int atom_type,
     double temperature,
-    double overpotential,
+    // double overpotential,
     double *rate,
     struct SimulationEnv* se
 );
@@ -43,7 +43,7 @@ double calculate_evaporation_rate2(
 double calculate_surf_diffusion_rate2(
 	unsigned char* atom_env,
 	double temperature,						// system temperature
-	double overpotential,					// system overpotential
+	// double overpotential,					// system overpotential
 	struct SimulationEnv* se
 );
 
