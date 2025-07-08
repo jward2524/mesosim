@@ -332,11 +332,11 @@ void compute_transition_array(struct SimulationState* ss, struct SimulationEnv* 
 		{
 			if (r->is_evaporation)
 			{
-				rate_const = calculate_evaporation_rate2(r->atom_env, ss->temperature, ss->overpotential, se);
+				rate_const = calculate_evaporation_rate(r->atom_env, ss->temperature, ss->overpotential, se);
 			}
 			else
 			{
-				rate_const = calculate_surf_diffusion_rate2(r->atom_env, ss->temperature, se);
+				rate_const = calculate_surf_diffusion_rate(r->atom_env, ss->temperature, se);
 			}
 			r->k = rate_const;
 			r->frequency = r->k*(double)r->transition_count;
@@ -943,85 +943,8 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 
 /******************************************************************************/
 /******************************************************************************/
-// calculates surface diffusion rate constant
-int calculate_surf_diffusion_rate(	
-	int initial_configuration[],			// initial configuration array
-	int final_configuration[],				// final configuration array
-	int atom_type,							// type of atom in consideration for transition
-	double temperature,						// system temperature
-	// double overpotential,					// system overpotential
-	double *rate,							// return value - rate constant k
-	struct SimulationEnv* se
-)
-{ 
-	double energy = 0.0;
-	
-	// [ ]: why are these doubles? presumably so they don't get implicitly cast as such when used in calculation
-	// total number of neighbors in initial/final
-	int neighbor_cnt_initial = 0;
-	int neighbor_cnt_final = 0;
-	
-	// number of type A/B/C [index 012] neighboring atoms in initial/final configuration
-	int neighbor_type_cnt_initial[] = {0, 0, 0};
-	int neighbor_type_cnt_final[] = {0, 0, 0};
-
-	// [ ]: why is this static, not const? it should also be a simulation input
-	static double b_anisotropy_factor[12] = {1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.}; // "optional" anistropy factor, indices match se->jump_offset
-	
-	int neighbor_type; //type of atom for nearest neighbor
-
-	int bond_idx, env_idx;
-	for (int i=0; i<se->max_neighbors; ++i)
-	{
-		neighbor_type = initial_configuration[i];
-
-		bond_idx = get_bond_index(atom_type, neighbor_type, se);
-		env_idx = get_env_index(1, bond_idx, se); // TODO: hard-coded 1st nn
-
-		if (neighbor_type >= 0) {
-			++neighbor_type_cnt_initial[neighbor_type]; //number of type A/B/C neighboring atoms in init configuration
-			energy += se->nn_energy[env_idx] * b_anisotropy_factor[i]; //A-A/B/C bond - grab correct index of se->nnE array from se->nnE*_index array based on neighbor type
-		}
-
-		neighbor_type = final_configuration[i];
-		if (neighbor_type >= 0) {
-			++neighbor_type_cnt_final[neighbor_type]; //number of type A/B/C neighboring atoms in final configuration
-			//energy -= se->nnE[nnE_A_idxs[neighbor_type]]*b_anisotropy_factor[i]; //A-A/B/C bond, told to leave in and comment out
-		}
-	}
-
-	for (int i=0;i<3;++i)
-	{
-		neighbor_cnt_initial += neighbor_type_cnt_initial[i];
-		neighbor_cnt_final += neighbor_type_cnt_final[i];
-	}
-	// these override the previous energy sum
-	if (neighbor_cnt_initial == 0)
-	{
-		// no neighbors - this condition corresponds to a diffuser walking through a lattice (a lattice gas)
-		
-		energy = -1.0;
-
-	}
-
-	if ((neighbor_cnt_initial > 0) && (neighbor_cnt_final <= 1))
-	{ // [ ]: this is preventing evaporation (when no final neighbors) 
-		// BUG: this will mess up probabilities? by having fake transitions
-		energy = 1000.;				// final configuration has no near neighbors,
-									// so this effectively corresponds to an evaporation-like event.
-									// Don't let it happen!
-	}
-
-	// ENHANCE: replace calculating the exp with memoizing up the value (uhash?) -> speedup?
-	// overpotential is only for evaporation
-	//*rate = 1e13*exp(-energy/(kBoltz*temperature)) //+ 1e-4*exp(-(energy-overpotential)/(kBoltz*temperature));
-	*rate = 1e13*exp(-energy/(kBoltz*temperature));
-	//printf("rate = %le\n", *rate);
-	return 0;
-}
-
 // calculates surface diffusion rate using atom environment
-double calculate_surf_diffusion_rate2(
+double calculate_surf_diffusion_rate(
 	unsigned char* atom_env,
 	double temperature,						// system temperature
 	// double overpotential,					// system overpotential
@@ -1058,46 +981,8 @@ double calculate_surf_diffusion_rate2(
 
 /******************************************************************************/
 /******************************************************************************/
-
-int calculate_evaporation_rate(
-	int initial_configuration[],			// initial configuration array of atom's nearest neighbors
-	int atom_type,							// type of atom in consideration for transition
-	double temperature,						// system temperature
-	double overpotential,					// system overpotential
-	double *rate,							// return value
-	struct SimulationEnv* se
-)
-{
-	int i;
-	static double b_anisotropy_factor[12] = {1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.};			// optional anistropy factor
-	double energy = 0.0;
-	
-	int neighbor_type; //type of atom for nearest neighbor
-	int bond_idx, env_idx;
-	if (se->is_soluble[atom_type])
-	{
-		//A can evaporate
-		for (i=0;i<se->max_neighbors;++i)
-		{ // calculate energy of initial state before evaporation
-			neighbor_type = initial_configuration[i];
-			bond_idx = get_bond_index(atom_type, neighbor_type, se);
-			env_idx = get_env_index(1, bond_idx, se); // TODO: hard-coded 1st nn
-			if (neighbor_type >= 0)
-				energy += se->nn_energy[env_idx] * b_anisotropy_factor[i]; //bonding with A
-		}
-	}
-	else
-		// BUG: replace faking a really high energy with just not having the rate in the list
-		energy = 1000.; //A cannot evaporate
-	
-	// dissolution/evaporation equation
-	*rate = 1e4*exp(-(energy-overpotential)/(kBoltz*temperature));
-		
-	return 0;
-}
-
 // calculates evaporation rate using atom environment
-double calculate_evaporation_rate2(
+double calculate_evaporation_rate(
 	unsigned char *atom_env,
 	double temperature,						// system temperature
 	double overpotential,					// system overpotential
