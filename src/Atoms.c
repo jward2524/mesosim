@@ -153,6 +153,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 		clean_and_exit(1);
 	}
 	create_default_atom(ss->atom_cnt, ss->atom_arr, se);
+	++ss->atom_cnt;
 
 	if (ss->atom_cnt > se->max_atoms)
 	{
