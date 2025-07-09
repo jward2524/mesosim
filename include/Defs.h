@@ -80,7 +80,7 @@
 
 // simple cubic lattice vectors in orthogonal space
 // unit is lattice parameters (a)
-// TODO: add parameter that defines length of lattice parameter
+// TODO: add parameter that defines length of lattice parameter (spaarks: 'scale')
 // **these are not necessarily unit vectors**
 #define SCXV1 1.0
 #define SCYV1 0.0

@@ -200,7 +200,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 		// increment the elapsed time
 		// whether this is the 1st, 2nd, or 3rd random number in the loop affects the time (diff random numbers)
 		ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
-
+		
 		// update rates
 		if (se->overpotential_ramp_rate != 0.0)
 		{

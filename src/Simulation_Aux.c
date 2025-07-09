@@ -285,6 +285,12 @@ void get_shifts(struct SimulationEnv* se)
 
 void adjust_pbc(int* x, int* y, int* z, struct SimulationEnv* se) // should be lattice coordinates
 {
+	// TODO: allow to turn off pbc in a direction
+	// if exceeds boundary, either:
+	// treat as occupied site - of what composition? atoms will scale box walls like adatoms
+	// *treat as not a site - doesn't contribute to energy, can't be transitioned to
+	// 		if not a site, return -2 for adjust_pbc, skip atom_at+findzone, don't collect energy or create transition
+
 	// x y z in lattice coordinates
 	if (*x < se->simbox_limits_lat[0][0])
 		*x += se->simbox_limits_lat[0][1];
@@ -621,7 +627,8 @@ int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, 
 		atom_idx = atom_at(neighbor_x, neighbor_y, neighbor_z, ss->atom_arr, ss->zone_arr, se);
 
 		if (atom_idx != -1)
-		{ // if there is an atom present, 'return' its type
+		{
+			// if there is an atom present, 'return' its type
 			final_config[i] = ss->atom_arr[at]->type;
 			++nn_cnt;
 		}
@@ -649,6 +656,7 @@ void initialize_flat_sheet_1(struct SimulationState *ss, struct SimulationEnv *s
 			{
 				nz = drandj(&rand_seed);
 				
+				// TODO: make into fxn
 				double bar = 0;
 				int type = -1;
 				do {

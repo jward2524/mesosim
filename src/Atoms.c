@@ -181,7 +181,8 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 	{
 		// link this atom to the others in the zone linked list
 
-		atom_idx = ss->zone_arr[xzone][yzone][zzone].offset;				// first element of list
+		// first element of list
+		atom_idx = ss->zone_arr[xzone][yzone][zzone].offset;
 
 		while (ss->atom_arr[atom_idx]->next_atom != -1)
 			atom_idx = ss->atom_arr[atom_idx]->next_atom;
@@ -203,7 +204,7 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 
 	// find (or set) the occupied neighbor sites
 
-	// [ ]: saturate all the bonds, except it doesn't?
+	// identify neighbors and notify them of presence
 
 	for (int i=0; i < se->max_neighbors; ++i)
 	{
@@ -575,7 +576,8 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 				break;
 
 			case -1:
-				if (ss->atom_arr[at]->transition_indices[i] != -1)		// i.e., this is a spot to jump to 
+				if (ss->atom_arr[at]->transition_indices[i] != -1)		
+					// an open site to jump to 
 					take_off_transition_list(at, i, ss);
 				break;
 
@@ -703,7 +705,6 @@ int atom_at(int cx, int cy, int cz, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][Z
 
 	// cycle through the zone linked list
 	i = zone_arr[zx][zy][zz].offset;
-	// TODO: if doubles for lattice coordinates are necessary, then should probably change from == to fabs(a-b) < epsilon
 	while (i != -1)
 	{
 		if ((atom_arr[i]->lattice[0] == cx)&&
