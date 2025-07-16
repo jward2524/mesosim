@@ -687,12 +687,17 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
 
 	double dist;
 
+	// for when ss* represents a prism cell
 	//center of the cluster is the halfway point
 	center_cart[0] = se->ssx / 2;
 	center_cart[1] = se->ssy / 2;
 	center_cart[2] = se->ssz / 2;
 	// TODO: check that the center is at a lattice site?
 	cartesian2lattice_site(center_cart, se->invert_primitive_basis, center_lattice);
+
+	// center_lattice[0] = se->ssx / 2;
+	// center_lattice[1] = se->ssy / 2;
+	// center_lattice[2] = se->ssz / 2;
 
 	// convert lattice distance to cartesian distance using largest (smallest?) lattice vector
 	double max_mag = -1; 
@@ -744,11 +749,11 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
 	for (int dim_idx = 0; dim_idx < 3; dim_idx++) {
 		if (bblimits_cart[dim_idx][0] < 0) {
 			printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
-			return;
+			clean_and_exit(1);
 		}
 		if (bblimits_cart[dim_idx][1] > (int)(2*center_cart[dim_idx])) {
 			printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
-			return;
+			clean_and_exit(1);
 		}
 	}
 

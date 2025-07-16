@@ -68,6 +68,8 @@ struct SimulationEnv
     // index in jump_offset that has the jump in the opposite direction in simulation; opposite_offset[0]=11 means the opposite direction of se->jump_offset[0] is se->jump_offset[11]
     int *opposite_offset;
     
+    // primitive unit cell basis vectors + inverted; primitive_basis[*][0] = basis1, primitive_basis[0][*] = x component of basises
+    // is also transformation matrix for [lattice to cartesian coordinates] [cartesian to lattice coordinates] respectively
     double primitive_basis[3][3];
     double invert_primitive_basis[3][3]; 
     double ucell_params[6]; // unit cell parameters; a b c alpha beta gamma // TODO: this is never used except for printing?

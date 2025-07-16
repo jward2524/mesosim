@@ -16,7 +16,7 @@ int match_atom_type(char* type, char* types[], int* num_types, FILE* temp_log);
 int parse_datalog_params(char* params, int cursor, struct LoggingState* ls, FILE* temp_log);
 
 bool output_log_file(FILE* sim_log_file, int frame_num, double elapsed_stime, double temperature, double overpotential, int atom_cnt, double total_internal_energy);
-bool write_xyz_file(struct SimulationState* sim_state, char* xyz_filename, int frame_num);
+bool write_xyz_file(char* xyz_filename, int frame_num, struct SimulationState* ss, struct SimulationEnv* se);
 bool output_kmc_file(char *kmc_filename); //need to rework
 
 int get_num_bond_types(int num_elements);

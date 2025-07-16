@@ -69,7 +69,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 	
 	output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-	write_xyz_file(ss, ls->position_log_prefix, framenum);
+	write_xyz_file(ls->position_log_prefix, framenum, ss, se);
 	framenum++;
 
 	unsigned long int iter = 1; // iteration count
@@ -96,7 +96,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 			calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 			output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-			write_xyz_file(ss, ls->position_log_prefix, framenum);
+			write_xyz_file(ls->position_log_prefix, framenum, ss, se);
 
 			ss->simulation_should_kill_itself = false;
 
@@ -265,7 +265,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			
 			calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 			output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-			write_xyz_file(ss, ls->position_log_prefix, framenum);
+			write_xyz_file(ls->position_log_prefix, framenum, ss, se);
 			
 			if (ls->analysis_type == REGULAR_TIME_INTERVALS)
 			{
@@ -301,7 +301,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	//TODO: finish IO
 	calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 	output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-	write_xyz_file(ss, ls->position_log_prefix, framenum);
+	write_xyz_file(ls->position_log_prefix, framenum, ss, se);
 	
 	if (iter == ss->final_iteration)
 		fprintf(ls->sim_log_file, "reached final iteration and terminated\n");

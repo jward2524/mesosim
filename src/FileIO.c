@@ -914,31 +914,80 @@ bool output_log_file(FILE* sim_log_file, int frame_num, double elapsed_stime, do
 	return true;
 }
 
-bool write_xyz_file(struct SimulationState* ss, char* xyz_filename, int frame_num)
+bool write_xyz_file(char* xyz_filename, int frame_num, struct SimulationState* ss, struct SimulationEnv* se)
 {
-	FILE* fileid;
+	bool is_extended = 1;
+
 	char filename_full[BUFFER_SIZE];
 	sprintf(filename_full, "%s_%d.xyz", xyz_filename, frame_num);
-	if ((fileid = fopen(filename_full, "w+")) == NULL)
+	FILE* file = fopen(filename_full, "w+");
+	if (file == NULL)
 	{
 		printf("ERROR! Couldn't open output file %s\n", filename_full);
-		return false;
+		fprintf(stderr, "Couldn't open file %s: %s", filename_full, strerror(errno));
+		clean_and_exit(errno);
 	}
 
 	/* format:
 		[number of atoms]
-		[comment line - exactly one lines]
+		[comment line - exactly one line]
 		[element] [x] [y] [z]
 	*/
-	// TODO: use extended XYZ format (https://docs.ovito.org/reference/file_formats/input/xyz.html#file-formats-input-xyz-extended-format)
-	fprintf(fileid, "%lld\n", ss->atom_cnt); //start with number of atoms
-	fprintf(fileid, "time = %lf, temperature = %lf, potential = %lf, energy = %lf\n", ss->elapsed_stime, ss->temperature, ss->overpotential, ss->total_internal_energy); //need to compute energy here!
+	// using extended XYZ format
+	// (https://docs.ovito.org/reference/file_formats/input/xyz.html#file-formats-input-xyz-extended-format)
+	fprintf(file, "%lld\n", ss->atom_cnt); //start with number of atoms
+	// TODO: move calculation to initialization fxn
+	// TODO: make a simulation_basis or simulation_cell variable
+	if (is_extended)
+	{
+		// 3x3 matrix - rows are cell vectors [preferred]
+		int x_range = se->simbox_limits_lat[0][1] - se->simbox_limits_lat[0][0];
+		int y_range = se->simbox_limits_lat[1][1] - se->simbox_limits_lat[1][0];
+		int z_range = se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0];
+
+		// ENHANCE: this would be prettier if se->primitive_basis were transposed'
+		// [[u1 u2 u3], [v1 v2 v3], [w1 w2 w3]] vs [[u1 v1 w1], [u2 v2 w2], [u3 v3 w3]]
+		int u_lat[3] = {x_range, 0, 0};
+		int v_lat[3] = {0, y_range, 0};
+		int w_lat[3] = {0, 0, z_range};
+		double u_cart[3], v_cart[3], w_cart[3];
+		
+		lattice2cartesian(u_lat, se->primitive_basis, u_cart);
+		lattice2cartesian(v_lat, se->primitive_basis, v_cart);
+		lattice2cartesian(w_lat, se->primitive_basis, w_cart);
+		
+		fprintf(
+			file, 
+			"Lattice=\"%lf %lf %lf %lf %lf %lf %lf %lf %lf\" ",
+			u_cart[0], u_cart[1], u_cart[2],
+			v_cart[0], v_cart[1], v_cart[2],
+			w_cart[0], w_cart[1], w_cart[2]
+		);
+
+		int o_lat[] = {
+			se->simbox_limits_lat[0][0],
+			se->simbox_limits_lat[1][0],
+			se->simbox_limits_lat[2][0]
+		};
+		double o_cart[3];
+
+		lattice2cartesian(o_lat, se->primitive_basis, o_cart);
+
+		fprintf(
+			file, 
+			"Origin=\"%lf %lf %lf\" ",
+			o_cart[0], o_cart[1], o_cart[2]
+		);
+		fprintf(file, "pbc=\"T T T\" ");
+		fprintf(file, "Properties=id:I:1:species:S:1:pos:R:3 ");
+	}
+	fprintf(file, "time=%lf temperature=%lf potential=%lf energy=%lf\n", ss->elapsed_stime, ss->temperature, ss->overpotential, ss->total_internal_energy); //need to compute energy here!
 
 	Atom **atoms = ss->atom_arr;
 	for (int i = 0; i < ss->atom_cnt; ++i)
 		// TODO: call organize here
-		fprintf(fileid, "%d %s %lf %lf %lf %lf\n", i, atoms[i]->name, atoms[i]->cart_coord[0], atoms[i]->cart_coord[1], atoms[i]->cart_coord[2], atoms[i]->bsradius); //name is now element type
+		fprintf(file, "%d %s %lf %lf %lf %lf\n", i, atoms[i]->name, atoms[i]->cart_coord[0], atoms[i]->cart_coord[1], atoms[i]->cart_coord[2], atoms[i]->bsradius); //name is now element type
 	//ball and stick or space filling?
-	fclose(fileid);
+	fclose(file);
 	return true;
 }
