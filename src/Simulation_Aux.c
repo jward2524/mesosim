@@ -290,20 +290,24 @@ void adjust_pbc(int* u, int* v, int* w, struct SimulationEnv* se) // should be l
 	// 		if not a site, return -2 for adjust_pbc, skip atom_at+findzone, don't collect energy or create transition
 
 	// x y z in lattice coordinates
+	int u_range = se->simbox_limits_lat[0][1] - se->simbox_limits_lat[0][0];
+	int v_range = se->simbox_limits_lat[1][1] - se->simbox_limits_lat[1][0];
+	int w_range = se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0];
+
 	if (*u < se->simbox_limits_lat[0][0])
-		*u += se->simbox_limits_lat[0][1];
+		*u += u_range;
 	if (*u >= se->simbox_limits_lat[0][1])
-		*u -= se->simbox_limits_lat[0][1];
+		*u -= u_range;
 
 	if (*v < se->simbox_limits_lat[1][0])
-		*v += se->simbox_limits_lat[1][1];
+		*v += v_range;
 	if (*v >= se->simbox_limits_lat[1][1])
-		*v -= se->simbox_limits_lat[1][1];
+		*v -= v_range;
 
 	if (*w < se->simbox_limits_lat[2][0])
-		*w += se->simbox_limits_lat[2][1];
+		*w += w_range;
 	if (*w >= se->simbox_limits_lat[2][1])
-		*w -= se->simbox_limits_lat[2][1];
+		*w -= w_range;
 
 	return;
 
@@ -901,6 +905,7 @@ void initialize_simulation_box(struct SimulationEnv* se) //double system_size_x,
 }
 
 // converts cartesian corners to lattice limits along each dimension
+// values are rounded towards initial values of limits_lat
 void corners2limits(double corners_cart[8][3], int limits_lat[3][2], double inv_basis[3][3])
 {
 	// convert corners from cartesian coords into atom/lattice coords
