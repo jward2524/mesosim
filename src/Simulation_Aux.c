@@ -26,9 +26,9 @@ void get_system_rw_radius(struct SimulationEnv* se)
 
 	// find minimum axial distance to system edge
 
-	ss = se->ssx;
-	if (se->ssy < ss) ss = se->ssy;
-	if (se->ssz < ss) ss = se->ssz;
+	ss = se->system_size_x;
+	if (se->system_size_y < ss) ss = se->system_size_y;
+	if (se->system_size_z < ss) ss = se->system_size_z;
 
 	ssr = (double)ss/2.;
 	ssr = ssr - 5.;
@@ -225,7 +225,7 @@ void get_shifts(struct SimulationEnv* se)
 { // updates zi*, zi*shift, *sh
 	int temp1;
 
-	temp1 = se->zix;
+	temp1 = se->zone_count_u;
 	se->zixshift = 0;
 	while (temp1 > 1)
 	{
@@ -233,7 +233,7 @@ void get_shifts(struct SimulationEnv* se)
 		temp1 = temp1/2;
 	}
 
-	temp1 = se->ziy;
+	temp1 = se->zone_count_v;
 	se->ziyshift = 0;
 	while (temp1 > 1)
 	{
@@ -241,7 +241,7 @@ void get_shifts(struct SimulationEnv* se)
 		temp1 = temp1/2;
 	}
 
-	temp1 = se->ziz;
+	temp1 = se->zone_count_w;
 	se->zizshift = 0;
 	while (temp1 > 1)
 	{
@@ -249,7 +249,7 @@ void get_shifts(struct SimulationEnv* se)
 		temp1 = temp1/2;
 	}
 
-	temp1 = se->ssx;
+	temp1 = se->system_size_x;
 	se->ssxshift = 0;
 	while (temp1 > 1)
 	{
@@ -257,7 +257,7 @@ void get_shifts(struct SimulationEnv* se)
 		temp1 = temp1/2;
 	}
 
-	temp1 = se->ssy;
+	temp1 = se->system_size_y;
 	se->ssyshift = 0;
 	while (temp1 > 1)
 	{
@@ -265,7 +265,7 @@ void get_shifts(struct SimulationEnv* se)
 		temp1 = temp1/2;
 	}
 
-	temp1 = se->ssz;
+	temp1 = se->system_size_z;
 	se->sszshift = 0;
 	while (temp1 > 1)
 	{
@@ -276,14 +276,14 @@ void get_shifts(struct SimulationEnv* se)
 	se->xsh = se->zixshift - se->ssxshift;
 	se->ysh = se->ziyshift - se->ssyshift;
 	se->zsh = se->zizshift - se->sszshift;
-	// TODO: more shifts in zones than in system? se->zix > se->ssx
+	// TODO: more shifts in zones than in system? se->zone_count_u > se->system_size_x
 	return;
 }
 
 /******************************************************************************/
 /******************************************************************************/
 
-void adjust_pbc(int* x, int* y, int* z, struct SimulationEnv* se) // should be lattice coordinates
+void adjust_pbc(int* u, int* v, int* w, struct SimulationEnv* se) // should be lattice coordinates
 {
 	// TODO: allow to turn off pbc in a direction
 	// if exceeds boundary, either:
@@ -292,20 +292,20 @@ void adjust_pbc(int* x, int* y, int* z, struct SimulationEnv* se) // should be l
 	// 		if not a site, return -2 for adjust_pbc, skip atom_at+findzone, don't collect energy or create transition
 
 	// x y z in lattice coordinates
-	if (*x < se->simbox_limits_lat[0][0])
-		*x += se->simbox_limits_lat[0][1];
-	if (*x >= se->simbox_limits_lat[0][1])
-		*x -= se->simbox_limits_lat[0][1];
+	if (*u < se->simbox_limits_lat[0][0])
+		*u += se->simbox_limits_lat[0][1];
+	if (*u >= se->simbox_limits_lat[0][1])
+		*u -= se->simbox_limits_lat[0][1];
 
-	if (*y < se->simbox_limits_lat[1][0])
-		*y += se->simbox_limits_lat[1][1];
-	if (*y >= se->simbox_limits_lat[1][1])
-		*y -= se->simbox_limits_lat[1][1];
+	if (*v < se->simbox_limits_lat[1][0])
+		*v += se->simbox_limits_lat[1][1];
+	if (*v >= se->simbox_limits_lat[1][1])
+		*v -= se->simbox_limits_lat[1][1];
 
-	if (*z < se->simbox_limits_lat[2][0])
-		*z += se->simbox_limits_lat[2][1];
-	if (*z >= se->simbox_limits_lat[2][1])
-		*z -= se->simbox_limits_lat[2][1];
+	if (*w < se->simbox_limits_lat[2][0])
+		*w += se->simbox_limits_lat[2][1];
+	if (*w >= se->simbox_limits_lat[2][1])
+		*w -= se->simbox_limits_lat[2][1];
 
 	return;
 
@@ -315,14 +315,14 @@ void adjust_pbc(int* x, int* y, int* z, struct SimulationEnv* se) // should be l
 /********************************************************************************/
 /********************************************************************************/
 // finds the zone indices xy yz zz that correspond to the lattice coordinates xxx yyy zzz
-void findzone(int *xz, int *yz, int *zz, int xxx, int yyy, int zzz, struct SimulationEnv* se)
+void findzone(int *zone_u, int *zone_v, int *zone_w, int u, int v, int w, struct SimulationEnv* se)
 { 
 	// *z are pointers to return indices of the zone, *** are lattice coordinates
 	// normalize coordinates to the sblimits, then find which zone
 	// (zones / extent) * adjusted_coordinate
-	*xz = (int) (((double) se->zix / (se->simbox_limits_lat[0][1] - se->simbox_limits_lat[0][0])) * (xxx - se->simbox_limits_lat[0][0]));
-	*yz = (int) (((double) se->ziy / (se->simbox_limits_lat[1][1] - se->simbox_limits_lat[1][0])) * (yyy - se->simbox_limits_lat[1][0]));
-	*zz = (int) (((double) se->ziz / (se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0])) * (zzz - se->simbox_limits_lat[2][0]));
+	*zone_u = (int) (((double) se->zone_count_u / (se->simbox_limits_lat[0][1] - se->simbox_limits_lat[0][0])) * (u - se->simbox_limits_lat[0][0]));
+	*zone_v = (int) (((double) se->zone_count_v / (se->simbox_limits_lat[1][1] - se->simbox_limits_lat[1][0])) * (v - se->simbox_limits_lat[1][0]));
+	*zone_w = (int) (((double) se->zone_count_w / (se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0])) * (w - se->simbox_limits_lat[2][0]));
 
 	return;
 }
@@ -400,9 +400,9 @@ void initialize_zones(Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct 
 {
 	int i, j, k;
 	
-	for (i=0;i<se->zix;++i)
-		for (j=0;j<se->ziy;++j)
-			for (k=0;k<se->ziz;++k)
+	for (i=0;i<se->zone_count_u;++i)
+		for (j=0;j<se->zone_count_v;++j)
+			for (k=0;k<se->zone_count_w;++k)
 				zone_arr[i][j][k].offset = -1;
 	return;
 }
@@ -650,9 +650,9 @@ void initialize_flat_sheet_1(struct SimulationState *ss, struct SimulationEnv *s
 	for (k = 0; k < se->sheet_thickness; ++k) //new here! loop through z because nothing is buried
 	{
 		//printf("layer k = %d\n", k);
-		for (i=0;i < se->ssx; ++i)						// loop through x and y
+		for (i=0;i < se->system_size_x; ++i)						// loop through x and y
 		{
-			for (j=0;j < se->ssy; ++j)
+			for (j=0;j < se->system_size_y; ++j)
 			{
 				nz = drandj(&rand_seed);
 				
@@ -689,15 +689,15 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
 
 	// for when ss* represents a prism cell
 	//center of the cluster is the halfway point
-	center_cart[0] = se->ssx / 2;
-	center_cart[1] = se->ssy / 2;
-	center_cart[2] = se->ssz / 2;
+	center_cart[0] = se->system_size_x / 2;
+	center_cart[1] = se->system_size_y / 2;
+	center_cart[2] = se->system_size_z / 2;
 	// TODO: check that the center is at a lattice site?
 	cartesian2lattice_site(center_cart, se->invert_primitive_basis, center_lattice);
 
-	// center_lattice[0] = se->ssx / 2;
-	// center_lattice[1] = se->ssy / 2;
-	// center_lattice[2] = se->ssz / 2;
+	// center_lattice[0] = se->system_size_x / 2;
+	// center_lattice[1] = se->system_size_y / 2;
+	// center_lattice[2] = se->system_size_z / 2;
 
 	// convert lattice distance to cartesian distance using largest (smallest?) lattice vector
 	double max_mag = -1; 
@@ -824,9 +824,9 @@ void initialize_simulation_box(struct SimulationEnv* se) //double system_size_x,
 	// 6 planes, of form dot(normal, point on plane) = dot(normal, [x,y,z of point to test])
 	// normal=(1,0,0); point on plane=(128,0,0) -> 128 = x
 	// normal of family (1,0,0) (-1,0,0)
-	// point on plane of family  (se->ssx,0,0) (0,0,0)
-	// x=0 y=0 z=0 x=se->ssx y=se->ssy z=se->ssz
-	// to define a region: x>=0 y>=0 z>=0 x<se->ssx y<se->ssy z<se->ssz
+	// point on plane of family  (se->system_size_x,0,0) (0,0,0)
+	// x=0 y=0 z=0 x=se->system_size_x y=se->system_size_y z=se->system_size_z
+	// to define a region: x>=0 y>=0 z>=0 x<se->system_size_x y<se->system_size_y z<se->system_size_z
 	// normals point towards inside of region (keeps the inequality the same)
 
 	// convert into lattice vector form
@@ -842,15 +842,15 @@ void initialize_simulation_box(struct SimulationEnv* se) //double system_size_x,
 		{0, 0, 0}, // x
 		{0, 0, 0}, // y
 		{0, 0, 0}, // z 
-		{se->ssx, 0, 0}, // x
-		{0, se->ssy, 0}, // y
-		{0, 0, se->ssz}, // z
+		{se->system_size_x, 0, 0}, // x
+		{0, se->system_size_y, 0}, // y
+		{0, 0, se->system_size_z}, // z
 	};
 	
 	double center_cart[] = {
-		se->ssx / 2,
-		se->ssy / 2,
-		se->ssz / 2,
+		se->system_size_x / 2,
+		se->system_size_y / 2,
+		se->system_size_z / 2,
 	};
 	int center_lattice[3];
 	// TODO: check that the center is at a lattice site
@@ -858,13 +858,13 @@ void initialize_simulation_box(struct SimulationEnv* se) //double system_size_x,
 
 	double sbcorners_cart[8][3] = {
 		{0, 0, 0},
-		{se->ssx, 0, 0},
-		{0, se->ssy, 0},
-		{0, 0, se->ssz},
-		{se->ssx, se->ssy, 0},
-		{se->ssx, 0, se->ssz},
-		{0, se->ssy, se->ssz},
-		{se->ssx, se->ssy, se->ssz},
+		{se->system_size_x, 0, 0},
+		{0, se->system_size_y, 0},
+		{0, 0, se->system_size_z},
+		{se->system_size_x, se->system_size_y, 0},
+		{se->system_size_x, 0, se->system_size_z},
+		{0, se->system_size_y, se->system_size_z},
+		{se->system_size_x, se->system_size_y, se->system_size_z},
 	};
 
 	for (int i = 0; i < 3; i++)
@@ -885,13 +885,13 @@ void initialize_simulation_box(struct SimulationEnv* se) //double system_size_x,
 
 		switch (side % 3) {
 			case 0:
-				translation_dist = se->ssx;
+				translation_dist = se->system_size_x;
 				break;
 			case 1:
-				translation_dist = se->ssy;
+				translation_dist = se->system_size_y;
 				break;
 			case 2:
-				translation_dist = se->ssz;
+				translation_dist = se->system_size_z;
 				break;
 		}
 		// TODO: handle system sizes that don't result in even translation vectors
@@ -926,9 +926,9 @@ void corners2limits(double corners_cart[8][3], int limits_lat[3][2], double inv_
 }
 
 // check if coordinate passed periodic boundary conditions, and translate if it did
-void check_pbc(int* x, int* y, int* z, double basis[3][3])
+void check_pbc(int* u, int* v, int* w, double basis[3][3])
 {
-	int coords_lat[3] = {*x, *y, *z};
+	int coords_lat[3] = {*u, *v, *w};
 	// double fcoords_lat[3] = {(double) *x, (double) *y, (double) *z};
 	int rhs;
 	double coords_cart[3];
@@ -952,9 +952,9 @@ void check_pbc(int* x, int* y, int* z, double basis[3][3])
 		if (cond)
 		{
 			pbc_translate(coords_lat, translation_vector[side]);
-			*x = coords_lat[0];
-			*y = coords_lat[1];
-			*z = coords_lat[2];
+			*u = coords_lat[0];
+			*v = coords_lat[1];
+			*w = coords_lat[2];
 		}
 	}
 }

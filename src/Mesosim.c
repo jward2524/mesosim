@@ -41,9 +41,9 @@ int main(int argc, char* argv[]) {
     sim_env = calloc(1, sizeof(struct SimulationEnv));
     log_state = calloc(1, sizeof(struct LoggingState));
 
-    sim_env->zix = TTS;
-    sim_env->ziy = TTS;
-    sim_env->ziz = TTS;
+    sim_env->zone_count_u = TTS;
+    sim_env->zone_count_v = TTS;
+    sim_env->zone_count_w = TTS;
     sim_env->dissolution = DISSOLUTION; // holy shit, when not =DISSOLUTION[=1], it breaks some shit heavy
     // initialize_lattice_geometry(); //this gets overwritten by info from the input file
     sim_env->simulation_type = -1; //TODO: need to define in globals!!
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
     //print a lot of information to the log
     // TODO: move this to a function, esp since most of these are globals anyways
     fprintf(log_state->sim_log_file, "successfully read input file and preprocessed\n");
-    fprintf(log_state->sim_log_file, "system size is %d x %d x %d\n", sim_env->ssx, sim_env->ssy, sim_env->ssz);
+    fprintf(log_state->sim_log_file, "system size is %d x %d x %d\n", sim_env->system_size_x, sim_env->system_size_y, sim_env->system_size_z);
 
     switch (sim_env->lattice_type) {
         case FCC:
@@ -297,9 +297,9 @@ void initialize_lattice_geometry(struct SimulationEnv* sim_env)
 	inver(sim_env->primitive_basis, sim_env->invert_primitive_basis);
 	primitive_basis2ucell_params(sim_env->primitive_basis, sim_env->ucell_params);
 
-	sim_env->ssx = 1;
-	sim_env->ssy = 1;
-	sim_env->ssz = 1;
+	sim_env->system_size_x = 1;
+	sim_env->system_size_y = 1;
+	sim_env->system_size_z = 1;
 
 	return;
 }

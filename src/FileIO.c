@@ -163,12 +163,12 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 	int argsread; //check to see if everything got read correctly
 	if (strncmp(cmd, "systemsize", 10) == 0) {
 		// set the system size using params
-		if ((argsread = sscanf(params, "%d %d %d", &se->ssx, &se->ssy, &se->ssz)) != 3)
+		if ((argsread = sscanf(params, "%d %d %d", &se->system_size_x, &se->system_size_y, &se->system_size_z)) != 3)
 		{
 			fprintf(temp_log, "ERROR! Could not correctly read system size parameters %s\n", params);
 			return FILE_COMMAND_IGNORED;
 		}
-		se->max_atoms = se->ssx * se->ssy * se->ssz;
+		se->max_atoms = se->system_size_x * se->system_size_y * se->system_size_z;
 	}
 	else if (strncmp(cmd, "temp", 4) == 0) {
 		// set the system temperature
@@ -636,12 +636,14 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 	int x,y,z;
 
 	// system and zone size
-	se->ssx = DSIMSIZE; //is this always true?????
-	se->ssy = DSIMSIZE;
-	se->ssz = DSIMSIZE;
-	se->zix = TTS;
-	se->ziy = TTS;
-	se->ziz = TTS;							// zones in x, y, z
+	se->system_size_x = DSIMSIZE; //is this always true?????
+	se->system_size_y = DSIMSIZE;
+	se->system_size_z = DSIMSIZE;
+	
+	// zones in x, y, z
+	se->zone_count_u = TTS;
+	se->zone_count_v = TTS;
+	se->zone_count_w = TTS;	
 
 	//general_simulation_initialization(); //happens later
 
@@ -656,11 +658,11 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 		&se->rmat[1][0], &se->rmat[1][1], &se->rmat[1][2], 
 		&se->rmat[2][0], &se->rmat[2][1], &se->rmat[2][2]); 
 
-	fscanf(input_file, "%d %d %d", &se->ssx, &se->ssy, &se->ssz);
+	fscanf(input_file, "%d %d %d", &se->system_size_x, &se->system_size_y, &se->system_size_z);
 
 	fscanf(input_file, "%d", &newnat);
 
-	fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", se->ssx, se->ssy, se->ssz, newnat);
+	fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", se->system_size_x, se->system_size_y, se->system_size_z, newnat);
 	
 	int tempint;
 	double tempdouble[3][3];
@@ -856,11 +858,11 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 		&se->rmat[1][0], &se->rmat[1][1], &se->rmat[1][2], 
 		&se->rmat[2][0], &se->rmat[2][1], &se->rmat[2][2]); 
 
-	fscanf(input_file, "%d %d %d", &se->ssx, &se->ssy, &se->ssz);
+	fscanf(input_file, "%d %d %d", &se->system_size_x, &se->system_size_y, &se->system_size_z);
 
 	fscanf(input_file, "%d", &newnat);
 
-	fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", se->ssx, se->ssy, se->ssz, newnat);
+	fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", se->system_size_x, se->system_size_y, se->system_size_z, newnat);
 		
 	Atom temp_atom;
 	for (int i=0; i<newnat; ++i)

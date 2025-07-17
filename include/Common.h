@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+// general note: 
+// uvw refer to coordinates in lattice vector space
+// xyz refer to coordinates in cartesian (orthogonal basis) space
+
 // variables for simulation conditions
 // (generally) initialized and then never edited again, only read
 struct SimulationEnv
@@ -21,9 +25,9 @@ struct SimulationEnv
     int zsh, ysh, xsh; // shifts
 
     // [ ]: cartesian, units of nearest-neighbor spacing?
-    int ssx, ssy, ssz; // system size x, y, z
+    int system_size_x, system_size_y, system_size_z; // system size x, y, z
     double ssr;
-    int zix, ziy, ziz;
+    int zone_count_u, zone_count_v, zone_count_w;
 
     int lattice_type;
     int max_neighbors;

@@ -3,15 +3,15 @@
 
 #include "Common.h"
 
-int add_atom(int x, int y, int z, int type, int special, struct SimulationState* ss, struct SimulationEnv* se);
-int atom_at(int cx, int cy, int cz, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
+int add_atom(int u, int v, int w, int type, int special, struct SimulationState* ss, struct SimulationEnv* se);
+int atom_at(int u, int v, int w, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
 void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se);
 void move_atom(int ia, int fa, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition** transition_arr, struct SimulationEnv *se);
 
 // void make_buried_atoms_real(void);
 
-int random_reincarnate_atom(int x, int y, int z, int type, int vc); //feels like it'll never be called
-int reincarnate_atom(int x, int y, int z, int type, int vc); //will not be called
+int random_reincarnate_atom(int u, int v, int w, int type, int vc); //feels like it'll never be called
+int reincarnate_atom(int u, int v, int w, int type, int vc); //will not be called
 void bury_atom(int at, int *pos); //no longer relevant
 
 // rotation and molecule orientation
