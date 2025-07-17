@@ -208,12 +208,10 @@ void initialize_initial_structure(struct SimulationState* ss, struct SimulationE
 			initialize_from_file(se->atoms_filename); //TODO! THIS IS BIG!
 			break;
 	}
-	//printf("My atoms are added\n");
-	check_system(ss, se); // optimizes the atoms added in the initialization routines
-	//printf("My atoms are checked\n");
-	organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis);
-	//printf("My atoms are organized\n");
-	//simulation_initialized = true; //this never really gets used
+
+	// optimizes the atoms added in the initialization routines??
+	check_system(ss, se); 
+	// organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis);
 
 	return;
 }
@@ -339,7 +337,7 @@ void set_default_orientation(Atom** atom_arr, int atom_cnt, int lattice_type, do
 	double spin_ax[3];
 	double vec_angle;
 
-	organize(atom_arr, atom_cnt, basis); // atom_cnt ='d 0
+	// organize(atom_arr, atom_cnt, basis); // atom_cnt ='d 0
 
 	switch(lattice_type)
 	{
