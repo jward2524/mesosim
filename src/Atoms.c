@@ -113,6 +113,7 @@ void create_default_atom(int atom_idx, Atom** atom_arr, struct SimulationEnv *se
 
 	atom_arr[atom_idx]->next_atom = -1;
 	atom_arr[atom_idx]->previous_atom = -1;
+	atom_arr[atom_idx]->bsradius = -1;
 
 	return;
 }
@@ -416,61 +417,70 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 // copies one element ia of atom list to another point fa
 // used only within the simulation routines, things like bonds, etc. are not copied.
 
-void move_atom(int ia, int fa, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition** transition_arr, struct SimulationEnv *se)
+void move_atom(int initial_idx, int final_idx, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition** transition_arr, struct SimulationEnv *se)
 {
-	int n;
-	int n2;
-	int xzone, yzone, zzone;
+	int zone_u, zone_v, zone_w;
 
-	atom_arr[fa]->lattice[0] = atom_arr[ia]->lattice[0];
-	atom_arr[fa]->lattice[1] = atom_arr[ia]->lattice[1];
-	atom_arr[fa]->lattice[2] = atom_arr[ia]->lattice[2];
+	atom_arr[final_idx]->lattice[0] = atom_arr[initial_idx]->lattice[0];
+	atom_arr[final_idx]->lattice[1] = atom_arr[initial_idx]->lattice[1];
+	atom_arr[final_idx]->lattice[2] = atom_arr[initial_idx]->lattice[2];
 
 	/*atom[fa]->color[0] = atom[ia]->color[0];
 	atom[fa]->color[1] = atom[ia]->color[1];
 	atom[fa]->color[2] = atom[ia]->color[2];*/
 
-	atom_arr[fa]->bsradius = atom_arr[ia]->bsradius;
+	atom_arr[final_idx]->bsradius = atom_arr[initial_idx]->bsradius;
 
-	atom_arr[fa]->type = atom_arr[ia]->type;
-	strcpy(atom_arr[fa]->name, atom_arr[ia]->name);
+	atom_arr[final_idx]->type = atom_arr[initial_idx]->type;
+	strcpy(atom_arr[final_idx]->name, atom_arr[initial_idx]->name);
 
 	//atom[fa]->biso = atom[ia]->biso;
 
-	atom_arr[fa]->next_atom = atom_arr[ia]->next_atom;
-	atom_arr[fa]->previous_atom = atom_arr[ia]->previous_atom;
+	atom_arr[final_idx]->next_atom = atom_arr[initial_idx]->next_atom;
+	atom_arr[final_idx]->previous_atom = atom_arr[initial_idx]->previous_atom;
 
-	if (atom_arr[fa]->next_atom >= 0)							// update valid link
-		atom_arr[atom_arr[fa]->next_atom]->previous_atom = fa;
-
-	if (atom_arr[fa]->previous_atom >= 0)
-		atom_arr[atom_arr[fa]->previous_atom]->next_atom = fa;
-	else													// fa is first element of a zone
-		{
-			findzone(&xzone, &yzone, &zzone, atom_arr[fa]->lattice[0], atom_arr[fa]->lattice[1], atom_arr[fa]->lattice[2], se);
-			zone_arr[xzone][yzone][zzone].offset = fa;
-		}
-
-	for (n=0;n < se->max_neighbors;++n)
-		{
-			atom_arr[fa]->neighbor_atom_idxs[n] =	atom_arr[ia]->neighbor_atom_idxs[n];
-
-			n2 = atom_arr[ia]->neighbor_atom_idxs[n];
-			if (n2 >= 0) atom_arr[n2]->neighbor_atom_idxs[se->opposite_offset[n]] = fa;
-
-			atom_arr[fa]->transition_indices[n] = atom_arr[ia]->transition_indices[n];
-
-			if (atom_arr[fa]->transition_indices[n] >= 0)
-			transition_arr[atom_arr[fa]->transition_indices[n]]->atom_idx = fa;
-		}
-
-	atom_arr[fa]->transition_indices[se->max_neighbors]
-		= atom_arr[ia]->transition_indices[se->max_neighbors];
-
-	if (atom_arr[fa]->transition_indices[se->max_neighbors] >= 0){
-		transition_arr[atom_arr[fa]->transition_indices[se->max_neighbors]]->atom_idx = fa;
+	if (atom_arr[final_idx]->next_atom >= 0)
+	{
+		// update valid link
+		atom_arr[atom_arr[final_idx]->next_atom]->previous_atom = final_idx;
 	}
-		
+
+	if (atom_arr[final_idx]->previous_atom >= 0)
+	{
+		atom_arr[atom_arr[final_idx]->previous_atom]->next_atom = final_idx;
+	}
+	else
+	{
+		// fa is first element of a zone
+		findzone(&zone_u, &zone_v, &zone_w, atom_arr[final_idx]->lattice[0], atom_arr[final_idx]->lattice[1], atom_arr[final_idx]->lattice[2], se);
+		zone_arr[zone_u][zone_v][zone_w].offset = final_idx;
+	}
+
+	int n2;
+	for (int n=0; n < se->max_neighbors; ++n)
+	{
+		atom_arr[final_idx]->neighbor_atom_idxs[n] = atom_arr[initial_idx]->neighbor_atom_idxs[n];
+
+		n2 = atom_arr[initial_idx]->neighbor_atom_idxs[n];
+		if (n2 >= 0)
+		{
+			atom_arr[n2]->neighbor_atom_idxs[se->opposite_offset[n]] = final_idx;
+		}
+
+		atom_arr[final_idx]->transition_indices[n] = atom_arr[initial_idx]->transition_indices[n];
+
+		if (atom_arr[final_idx]->transition_indices[n] >= 0)
+		{
+			transition_arr[atom_arr[final_idx]->transition_indices[n]]->atom_idx = final_idx;
+		}
+	}
+
+	atom_arr[final_idx]->transition_indices[se->max_neighbors] = atom_arr[initial_idx]->transition_indices[se->max_neighbors];
+
+	if (atom_arr[final_idx]->transition_indices[se->max_neighbors] >= 0)
+	{
+		transition_arr[atom_arr[final_idx]->transition_indices[se->max_neighbors]]->atom_idx = final_idx;
+	}
 
 	return;
 }
@@ -481,7 +491,7 @@ void move_atom(int ia, int fa, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_
 void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 {
 
-	int i,j;
+	int i,neighbor_idx;
 	int type;
 	int xzone, yzone, zzone;
 
@@ -498,14 +508,14 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 		int vc;
 	} new_atom[MAXIMUM_NUMBER_OF_NEIGHBORS], new_random_atom[MAXIMUM_NUMBER_OF_NEIGHBORS];
 
-	int nt[MAXIMUM_NUMBER_OF_NEIGHBORS];
-	int nnt = 0;
+	int occupied_neighbors[MAXIMUM_NUMBER_OF_NEIGHBORS];
+	int occupied_neighbors_cnt = 0;
 
-	int nb[MAXIMUM_NUMBER_OF_NEIGHBORS];
-	int nnb = 0;
+	int buried_neighbors[MAXIMUM_NUMBER_OF_NEIGHBORS];
+	int buried_neighbors_cnt = 0;
 
-	int nr[MAXIMUM_NUMBER_OF_NEIGHBORS];
-	int nnr = 0;
+	int reincar_neighbors[MAXIMUM_NUMBER_OF_NEIGHBORS];
+	int reincar_neighbors_cnt = 0;
 
 	number_of_new_atoms = 0;
 	number_of_new_random_atoms = 0;
@@ -516,9 +526,9 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 
 	for (i=0; i < se->max_neighbors; ++i)
 	{
-		j = ss->atom_arr[at]->neighbor_atom_idxs[i];
+		neighbor_idx = ss->atom_arr[at]->neighbor_atom_idxs[i];
 
-		switch(j) //might be irrelevant if burial removed // [ ]: burried
+		switch(neighbor_idx) //might be irrelevant if burial removed // [ ]: burried
 		{
 			// -2 and -1 are not used - reincarnation and incarnation?
 			case -2:
@@ -564,9 +574,9 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 				break;
 
 			default:	// make other atom see this spot as empty
-				ss->atom_arr[j]->neighbor_atom_idxs[se->opposite_offset[i]] = -1;
-				nt[nnt] = j;
-				++nnt;
+				ss->atom_arr[neighbor_idx]->neighbor_atom_idxs[se->opposite_offset[i]] = -1;
+				occupied_neighbors[occupied_neighbors_cnt] = neighbor_idx;
+				++occupied_neighbors_cnt;
 				break;
 		}
 	}
@@ -582,9 +592,9 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 	// remove the atom from the atom list
 
 	i = ss->atom_arr[at]->next_atom;
-	j = ss->atom_arr[at]->previous_atom;
+	neighbor_idx = ss->atom_arr[at]->previous_atom;
 
-	if (j == -1)
+	if (neighbor_idx == -1)
     {
         // this is the first atom on this list, so make the zone point to
 		// the next element in the list.  Note that if the zone had only
@@ -602,13 +612,13 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
         if (i == -1)
         {
 		    // this is the last element on this list,
-			ss->atom_arr[j]->next_atom = -1;
+			ss->atom_arr[neighbor_idx]->next_atom = -1;
 		}
 		else
         {
 			// atom is embedded in the list, nothing special needs be done
-			ss->atom_arr[i]->previous_atom = j;
-			ss->atom_arr[j]->next_atom = i;
+			ss->atom_arr[i]->previous_atom = neighbor_idx;
+			ss->atom_arr[neighbor_idx]->next_atom = i;
 		}
 	}
 
@@ -619,9 +629,9 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 		//copy_atom(nat-1, at);
         move_atom((ss->atom_cnt-1), at, ss->atom_arr, ss->zone_arr, ss->transition_arr, se);
 
-	    for (i=0;i<nnt;++i)
-			if (nt[i] == (ss->atom_cnt-1))
-				nt[i] = at;
+	    for (i=0;i<occupied_neighbors_cnt;++i)
+			if (occupied_neighbors[i] == (ss->atom_cnt-1))
+				occupied_neighbors[i] = at;
 	}
 
 	free(ss->atom_arr[ss->atom_cnt-1]);
@@ -630,7 +640,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 
 	// re-incarnate the buried atoms of the same type
 
-	nnb = 0;
+	buried_neighbors_cnt = 0;
 
 	for (i=0;i<number_of_new_atoms;++i)
     {
@@ -640,11 +650,11 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 
         vc = new_atom[i].vc;
 
-        nb[nnb] = reincarnate_atom(u,v,w,type,vc);
-        ++nnb;
+        buried_neighbors[buried_neighbors_cnt] = reincarnate_atom(u,v,w,type,vc);
+        ++buried_neighbors_cnt;
     }
 
-	nnr = 0;
+	reincar_neighbors_cnt = 0;
 
 	for (i=0;i<number_of_new_random_atoms;++i)
     {
@@ -664,9 +674,9 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 			bar += se->substrate_composition[type];
 		}
 		while (bar < subv);
-		nr[nnr]= random_reincarnate_atom(u, v, w, type, vc);
+		reincar_neighbors[reincar_neighbors_cnt]= random_reincarnate_atom(u, v, w, type, vc);
 
-        ++nnr;
+        ++reincar_neighbors_cnt;
         }
 
 	return;
@@ -682,6 +692,8 @@ int atom_at(int u, int v, int w, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONE
 	// lattice coordinates uvw
 	int i;
 	int zone_u, zone_v, zone_w;
+
+	adjust_pbc(&u, &v, &w, se);
 
 	// find proper zone
 	findzone(&zone_u, &zone_v, &zone_w, u, v, w, se);

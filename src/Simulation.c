@@ -90,6 +90,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 	while (!simulation_end)
 	{
+		printf("%lld %lld %lld\n", iter, ss->atom_cnt, transitioning_atom_idx);
 		if (ss->simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
 		{
 			//find_average_curvature(); // XXX: no longer valid
@@ -101,7 +102,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			ss->simulation_should_kill_itself = false;
 
 			// TODO: remove from here
-			organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); // XXX: remove from here
+			// organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); // XXX: remove from here
 
 			return 1; //return 1 b/c error
 		}
@@ -209,7 +210,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			prev_stime = ss->elapsed_stime;
 		}
 
-		// refresh neighbors of previous atom
+		// refresh neighbors of previous site
 		for (int i = 0; i < se->max_neighbors; i++)
 		{
 			neighbor_x = old_x + se->jump_offset[i].dx;
@@ -230,7 +231,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			// refresh moved atom
 			refresh_transitions(transitioned_atom_idx, ss, se);
 	
-			// refresh neighbors of moved atom
+			// refresh neighbors of moved-to site
 			for (int i = 0; i < se->max_neighbors; i++)
 			{
 				neighbor_idx = ss->atom_arr[transitioned_atom_idx]->neighbor_atom_idxs[i];
@@ -256,7 +257,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 		if (checkpoint_reached)
 		{
-			organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); //replaced but do i really need it
+			// organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); //replaced but do i really need it
 			
 			//record the elapsed time in a file here
 			printf("writing file %d: elapsed_stime = %lf\n", framenum, ss->elapsed_stime);
