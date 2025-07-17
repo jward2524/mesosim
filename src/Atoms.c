@@ -140,8 +140,9 @@ int add_atom(int x, int y, int z, int type, int special, struct SimulationState*
 				++num_overlapping;
 		}
 
-		printf("ERROR! Unable to add atom %lld; %d other atoms found at (%d, %d, %d)\n", ss->atom_cnt, num_overlapping, x, y, z);
-		ss->simulation_should_kill_itself = true;
+		fprintf(stderr, "ERROR! Unable to add atom %lld; %d other atoms found at (%d, %d, %d)\n", ss->atom_cnt, num_overlapping, x, y, z);
+		// ss->simulation_should_kill_itself = true;
+		clean_and_exit(1);
 		return ss->atom_cnt;
 	}
 

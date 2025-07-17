@@ -243,14 +243,12 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 		// ENHANCE - not all are necessary if overpotential/temperature don't change?
 		compute_transition_array(ss, se);
 		// end of updating rates
-		
-		++iter; //sanity check to avoid ending in an infinite cycle // [ ]: what?
-
+	
 		// after iteration, log if necessary
 		if (iter % 100 == 0)
 			printf("iteration %ld, time %le\n", iter, ss->elapsed_stime);
 
-			// TODO: implement the checkpoint lists
+		// TODO: implement the checkpoint lists
 		if ((ls->analysis_type == REGULAR_TIME_INTERVALS) || (ls->analysis_type == LN_TIME_INTERVALS))
 			checkpoint_reached = (ss->elapsed_stime >= ls->next_log_checkpoint);
 		else if (ls->analysis_type == ITERATION_INTERVALS)
@@ -287,12 +285,14 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			++framenum;
 		}
 
+		++iter; //sanity check to avoid ending in an infinite cycle // [ ]: what?
+
 		// check if simulation is over
 		if (ss->sim_end_type == SIM_END_BY_STIME){
 			simulation_end = (ss->elapsed_stime >= ss->run_stime);
 		}
 		else if (ss->sim_end_type == SIM_END_BY_ITERATIONS) {
-			simulation_end = (iter >= ss->final_iteration);
+			simulation_end = (iter > ss->final_iteration);
 		}
 	}
 
