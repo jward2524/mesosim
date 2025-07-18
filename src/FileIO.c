@@ -934,50 +934,28 @@ bool write_xyz_file(char* xyz_filename, int frame_num, struct SimulationState* s
 		[comment line - exactly one line]
 		[element] [x] [y] [z]
 	*/
-	// using extended XYZ format
-	// (https://docs.ovito.org/reference/file_formats/input/xyz.html#file-formats-input-xyz-extended-format)
-	fprintf(file, "%lld\n", ss->atom_cnt); //start with number of atoms
-	// TODO: move calculation to initialization fxn
-	// TODO: make a simulation_basis or simulation_cell variable
+
+	//start with number of atoms
+	fprintf(file, "%lld\n", ss->atom_cnt); 
+
 	if (is_extended)
 	{
+		// using extended XYZ format
+		// (https://docs.ovito.org/reference/file_formats/input/xyz.html#file-formats-input-xyz-extended-format)
+		
 		// 3x3 matrix - rows are cell vectors [preferred]
-		int u_range = se->simbox_limits_lat[0][1] - se->simbox_limits_lat[0][0];
-		int v_range = se->simbox_limits_lat[1][1] - se->simbox_limits_lat[1][0];
-		int w_range = se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0];
-
-		// ENHANCE: this would be prettier if se->primitive_basis were transposed'
-		// [[u1 u2 u3], [v1 v2 v3], [w1 w2 w3]] vs [[u1 v1 w1], [u2 v2 w2], [u3 v3 w3]]
-		int u_lat[3] = {u_range, 0, 0};
-		int v_lat[3] = {0, v_range, 0};
-		int w_lat[3] = {0, 0, w_range};
-		double u_cart[3], v_cart[3], w_cart[3];
-		
-		lattice2cartesian(u_lat, se->primitive_basis, u_cart);
-		lattice2cartesian(v_lat, se->primitive_basis, v_cart);
-		lattice2cartesian(w_lat, se->primitive_basis, w_cart);
-		
 		fprintf(
 			file, 
 			"Lattice=\"%lf %lf %lf %lf %lf %lf %lf %lf %lf\" ",
-			u_cart[0], u_cart[1], u_cart[2],
-			v_cart[0], v_cart[1], v_cart[2],
-			w_cart[0], w_cart[1], w_cart[2]
+			se->simbox_vectors_cart[0][0], se->simbox_vectors_cart[0][1], se->simbox_vectors_cart[0][2],
+			se->simbox_vectors_cart[1][0], se->simbox_vectors_cart[1][1], se->simbox_vectors_cart[1][2],
+			se->simbox_vectors_cart[2][0], se->simbox_vectors_cart[2][1], se->simbox_vectors_cart[2][2]
 		);
-
-		int o_lat[] = {
-			se->simbox_limits_lat[0][0],
-			se->simbox_limits_lat[1][0],
-			se->simbox_limits_lat[2][0]
-		};
-		double o_cart[3];
-
-		lattice2cartesian(o_lat, se->primitive_basis, o_cart);
 
 		fprintf(
 			file, 
 			"Origin=\"%lf %lf %lf\" ",
-			o_cart[0], o_cart[1], o_cart[2]
+			se->simbox_origin_cart[0], se->simbox_origin_cart[1], se->simbox_origin_cart[2]
 		);
 		fprintf(file, "pbc=\"T T T\" ");
 		fprintf(file, "Properties=id:I:1:species:S:1:pos:R:3 ");

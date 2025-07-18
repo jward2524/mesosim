@@ -290,24 +290,21 @@ void adjust_pbc(int* u, int* v, int* w, struct SimulationEnv* se) // should be l
 	// 		if not a site, return -2 for adjust_pbc, skip atom_at+findzone, don't collect energy or create transition
 
 	// x y z in lattice coordinates
-	int u_range = se->simbox_limits_lat[0][1] - se->simbox_limits_lat[0][0];
-	int v_range = se->simbox_limits_lat[1][1] - se->simbox_limits_lat[1][0];
-	int w_range = se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0];
 
 	if (*u < se->simbox_limits_lat[0][0])
-		*u += u_range;
+		*u += se->lat_range[0];
 	if (*u >= se->simbox_limits_lat[0][1])
-		*u -= u_range;
+		*u -= se->lat_range[0];
 
 	if (*v < se->simbox_limits_lat[1][0])
-		*v += v_range;
+		*v += se->lat_range[1];
 	if (*v >= se->simbox_limits_lat[1][1])
-		*v -= v_range;
+		*v -= se->lat_range[1];
 
 	if (*w < se->simbox_limits_lat[2][0])
-		*w += w_range;
+		*w += se->lat_range[2];
 	if (*w >= se->simbox_limits_lat[2][1])
-		*w -= w_range;
+		*w -= se->lat_range[2];
 
 	return;
 
@@ -322,9 +319,9 @@ void findzone(int *zone_u, int *zone_v, int *zone_w, int u, int v, int w, struct
 	// *z are pointers to return indices of the zone, *** are lattice coordinates
 	// normalize coordinates to the sblimits, then find which zone
 	// (zones / extent) * adjusted_coordinate
-	*zone_u = (int) (((double) se->zone_count_u / (se->simbox_limits_lat[0][1] - se->simbox_limits_lat[0][0])) * (u - se->simbox_limits_lat[0][0]));
-	*zone_v = (int) (((double) se->zone_count_v / (se->simbox_limits_lat[1][1] - se->simbox_limits_lat[1][0])) * (v - se->simbox_limits_lat[1][0]));
-	*zone_w = (int) (((double) se->zone_count_w / (se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0])) * (w - se->simbox_limits_lat[2][0]));
+	*zone_u = (int) (((double) se->zone_count_u / (se->lat_range[0])) * (u - se->simbox_limits_lat[0][0]));
+	*zone_v = (int) (((double) se->zone_count_v / (se->lat_range[1])) * (v - se->simbox_limits_lat[1][0]));
+	*zone_w = (int) (((double) se->zone_count_w / (se->lat_range[2])) * (w - se->simbox_limits_lat[2][0]));
 
 	return;
 }
@@ -648,7 +645,7 @@ void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se)
 {
 	double drand;
 
-	int mid_w = (se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0]) / 2;
+	int mid_w = se->simbox_limits_lat[2][0] + ((se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0]) / 2);
 	int half_thickness = se->sheet_thickness / 2;
 
 	for (int k = mid_w - half_thickness; k < mid_w + half_thickness; ++k)
@@ -877,6 +874,23 @@ void initialize_simulation_box(struct SimulationEnv* se) //double system_size_x,
 		se->simbox_limits_lat[i][1] = center_lattice[0];
 	}
 	corners2limits(sbcorners_cart, se->simbox_limits_lat, se->invert_primitive_basis);
+
+	for (int i = 0; i < 3; i++)
+	{
+		se->lat_range[i] = se->simbox_limits_lat[i][1] - se->simbox_limits_lat[i][0];
+		int vector_lat[3] = {0, 0, 0};
+		vector_lat[i] = se->lat_range[i];
+		lattice2cartesian(vector_lat, se->primitive_basis, se->simbox_vectors_cart[i]);
+	}
+
+	// origin is the minimum in all directions
+	int origin_lat[] = {
+		se->simbox_limits_lat[0][0],
+		se->simbox_limits_lat[1][0],
+		se->simbox_limits_lat[2][0]
+	};
+
+	lattice2cartesian(origin_lat, se->primitive_basis, se->simbox_origin_cart);
 
 	// double point_lat[6][3];
 	double translation_dist;

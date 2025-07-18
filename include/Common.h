@@ -51,6 +51,11 @@ struct SimulationEnv
 
     // the lattice coorinate limits in order to accomodate the "simulation box"
     int simbox_limits_lat[3][2];
+    int lat_range[3];
+
+    // cartesian simulation cell vectors
+    double simbox_vectors_cart[3][3]; // [[u1 u2 u3], [v1 v2 v3], [w1 w2 w3]]
+    double simbox_origin_cart[3];
 
     double *nn_energy; // nnE[num_nn_levels][num_bond_types]
     
@@ -74,6 +79,7 @@ struct SimulationEnv
     
     // primitive unit cell basis vectors + inverted; primitive_basis[*][0] = basis1, primitive_basis[0][*] = x component of basises
     // is also transformation matrix for [lattice to cartesian coordinates] [cartesian to lattice coordinates] respectively
+    // [[u1 v1 w1], [u2 v2 w2], [u3 v3 w3]]
     double primitive_basis[3][3];
     double invert_primitive_basis[3][3]; 
     double ucell_params[6]; // unit cell parameters; a b c alpha beta gamma // TODO: this is never used except for printing?
