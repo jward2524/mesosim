@@ -21,7 +21,7 @@ void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double* total_inte
 
 void initialize_initial_structure(struct SimulationState* ss, struct SimulationEnv* se);
 
-void general_simulation_initialization(struct SimulationState* ss, struct SimulationEnv* se);
+void initialize_simulation_variables(struct SimulationState* ss, struct SimulationEnv* se);
 
 void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv* se);
 void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationEnv* se);

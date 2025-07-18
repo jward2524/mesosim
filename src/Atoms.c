@@ -159,7 +159,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 
 	if (ss->atom_cnt > se->max_atoms)
 	{
-		fprintf(stderr, "Number of atoms (%lld) is exceeding set maximum (%lld)", ss->atom_cnt, se->max_atoms);
+		fprintf(stderr, "Number of atoms (%lld) is exceeding set maximum (%lld)\n", ss->atom_cnt, se->max_atoms);
         clean_and_exit(errno);
 	}
 

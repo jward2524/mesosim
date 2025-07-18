@@ -92,7 +92,7 @@ void get_system_normal(double basis[3][3]) // XXX: supposedly only for vizualiza
 /******************************************************************************/
 /******************************************************************************/
 // updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; zone_arr, rmat; normal_x, normal_y, normal_z; max_neighbors, se->jump_offset, se->opposite_offset; zi*, zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_stime, overpotential, next_log_checkpoint
-void general_simulation_initialization(struct SimulationState* ss, struct SimulationEnv* se)
+void initialize_simulation_variables(struct SimulationState* ss, struct SimulationEnv* se)
 {
 	// finish initializing structs
 
@@ -172,21 +172,6 @@ void general_simulation_initialization(struct SimulationState* ss, struct Simula
 
 	if (rand_seed > 0) rand_seed = -rand_seed;
 	srandj(&rand_seed);
-	// atom_cnt=0 for the initialization functions, so some of them end up doing nothing
-	get_shifts(se);	// bit shifts for periodic boundary conditions
-
-	// system geometry initialization
-
-	set_primitive_basis(se);
-	set_default_orientation(ss->atom_arr, ss->atom_cnt, se->lattice_type, se->rmat, se->primitive_basis); // supposedly was only for visualization
-	get_system_normal(se->primitive_basis);	// maybe only for visualization
-
-	// initialize data structures that help figure out which atoms are next to which other atoms
-
-	initialize_neighbor_offsets(se->lattice_type, &se->max_neighbors, se->jump_offset, se->opposite_offset);
-	initialize_zones(ss->zone_arr, se);							// initialize zone offsets
-
-	//set_atom_colors(atom_color); // not needed anymore
 
 	return;
 }
@@ -210,7 +195,7 @@ void initialize_initial_structure(struct SimulationState* ss, struct SimulationE
 	}
 
 	// optimizes the atoms added in the initialization routines??
-	check_system(ss, se); 
+	check_system(ss, se); // XXX
 	// organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis);
 
 	return;
@@ -882,6 +867,8 @@ void initialize_simulation_box(struct SimulationEnv* se) //double system_size_x,
 		vector_lat[i] = se->lat_range[i];
 		lattice2cartesian(vector_lat, se->primitive_basis, se->simbox_vectors_cart[i]);
 	}
+
+	se->max_atoms = se->lat_range[0] * se->lat_range[1] * se->lat_range[2];
 
 	// origin is the minimum in all directions
 	int origin_lat[] = {

@@ -645,7 +645,7 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 	se->zone_count_v = TTS;
 	se->zone_count_w = TTS;	
 
-	//general_simulation_initialization(); //happens later
+	//initialize_simulation_variables(); //happens later
 
 	//read in the lattice and rotation matrices
 	fscanf(input_file, "%lf %lf %lf %lf %lf %lf %lf %lf %lf",
