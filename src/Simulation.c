@@ -90,7 +90,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 	while (!simulation_end)
 	{
-		printf("%lld %lld %lld\n", iter, ss->atom_cnt, transitioning_atom_idx);
 		if (ss->simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
 		{
 			//find_average_curvature(); // XXX: no longer valid
@@ -189,6 +188,11 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 				j += rate_skip;
 				if (j == ss->rate_cnt) //no more options!
 					break;
+			}
+			else
+			{
+				fprintf(stderr, "Transition decision failed\n");
+				clean_and_exit(1);
 			}
 		}
 
@@ -323,7 +327,7 @@ void compute_transition_array(struct SimulationState* ss, struct SimulationEnv* 
 	double sum_of_rate_populations = 0.0;
 	ss->frequency_sum = 0.0;
 	
-	int rate_const;
+	double rate_const;
 	Rate *r;
 	// ENHANCE: parallelize
 	for (int rate_idx=0; rate_idx < ss->rate_cnt; ++rate_idx)
@@ -338,6 +342,11 @@ void compute_transition_array(struct SimulationState* ss, struct SimulationEnv* 
 			else
 			{
 				rate_const = calculate_surf_diffusion_rate(r->atom_env, ss->temperature, se);
+			}
+			if (isnan(rate_const))
+			{
+				fprintf(stderr, "Rate constant is nan");
+				clean_and_exit(1);
 			}
 			r->k = rate_const;
 			r->frequency = r->k*(double)r->transition_count;
