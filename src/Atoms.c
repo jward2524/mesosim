@@ -200,6 +200,8 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 	ss->atom_arr[pos]->lattice[1] = v;
 	ss->atom_arr[pos]->lattice[2] = w;
 
+	lattice2cartesian(ss->atom_arr[pos]->lattice, se->primitive_basis, ss->atom_arr[pos]->cart_coord);
+
 	ss->atom_arr[pos]->type = type;
 	strcpy(ss->atom_arr[ss->atom_cnt-1]->name, se->atom_names[type]); // TODO: use pos instead of atom_cnt-1
 	// TODO: use snprintf instead of strcpy
@@ -424,6 +426,8 @@ void move_atom(int initial_idx, int final_idx, Atom** atom_arr, Zone zone_arr[ZO
 	atom_arr[final_idx]->lattice[0] = atom_arr[initial_idx]->lattice[0];
 	atom_arr[final_idx]->lattice[1] = atom_arr[initial_idx]->lattice[1];
 	atom_arr[final_idx]->lattice[2] = atom_arr[initial_idx]->lattice[2];
+
+	lattice2cartesian(atom_arr[final_idx]->lattice, se->primitive_basis, atom_arr[final_idx]->cart_coord);
 
 	/*atom[fa]->color[0] = atom[ia]->color[0];
 	atom[fa]->color[1] = atom[ia]->color[1];
