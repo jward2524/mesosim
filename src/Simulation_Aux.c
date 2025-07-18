@@ -198,7 +198,7 @@ void initialize_initial_structure(struct SimulationState* ss, struct SimulationE
 	switch(se->simulation_type) // TODO: just use the damn macros instead
 	{
 		case 1:										// flat plane
-			initialize_flat_sheet_1(ss, se);
+			initialize_flat_sheet(ss, se);
 			break;
 
 		case 2:
@@ -644,19 +644,21 @@ int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, 
 /********************************************************************************/
 /********************************************************************************/
 
-void initialize_flat_sheet_1(struct SimulationState *ss, struct SimulationEnv *se)
+void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se)
 {
-	int i,j,k;
-	double nz;
-	//printf("Hi there\n");
-	for (k = 0; k < se->sheet_thickness; ++k) //new here! loop through z because nothing is buried
+	double drand;
+
+	int mid_w = (se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0]) / 2;
+	int half_thickness = se->sheet_thickness / 2;
+
+	for (int k = mid_w - half_thickness; k < mid_w + half_thickness; ++k)
 	{
-		//printf("layer k = %d\n", k);
-		for (i=0;i < se->system_size_x; ++i)						// loop through x and y
+		for (int i=se->simbox_limits_lat[0][0]; i < se->simbox_limits_lat[0][1]; ++i)
 		{
-			for (j=0;j < se->system_size_y; ++j)
+			// loop through x and y (two lattice directions)
+			for (int j=se->simbox_limits_lat[1][0]; j < se->simbox_limits_lat[1][1]; ++j)
 			{
-				nz = drandj(&rand_seed);
+				drand = drandj(&rand_seed);
 				
 				// TODO: make into fxn
 				double bar = 0;
@@ -665,7 +667,7 @@ void initialize_flat_sheet_1(struct SimulationState *ss, struct SimulationEnv *s
 					type++;
 					bar += se->substrate_composition[type];
 				}
-				while (bar < nz);
+				while (bar < drand);
 				add_atom(i, j, k, type, NORMAL, ss, se);
 			}
 		}

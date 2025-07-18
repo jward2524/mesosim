@@ -23,7 +23,7 @@ void initialize_initial_structure(struct SimulationState* ss, struct SimulationE
 
 void general_simulation_initialization(struct SimulationState* ss, struct SimulationEnv* se);
 
-void initialize_flat_sheet_1(struct SimulationState *ss, struct SimulationEnv* se);
+void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv* se);
 void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationEnv* se);
 void initialize_from_file(char* filename);
 

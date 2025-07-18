@@ -942,15 +942,15 @@ bool write_xyz_file(char* xyz_filename, int frame_num, struct SimulationState* s
 	if (is_extended)
 	{
 		// 3x3 matrix - rows are cell vectors [preferred]
-		int x_range = se->simbox_limits_lat[0][1] - se->simbox_limits_lat[0][0];
-		int y_range = se->simbox_limits_lat[1][1] - se->simbox_limits_lat[1][0];
-		int z_range = se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0];
+		int u_range = se->simbox_limits_lat[0][1] - se->simbox_limits_lat[0][0];
+		int v_range = se->simbox_limits_lat[1][1] - se->simbox_limits_lat[1][0];
+		int w_range = se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0];
 
 		// ENHANCE: this would be prettier if se->primitive_basis were transposed'
 		// [[u1 u2 u3], [v1 v2 v3], [w1 w2 w3]] vs [[u1 v1 w1], [u2 v2 w2], [u3 v3 w3]]
-		int u_lat[3] = {x_range, 0, 0};
-		int v_lat[3] = {0, y_range, 0};
-		int w_lat[3] = {0, 0, z_range};
+		int u_lat[3] = {u_range, 0, 0};
+		int v_lat[3] = {0, v_range, 0};
+		int w_lat[3] = {0, 0, w_range};
 		double u_cart[3], v_cart[3], w_cart[3];
 		
 		lattice2cartesian(u_lat, se->primitive_basis, u_cart);
