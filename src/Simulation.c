@@ -66,8 +66,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	ss->total_atoms_dissolved = 0;
 
 	// initial state
-	calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
-	
 	output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 	write_xyz_file(ls->position_log_prefix, framenum, ss, se);
 	framenum++;
@@ -92,9 +90,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	{
 		if (ss->simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
 		{
-			//find_average_curvature(); // XXX: no longer valid
-
-			calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 			output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 			write_xyz_file(ls->position_log_prefix, framenum, ss, se);
 
@@ -232,7 +227,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 		// if transition was not evaporation
 		if (transitioned_atom_idx >= 0)
 		{
-			// refresh moved atom
+			// refresh moved atom - gets refreshed as neighbor of previous site
 			refresh_transitions(transitioned_atom_idx, ss, se);
 	
 			// refresh neighbors of moved-to site
@@ -265,8 +260,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			
 			//record the elapsed time in a file here
 			printf("writing file %d: elapsed_stime = %lf\n", framenum, ss->elapsed_stime);
-			
-			calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 			output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 			write_xyz_file(ls->position_log_prefix, framenum, ss, se);
 			
@@ -303,8 +296,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 	
 	//write elapsed_stime to mark finish
-	//TODO: finish IO
-	calculate_internal_energy(ss->atom_arr, ss->atom_cnt, &ss->total_internal_energy, se);
 	output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 	write_xyz_file(ls->position_log_prefix, framenum, ss, se);
 	
@@ -401,7 +392,7 @@ int get_bond_index(int a, int b, struct SimulationEnv* se)
 // updates [atom_arr[atom_idx], neighbor_atom_idxs, transition_arr[i], rate_arr[i].transition_start_idx], initializes rate_arr
 int refresh_transitions(int atom_idx, struct SimulationState* ss, struct SimulationEnv* se) // atom_idx = index on atom list
 {
-	int i, neighbor_idx;
+	int neighbor_idx;
 	int rate_idx; // position of rate rate in rate list rate_arr[]
 	int next_x, next_y, next_z;
 
@@ -414,15 +405,19 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 
 	// first, remove all mention of this atom from transition list
 	// extra 1 for evaporation
-	for (i=0; i < se->max_neighbors + se->dissolution; ++i) 
+	for (int i=0; i < se->max_neighbors + se->dissolution; ++i) 
 	{
 		// transition can happen in the "i" direction
 		if (ss->atom_arr[atom_idx]->transition_indices[i] != -1) 
 			take_off_transition_list(atom_idx, i, ss);
 	}
 
+	ss->total_internal_energy -= ss->atom_arr[atom_idx]->energy;
+	ss->atom_arr[atom_idx]->energy = 0;
+
+	// update neighbors
 	// cycle through neighbor coordinates, and check if there is an atom there
-	for (i=0;i < se->max_neighbors;++i)
+	for (int i=0; i < se->max_neighbors; ++i)
 	{
 		ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] = -1;
 
@@ -443,12 +438,15 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 			int env_idx = get_env_index(1, bond_idx, se); // 1 for 1st nn
 			
 			atom_env[env_idx]++;
+			ss->atom_arr[atom_idx]->energy += se->nn_energy[env_idx];
 		}
 
 		// // if no atom atom_idx that position but occ_neighbor array says there is, fix it
 		// if ((j == -1) && (ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] >= 0))
 		// 	ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] = -1;
 	}
+	ss->atom_arr[atom_idx]->energy /= 2;
+	ss->total_internal_energy += ss->atom_arr[atom_idx]->energy;
 
 	// cycle through the neighbor sites.  if there's an empty one, calculate the transition rate to it
 	atom_rates_cnt = 0;
@@ -461,13 +459,13 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 		return atom_rates_cnt;
 
 	// create transitions to each unoccupied neighbor
-	for (int neighbor_idx=0; neighbor_idx < se->max_neighbors; ++neighbor_idx) 
+	for (int i=0; i < se->max_neighbors; ++i) 
 	{
 		// if unoccupied, consider transition
-		if (ss->atom_arr[atom_idx]->neighbor_atom_idxs[neighbor_idx] == -1) 
+		if (ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] == -1) 
 		{ 
 			// end_config is only used to identify the transitions that are functionally evaporations (no neighbors in end configuration)
-			int final_config_neighbor_cnt = get_final_configuration(atom_idx, neighbor_idx, ss, se, end_config);
+			int final_config_neighbor_cnt = get_final_configuration(atom_idx, i, ss, se, end_config);
 
 			if (final_config_neighbor_cnt < 1)
 			{
@@ -484,7 +482,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 				// if rate doesn't already exist, make new one
 				rate_idx = create_new_rate(atom_env, 0, ss, se);
 			}
-			add_to_transition_list(rate_idx, atom_idx, neighbor_idx, ss, se);
+			add_to_transition_list(rate_idx, atom_idx, i, ss, se);
 		}
 	}	
 

@@ -466,35 +466,16 @@ void initialize_jump_offsets(int lattice_type, CrystalOffset *jump_offset, int *
 /********************************************************************************/
 /********************************************************************************/
 // sum of all bond energies in system
-void calculate_internal_energy(Atom** atom_arr, int atom_cnt, double* total_internal_energy, struct SimulationEnv* se)
+double calculate_internal_energy(Atom** atom_arr, int atom_cnt, struct SimulationEnv* se)
 {
-	int neighbor, a_type, b_type, bond_idx, env_idx;
-	
-	*total_internal_energy = 0.;
+	double total_internal_energy = 0;
 
 	// for every atom, for every neighbor, calculate energy
 	for (int i = 0; i < atom_cnt; ++i) {
-		a_type = atom_arr[i]->type;
-		for (int j = 0; j < se->max_neighbors; ++j)
-		{
-			neighbor = atom_arr[i]->neighbor_atom_idxs[j];
-
-			if (neighbor != -1) //site is not empty
-			{
-				b_type = atom_arr[neighbor]->type;
-				
-				//bonds are assumed to be isotropic
-				bond_idx = get_bond_index(a_type, b_type, se);
-				env_idx = get_env_index(1, bond_idx, se);
-
-				*total_internal_energy += se->nn_energy[env_idx];
-			}
-
-		}
+		total_internal_energy += atom_arr[i]->energy;
 	}
 	// double counting all bonds, so divide by 2
-	*total_internal_energy /= 2.;
-	return;
+	return total_internal_energy;
 }
 /********************************************************************************/
 /********************************************************************************/
@@ -557,7 +538,7 @@ void set_primitive_basis(struct SimulationEnv *se) // lattice_type = crystal str
 /********************************************************************************/
 // fills initial_config with type of neighbors to atom[at], before jump offset_idx
 int get_initial_configuration(int atom_idx, int max_neighbors, Atom** atom_arr, int initial_config[]) // atom_idx is position in atom list, offset_idx is index in se->jump_offset
-{	// TODO: rename to remove the 2
+{
    	int offset_idx, neighbor_idx;
 	int nn_count = 0; // nearest-neighbors
 

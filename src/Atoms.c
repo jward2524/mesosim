@@ -99,7 +99,7 @@ void create_default_atom(int atom_idx, Atom** atom_arr, struct SimulationEnv *se
 		
 	for (int i=0; i<3; ++i)
 	{
-		atom_arr[atom_idx]->cart_coord[i] = 0.0;
+		atom_arr[atom_idx]->cartesian[i] = 0.0;
 		atom_arr[atom_idx]->lattice[i] = 0.0;
 	}
 
@@ -114,6 +114,7 @@ void create_default_atom(int atom_idx, Atom** atom_arr, struct SimulationEnv *se
 	atom_arr[atom_idx]->next_atom = -1;
 	atom_arr[atom_idx]->previous_atom = -1;
 	atom_arr[atom_idx]->bsradius = -1;
+	atom_arr[atom_idx]->energy = 0;
 
 	return;
 }
@@ -200,16 +201,16 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 	ss->atom_arr[pos]->lattice[1] = v;
 	ss->atom_arr[pos]->lattice[2] = w;
 
-	lattice2cartesian(ss->atom_arr[pos]->lattice, se->primitive_basis, ss->atom_arr[pos]->cart_coord);
+	lattice2cartesian(ss->atom_arr[pos]->lattice, se->primitive_basis, ss->atom_arr[pos]->cartesian);
 
 	ss->atom_arr[pos]->type = type;
 	strcpy(ss->atom_arr[ss->atom_cnt-1]->name, se->atom_names[type]); // TODO: use pos instead of atom_cnt-1
 	// TODO: use snprintf instead of strcpy
 
+	// update neighbors
+	// update neighbor's neighbor (only updates index pointing to current atom)
 	// find (or set) the occupied neighbor sites
-
 	// identify neighbors and notify them of presence
-
 	for (int i=0; i < se->max_neighbors; ++i)
 	{
 		// mark that this atom cannot yet jump in direction i
@@ -380,8 +381,8 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 
 	//printf("bond saturated\n");
 	// can't evaporate either
-	// [ ]: bc bonds saturated, except they aren't? so don't let it evaporate
-	ss->atom_arr[pos]->transition_indices[se->max_neighbors] = -1;
+	// bc bonds saturated, except they aren't? so don't let it evaporate
+	// ss->atom_arr[pos]->transition_indices[se->max_neighbors] = -1;
 
 	//printf("did you cause a problem\n");
 	// set the hopping rates for this atom
@@ -396,6 +397,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 	//printf("my transition refreshed\n");
 	// cycle through the nearest neighbors, refresh their transitions [or bury as necessary]
 
+	// XXX
 	for (int i=0; i < se->max_neighbors; ++i)
 	{
 		//printf("trying to refresh neighbor %d\n", i);
@@ -427,13 +429,14 @@ void move_atom(int initial_idx, int final_idx, Atom** atom_arr, Zone zone_arr[ZO
 	atom_arr[final_idx]->lattice[1] = atom_arr[initial_idx]->lattice[1];
 	atom_arr[final_idx]->lattice[2] = atom_arr[initial_idx]->lattice[2];
 
-	lattice2cartesian(atom_arr[final_idx]->lattice, se->primitive_basis, atom_arr[final_idx]->cart_coord);
+	lattice2cartesian(atom_arr[final_idx]->lattice, se->primitive_basis, atom_arr[final_idx]->cartesian);
 
 	/*atom[fa]->color[0] = atom[ia]->color[0];
 	atom[fa]->color[1] = atom[ia]->color[1];
 	atom[fa]->color[2] = atom[ia]->color[2];*/
 
 	atom_arr[final_idx]->bsradius = atom_arr[initial_idx]->bsradius;
+	atom_arr[final_idx]->energy = atom_arr[initial_idx]->energy;
 
 	atom_arr[final_idx]->type = atom_arr[initial_idx]->type;
 	strcpy(atom_arr[final_idx]->name, atom_arr[initial_idx]->name);
@@ -589,6 +592,8 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 	// TODO: if dissolution is even possible
 	if (ss->atom_arr[at]->transition_indices[se->max_neighbors] != -1)
 		take_off_transition_list(at, se->max_neighbors, ss);
+
+	ss->total_internal_energy -= ss->atom_arr[at]->energy;
 
 	// now get rid of the atom.  This is almost equivalent to burying it.
 	// find out what zone we're in
@@ -918,7 +923,7 @@ void copy_atom(int i, int j, Atom** atom_arr)
 
 	for (m=0;m<3;++m)
       	{
-	        atom_arr[i]->cart_coord[m] = atom_arr[j]->cart_coord[m];
+	        atom_arr[i]->cartesian[m] = atom_arr[j]->cartesian[m];
 			atom_arr[i]->lattice[m] = atom_arr[j]->lattice[m];
 		}
 
@@ -979,7 +984,7 @@ void orthomol(Atom** atom_arr, int atom_cnt, double basis[3][3])
 	int k;
 
 	for (k=0;k<atom_cnt;++k)
-    	lattice2cartesian(atom_arr[k]->lattice, basis, atom_arr[k]->cart_coord);
+    	lattice2cartesian(atom_arr[k]->lattice, basis, atom_arr[k]->cartesian);
 
 	return;
 }
@@ -999,14 +1004,14 @@ void centerg(Atom** atom_arr, int atom_cnt, double centroid[3])
 
 	for(j=0;j<atom_cnt;++j)
 		for(i=0;i<3;++i)
-			centroid[i] = centroid[i] + atom_arr[j]->cart_coord[i];
+			centroid[i] = centroid[i] + atom_arr[j]->cartesian[i];
 
 	for(i=0;i<3;++i)
 		centroid[i] = centroid[i] / (double)atom_cnt;
 
 	for(j=0;j<atom_cnt;++j)
 		for(i=0;i<3;++i)
-			atom_arr[j]->cart_coord[i] = atom_arr[j]->cart_coord[i]-centroid[i];
+			atom_arr[j]->cartesian[i] = atom_arr[j]->cartesian[i]-centroid[i];
 
 	dax -= centroid[0];
 	day -= centroid[1];

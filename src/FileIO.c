@@ -679,7 +679,7 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 			%lf\t\
 			%*f\t%*d\t%*d\t%*d\t%*f\t%*f\t%*f\t", // these are not assigned to anything
 			&temp_atom.type,
-			&temp_atom.cart_coord[0], &temp_atom.cart_coord[1], &temp_atom.cart_coord[2],
+			&temp_atom.cartesian[0], &temp_atom.cartesian[1], &temp_atom.cartesian[2],
 			&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2],
 			&temp_atom.bsradius);
 
@@ -782,9 +782,9 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 			return false;
         }
 
-		ss->atom_arr[i]->cart_coord[0] = xyz_pos[0];
-		ss->atom_arr[i]->cart_coord[1] = xyz_pos[1];
-		ss->atom_arr[i]->cart_coord[2] = xyz_pos[2];
+		ss->atom_arr[i]->cartesian[0] = xyz_pos[0];
+		ss->atom_arr[i]->cartesian[1] = xyz_pos[1];
+		ss->atom_arr[i]->cartesian[2] = xyz_pos[2];
 		atype = match_atom_type(xyz_type, typenames, &ntypes, temp_log);
 
 		if (atype == -1) //check to see if atom type is successfully added
@@ -874,7 +874,7 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 			%lf\t%lf\t%lf\t\
 			%d\t%d\t%d\t",
 			&temp_atom.type,
-			&temp_atom.cart_coord[0], &temp_atom.cart_coord[1], &temp_atom.cart_coord[2],
+			&temp_atom.cartesian[0], &temp_atom.cartesian[1], &temp_atom.cartesian[2],
 			&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2]); //get rid of lattice coords too?
 
 		for (int j=0; j<se->max_neighbors + se->dissolution; ++j) //when do we pick lattice?
@@ -965,7 +965,7 @@ bool write_xyz_file(char* xyz_filename, int frame_num, struct SimulationState* s
 	Atom **atoms = ss->atom_arr;
 	for (int i = 0; i < ss->atom_cnt; ++i)
 	{
-		fprintf(file, "%d %s %lf %lf %lf %lf\n", i, atoms[i]->name, atoms[i]->cart_coord[0], atoms[i]->cart_coord[1], atoms[i]->cart_coord[2], atoms[i]->bsradius); //name is now element type
+		fprintf(file, "%d %s %lf %lf %lf %lf\n", i, atoms[i]->name, atoms[i]->cartesian[0], atoms[i]->cartesian[1], atoms[i]->cartesian[2], atoms[i]->bsradius); //name is now element type
 	}
 	//ball and stick or space filling?
 	fclose(file);
