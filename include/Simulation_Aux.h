@@ -17,8 +17,6 @@ void findzone(int *zone_u, int *zone_v, int *zone_w, int u, int v, int w, struct
 void adjust_pbc(int *u, int *v, int *w, struct SimulationEnv* se);
 void set_primitive_basis(struct SimulationEnv* se);
 
-double calculate_internal_energy(Atom** atom_arr, int atom_cnt, struct SimulationEnv* se);
-
 void initialize_initial_structure(struct SimulationState* ss, struct SimulationEnv* se);
 
 void initialize_simulation_variables(struct SimulationState* ss, struct SimulationEnv* se);

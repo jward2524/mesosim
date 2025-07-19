@@ -465,20 +465,6 @@ void initialize_jump_offsets(int lattice_type, CrystalOffset *jump_offset, int *
 
 /********************************************************************************/
 /********************************************************************************/
-// sum of all bond energies in system
-double calculate_internal_energy(Atom** atom_arr, int atom_cnt, struct SimulationEnv* se)
-{
-	double total_internal_energy = 0;
-
-	// for every atom, for every neighbor, calculate energy
-	for (int i = 0; i < atom_cnt; ++i) {
-		total_internal_energy += atom_arr[i]->energy;
-	}
-	// double counting all bonds, so divide by 2
-	return total_internal_energy;
-}
-/********************************************************************************/
-/********************************************************************************/
 // updates primitive_basis, ucell_params, Atoms' cart_coords? to match lattice type
 void set_primitive_basis(struct SimulationEnv *se) // lattice_type = crystal structure type
 {

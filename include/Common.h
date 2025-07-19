@@ -120,6 +120,11 @@ struct SimulationState
     int sim_end_type;
 
     double frequency_sum;
+
+    // sum of all bond energies in system (no double-counting)
+    // incremental modification of this value throughout simulation and storage as a floating-point number
+    // means it loses some accuracy over iterations
+    // return to sum over all atom energies if want to regain some precision
     double total_internal_energy;
     
     double temperature;
