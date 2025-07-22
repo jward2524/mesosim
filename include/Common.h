@@ -60,9 +60,6 @@ struct SimulationEnv
     double *nn_energy; // nnE[num_nn_levels][num_bond_types]
     
     bool *is_soluble; // [num_elements] (implemented as always [8])
-    
-    double temperature;
-    double overpotential;
 
     int dissolution; // flag for whether dissolution events can occur
     char **atom_names; // [num_elements][BUFFER_SIZE or 3 or something]
@@ -113,6 +110,7 @@ struct SimulationState
     Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z]; // TODO: change to malloc
     TransProb transition_probability;
 
+    unsigned long iter;
     unsigned long final_iteration; // max number of iterations
     double run_stime; // simulation max runtime default (in seconds)
     bool simulation_should_kill_itself;

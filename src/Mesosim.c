@@ -84,8 +84,6 @@ int main(int argc, char* argv[]) {
     fclose(temp_log);
 
     //finish_preprocessing();   //only called when deposition matters
-
-    
     
 	// system geometry initialization
 
@@ -174,17 +172,17 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    fprintf(log_state->sim_log_file, "Temperature is %lf K\n", sim_env->temperature);
+    fprintf(log_state->sim_log_file, "Temperature is %lf K\n", sim_state->temperature);
 
     if (sim_env->overpotential_ramp_rate > 0.)
-        fprintf(log_state->sim_log_file, "Potential sweep [eV/s] from %lf to %lf at %lf\n", sim_env->overpotential, sim_env->overpotential_ramp_rate, sim_env->max_overpotential);
+        fprintf(log_state->sim_log_file, "Potential sweep [eV/s] from %lf to %lf at %lf\n", sim_state->overpotential, sim_env->overpotential_ramp_rate, sim_env->max_overpotential);
     else
-        fprintf(log_state->sim_log_file, "Potential constant [eV] at %lf\n", sim_env->overpotential);
+        fprintf(log_state->sim_log_file, "Potential constant [eV] at %lf\n", sim_state->overpotential);
 
     if (log_state->analysis_type == REGULAR_TIME_INTERVALS)
-        fprintf(log_state->sim_log_file, "Recording data at linear intervals [s] from %lf to %lf at %lf increments\n", log_state->next_log_checkpoint, log_state->log_interval, sim_state->run_stime);
+        fprintf(log_state->sim_log_file, "Recording data at linear intervals [s] from %lf to %lf at %lf increments\n", log_state->next_log_checkpoint, sim_state->run_stime, log_state->log_interval);
     else if (log_state->analysis_type == LN_TIME_INTERVALS)
-        fprintf(log_state->sim_log_file, "Recording data at log intervals [s] from %lf to %lf at %lf multiples\n", log_state->next_log_checkpoint, log_state->log_interval, sim_state->run_stime);
+        fprintf(log_state->sim_log_file, "Recording data at log intervals [s] from %lf to %lf at %lf multiples\n", log_state->next_log_checkpoint, sim_state->run_stime, log_state->log_interval);
     // TODO: fill out for other analysis_types
 
     fprintf(log_state->sim_log_file, "Random seed is %ld\n", rand_seed);

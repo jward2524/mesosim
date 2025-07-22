@@ -96,14 +96,24 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
 /*******************************************************************************
 *******************************************************************************/
 
-bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls) {
+bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls)
+{
 	char parameter_line[BUFFER_SIZE];
 	int errnum;
-	// ENHANCE: line length should be a const that is used to pull lines and create buffer sizes
+
 	while (fgets(parameter_line, BUFFER_SIZE, input_file) != NULL) {
 		if (strncmp(parameter_line, "restart", 7) == 0) {
 			//TODO: restart the simulation from a log file and don't do the rest of the loop
 			// restart also needs an atom position file
+			// extended xyz file can contain simulation box vectors
+			
+			// can memcpy structs sim_state, sim_env, log_state into a string and then into a file (in binary mode)
+			// would need to copy all malloc'ed info
+			// write to a restart file at every data log point
+			// restart using binary file
+
+			// give original input file and data file
+			// ignore geometry statement, replace with read in from file 
 		}
 		errnum = parse_input(parameter_line, temp_log, ss, se, ls);
 		if (errnum != SUCCESS)
@@ -906,21 +916,22 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 /*******************************************************************************
 *******************************************************************************/
 
-bool output_log_file(FILE* sim_log_file, int frame_num, double elapsed_stime, double temperature, double overpotential, int atom_cnt, double total_internal_energy)
+bool output_log_file(FILE* sim_log_file, int frame_num, unsigned long int iter, double elapsed_stime, double temperature, double overpotential, int atom_cnt, double total_internal_energy)
 {
 	fprintf(sim_log_file, "![%d]\t", frame_num);
+	fprintf(sim_log_file, "iter%lu\t", iter);
 	fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t", elapsed_stime, temperature, overpotential); // TODO: add iteration number to this
 	fprintf(sim_log_file, "atoms = %d\tinternal energy = %lf [eV]\n", atom_cnt, total_internal_energy);
 	fflush(sim_log_file);
 	return true;
 }
 
-bool write_xyz_file(char* xyz_filename, int frame_num, struct SimulationState* ss, struct SimulationEnv* se)
+bool write_xyz_file(char* xyz_filename, int frame_num, char* suffix, struct SimulationState* ss, struct SimulationEnv* se)
 {
 	bool is_extended = 1;
 
 	char filename_full[BUFFER_SIZE];
-	sprintf(filename_full, "%s_%d.xyz", xyz_filename, frame_num);
+	sprintf(filename_full, "%s_%d_%s.xyz", xyz_filename, frame_num, suffix);
 	FILE* file = fopen(filename_full, "w+");
 	if (file == NULL)
 	{

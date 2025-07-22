@@ -15,6 +15,8 @@ int adatom_before; // XXX: never used?
 int lastxt, lastyt, lastzt; // containers for coordinates of a next step
 bool checkpoint_reached = false;
 
+const double FABS_TOL = 1e-6;
+
 // ENHANCE: pass struct with all simulation parameters as argument
 unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls) //potentially FILE* as arguments
 {
@@ -65,12 +67,27 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	
 	ss->total_atoms_dissolved = 0;
 
-	// initial state
-	output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-	write_xyz_file(ls->position_log_prefix, framenum, ss, se);
-	framenum++;
+	// iteration count
+	ss->iter = 0;
 
-	unsigned long int iter = 1; // iteration count
+	char suffix[BUFFER_SIZE];
+	if (ls->analysis_type == REGULAR_TIME_INTERVALS)
+	{
+		snprintf(suffix, BUFFER_SIZE, "t0");
+	}
+	else if (ls->analysis_type == LN_TIME_INTERVALS)
+	{
+		snprintf(suffix, BUFFER_SIZE, "t0");
+	}
+	else if (ls->analysis_type == ITERATION_INTERVALS)
+	{
+		snprintf(suffix, BUFFER_SIZE, "i0");
+	}
+
+	// initial state
+	output_log_file(ls->sim_log_file, framenum, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+	write_xyz_file(ls->position_log_prefix, framenum, suffix, ss, se);
+	framenum++;
 
 	prev_stime = 0.0;
 	
@@ -88,15 +105,18 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 	while (!simulation_end)
 	{
+		ss->iter++;
+
 		if (ss->simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
 		{
-			output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-			write_xyz_file(ls->position_log_prefix, framenum, ss, se);
+			output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->iter, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+			write_xyz_file(ls->position_log_prefix, framenum, suffix, ss, se);
 
 			ss->simulation_should_kill_itself = false;
 
 			// TODO: remove from here
 			// organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); // XXX: remove from here
+			printf("killed somehow\n");
 
 			return 1; //return 1 b/c error
 		}
@@ -197,7 +217,8 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			clean_and_exit(1);
 		}
 		
-		// increment the elapsed time
+		// increment the elapsed time (how much passed before last transition)
+		// time passed, then transition occurred
 		// whether this is the 1st, 2nd, or 3rd random number in the loop affects the time (diff random numbers)
 		ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
 		
@@ -245,64 +266,87 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 		// end of updating rates
 	
 		// after iteration, log if necessary
-		if (iter % 100 == 0)
-			printf("iteration %ld, time %le\n", iter, ss->elapsed_stime);
+		if (ss->iter % 100 == 0)
+			printf("iteration %ld, time %le\n", ss->iter, ss->elapsed_stime);
 
 		// TODO: implement the checkpoint lists
-		if ((ls->analysis_type == REGULAR_TIME_INTERVALS) || (ls->analysis_type == LN_TIME_INTERVALS))
+		if ((ls->analysis_type == REGULAR_TIME_INTERVALS) || (ls->analysis_type == LN_TIME_INTERVALS))\
+		{
 			checkpoint_reached = (ss->elapsed_stime >= ls->next_log_checkpoint);
+			snprintf(suffix, BUFFER_SIZE, "0");
+		}
 		else if (ls->analysis_type == ITERATION_INTERVALS)
-			checkpoint_reached = (iter >= ls->next_log_checkpoint);
+		{
+			checkpoint_reached = fabs(ls->next_log_checkpoint - (double) ss->iter) < FABS_TOL;
+			if (!checkpoint_reached && (ss->iter > ls->next_log_checkpoint))
+			{
+				fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing", ss->iter, ls->next_log_checkpoint);
+				clean_and_exit(1);
+			}
+		}
 
 		if (checkpoint_reached)
 		{
 			// organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); //replaced but do i really need it
 			
-			//record the elapsed time in a file here
-			printf("writing file %d: elapsed_stime = %lf\n", framenum, ss->elapsed_stime);
-			output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-			write_xyz_file(ls->position_log_prefix, framenum, ss, se);
-			
+			// update suffix and increment next checkpoint 
 			if (ls->analysis_type == REGULAR_TIME_INTERVALS)
 			{
+				snprintf(suffix, BUFFER_SIZE, "t%.4lf", ls->next_log_checkpoint);
+				
 				// bring next_log_checkpoint up to and one step beyond elapsed_stime
 				while (ls->next_log_checkpoint <= ss->elapsed_stime)
+				{
 					ls->next_log_checkpoint += ls->log_interval;
-
+				}
 			}
 			else if (ls->analysis_type == LN_TIME_INTERVALS)
 			{
+				snprintf(suffix, BUFFER_SIZE, "t%.4lf", ls->next_log_checkpoint);
 				while (ls->next_log_checkpoint <= ss->elapsed_stime)
+				{
 					ls->next_log_checkpoint *= ls->log_interval;
+				}
 			}
 			else if (ls->analysis_type == ITERATION_INTERVALS)
 			{
+				snprintf(suffix, BUFFER_SIZE, "i%lu", (unsigned long) ls->next_log_checkpoint);
 				ls->next_log_checkpoint += ls->log_interval;
 			}
 
+			// record the elapsed time in a file here
+			printf("writing file %d: elapsed_stime = %lf\n", framenum, ss->elapsed_stime);
+			output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->iter, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+			write_xyz_file(ls->position_log_prefix, framenum, suffix, ss, se);
+
 			++framenum;
 		}
-
-		++iter; //sanity check to avoid ending in an infinite cycle // [ ]: what?
 
 		// check if simulation is over
 		if (ss->sim_end_type == SIM_END_BY_STIME){
 			simulation_end = (ss->elapsed_stime >= ss->run_stime);
 		}
 		else if (ss->sim_end_type == SIM_END_BY_ITERATIONS) {
-			simulation_end = (iter > ss->final_iteration);
+			simulation_end = (ss->iter >= ss->final_iteration);
 		}
 	}
 
-	
 	//write elapsed_stime to mark finish
-	output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-	write_xyz_file(ls->position_log_prefix, framenum, ss, se);
+	output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->iter, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 	
-	if (iter == ss->final_iteration)
-		fprintf(ls->sim_log_file, "reached final iteration and terminated\n");
+	snprintf(suffix, BUFFER_SIZE, "%s_final", suffix);
+	write_xyz_file(ls->position_log_prefix, framenum, suffix, ss, se);
+	
+	if ((ss->final_iteration > 0) && (ss->iter >= ss->final_iteration))
+	{
+		fprintf(ls->sim_log_file, "Reached final iteration and terminated\n");
+	}
+	if ((ss->run_stime > 0) && (ss->elapsed_stime >= ss->run_stime))
+	{
+		fprintf(ls->sim_log_file, "Reached end of simulation time and terminated\n");
+	}
 
-	printf("Finished simulation\n"); //move this to the log file
+	printf("Finished simulation\n");
 		
 	//simulation_is_going = false;
 	return 0;
