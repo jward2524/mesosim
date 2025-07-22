@@ -37,7 +37,7 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
 	if (file_ender == NULL) // when is this null?
 	{
 		// if (sim_log_file == NULL) // when is this not null?
-		fprintf(temp_log, "ERROR! extension not found in file: %s\n", filename); //for reading arguments
+		fprintf(stderr, "Input parsing failed - extension not found in file: %s\n", filename); //for reading arguments
 		// else
 		// fprintf(sim_log_file, "ERROR! extension not found in file: %s\n", filename); //should only happen when restarting/checkpointing
 	}
@@ -70,7 +70,7 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
 	else
 	{
 		// if (sim_log_file == NULL)
-		fprintf(temp_log, "ERROR! file extension not recognized: .%s\n", extension); //for reading arguments
+		fprintf(stderr, "Input parsing failed - file extension not recognized: .%s\n", extension); //for reading arguments
 		// else
 			// fprintf(sim_log_file, "ERROR! file extension not recognized: .%s\n", extension); //should only happen when restarting/checkpointing
 		ret = false;
@@ -119,7 +119,7 @@ bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState* s
 		if (errnum != SUCCESS)
 		{
 			//should write to the temp
-			fprintf(temp_log, "ERROR! Had issue reading the following line: \"%s\"\n", parameter_line);
+			fprintf(stderr, "Input parsing failed - Had issue reading the following line: \"%s\"\n", parameter_line);
 			fclose(input_file);
 			return false;
 		}
@@ -139,6 +139,8 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 	char* ptr = line; // line from file
 	char cmd[BUFFER_SIZE]; // command - first word in line
 	char params[BUFFER_SIZE]; // parameters parsed from line
+
+	// TODO: make all errors print to stderr with better info
 
 	// line start with command word and is followed by parameters
 	// split command word from parameters
@@ -175,8 +177,8 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		// set the system size using params
 		if ((argsread = sscanf(params, "%d %d %d", &se->system_size_x, &se->system_size_y, &se->system_size_z)) != 3)
 		{
-			fprintf(temp_log, "ERROR! Could not correctly read system size parameters %s\n", params);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Could not correctly read system size parameters %s\n", params);
+			exit(FILE_COMMAND_IGNORED);
 		}
 		se->max_atoms = se->system_size_x * se->system_size_y * se->system_size_z;
 	}
@@ -184,8 +186,8 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		// set the system temperature
 		if ((argsread = sscanf(params, "%lf", &ss->temperature)) != 1)
 		{
-			fprintf(temp_log, "ERROR! Could not correctly read temperature parameter %s\n", params);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Could not correctly read temperature parameter %s\n", params);
+			exit(FILE_COMMAND_IGNORED);
 		}
     }
 	else if (strncmp(cmd, "seed", 4) == 0) {
@@ -203,8 +205,8 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		}
 		else if ((argsread = sscanf(params, "%ld", &rand_seed)) != 1) //read in a long int
 		{
-			fprintf(temp_log, "ERROR! Could not correctly read random seed parameter %s\n", params);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Could not correctly read random seed parameter %s\n", params);
+			exit(FILE_COMMAND_IGNORED);
 		}
 	}
 	else if (strncmp(cmd, "potential", 9) == 0) {
@@ -218,8 +220,8 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		}
 		else if (argsread != 3) //
 		{
-			fprintf(temp_log, "ERROR! Could not correctly read potential sweep parameters %s\n", params);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Could not correctly read potential sweep parameters %s\n", params);
+			exit(FILE_COMMAND_IGNORED);
 		}
 	}
 	else if (strncmp(cmd+1, "nne", 3) == 0) {
@@ -228,19 +230,19 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		if ((se->num_nn_levels == 0) || (se->num_bond_types == 0))
 		{
 			fprintf(
-				temp_log, 
+				stderr, 
 				"ERROR! Number of nearest neighbor levels and number of elements \
 				needs to be set before defining nearest neighbor energies\n"
 			);
-			return FILE_COMMAND_IGNORED;
+			exit(FILE_COMMAND_IGNORED);
 		}
 
 		int ret = sscanf(cmd, "%dnne", &nn_level);
 
 		if (ret == 0)
 		{
-			fprintf(temp_log, "ERROR! Expected nne command format of [level]nne, recieved %s\n", cmd);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Expected nne command format of [level]nne, recieved %s\n", cmd);
+			exit(FILE_COMMAND_IGNORED);
 		}
 		
 		if (nn_level > se->num_nn_levels)
@@ -251,7 +253,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 				%d stated nn levels, energies for %d level provided\n", 
 				se->num_nn_levels, nn_level
 			);
-			return FILE_COMMAND_IGNORED;
+			exit(FILE_COMMAND_IGNORED);
 		}
 
 		// expect num_bond_types numbers
@@ -275,8 +277,8 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 
 		if (count != se->num_bond_types)
 		{
-			fprintf(temp_log, "ERROR! Expected %d bond energies, recieved %d\n", se->num_bond_types, count);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Expected %d bond energies, recieved %d\n", se->num_bond_types, count);
+			exit(FILE_COMMAND_IGNORED);
 		}
 
 	}
@@ -307,43 +309,43 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 			ls->analysis_type = (type > 0) ? ITERATION_INTERVALS : ITERATION_LIST;
 		}
 		else {
-			fprintf(temp_log, "ERROR! Unknown argument in 'datalog' command: %s\n", params);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Unknown argument in 'datalog' command: %s\n", params);
+			exit(FILE_COMMAND_IGNORED);
 		}
 	}
 	/*else if (strncmp(cmd, "runs", 4) == 0) {
 		//set number of runs
 		if ((argsread = sscanf(params, "%d", &number_of_simulation_runs)) != 1) {
 			printf("ERROR! Could not correctly read number of simulation runs %s\n", params);
-			return FILE_COMMAND_IGNORED;
+			exit(FILE_COMMAND_IGNORED);
 		}
 	}*/
 	else if (strncmp(cmd, "struct", 6) == 0) {
 		//set crystal structure
 		char structtype[3];
 		if ((argsread = sscanf(params, "%s", structtype)) != 1) {
-			fprintf(temp_log, "ERROR! Could not correctly read structure type %s\n", params);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Could not correctly read structure type %s\n", params);
+			exit(FILE_COMMAND_IGNORED);
 		}
-		if (strncmp(structtype, "FCC", 3) == 0 || strncmp(structtype, "1", 1) == 0)
+		if (strncmp(structtype, "FCC", 3) == 0 || strncmp(structtype, "fcc", 3) == 0)
 			se->lattice_type = FCC;
-		else if (strncmp(structtype, "BCC", 3) == 0 || strncmp(structtype, "2", 1) == 0)
+		else if (strncmp(structtype, "BCC", 3) == 0 || strncmp(structtype, "bcc", 3) == 0)
 			se->lattice_type = BCC;
-		else if (strncmp(structtype, "SC", 2) == 0 || strncmp(structtype, "3", 1) == 0)
+		else if (strncmp(structtype, "SC", 2) == 0 || strncmp(structtype, "sc", 2) == 0)
 			se->lattice_type = SC;
 		/*else if (strncmp(structtype, "DIA", 3) == 0 || strncmp(structtype, "4", 1) == 0)
 			lattice_type = DIAMOND;*/ 
 		else {
-			fprintf(temp_log, "ERROR! Structure type %s not valid\n", structtype);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Structure type %s not valid\n", structtype);
+			exit(FILE_COMMAND_IGNORED);
 		}
 		se->max_neighbors = MAXIMUM_NUMBER_OF_NEIGHBORS;
 	}
 	else if (strncmp(cmd, "output", 6) == 0) {
 		//set file name for log output
 		if ((argsread = sscanf(params, "%s", outFile)) != 1) {
-			fprintf(temp_log, "ERROR! Could not correctly read output file name %s\n", params);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Could not correctly read output file name %s\n", params);
+			exit(FILE_COMMAND_IGNORED);
 		}
 	}
 	else if (strncmp(cmd, "geometry", 8) == 0) {
@@ -351,27 +353,27 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		if (strncmp(params, "sheet", 5) == 0) {
 			se->simulation_type = SIMULATION_TYPE_FLAT_SHEET;
 			if ((argsread = sscanf(params, "%*s %d", &se->sheet_thickness)) != 1) {
-				fprintf(temp_log, "ERROR! Could not correctly read sheet thickness\n");
-				return FILE_COMMAND_IGNORED;
+				fprintf(stderr, "Input parsing failed - Could not correctly read sheet thickness\n");
+				exit(FILE_COMMAND_IGNORED);
 			}
 		}
 		else if (strncmp(params, "cluster", 6) == 0) {
 			se->simulation_type = SIMULATION_TYPE_CLUSTER;
 			if ((argsread = sscanf(params, "%*s %d", &se->cluster_radius)) != 1) {
-				fprintf(temp_log, "ERROR! Could not correctly read cluster radius\n");
-				return FILE_COMMAND_IGNORED;
+				fprintf(stderr, "Input parsing failed - Could not correctly read cluster radius\n");
+				exit(FILE_COMMAND_IGNORED);
 			}
 		}
 		else if (strncmp(params, "file", 4) == 0) {
 			se->simulation_type = SIMULATION_TYPE_FROM_FILE;
 			if ((argsread = sscanf(params, "%*s %s", se->atoms_filename)) != 1) {
-				fprintf(temp_log, "ERROR! Could not correctly read file name for atoms\n");
-				return FILE_COMMAND_IGNORED;
+				fprintf(stderr, "Input parsing failed - Could not correctly read file name for atoms\n");
+				exit(FILE_COMMAND_IGNORED);
 			}
 		}
 		else {
-			fprintf(temp_log, "ERROR! Could not recognize geometry type %s\n", params);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Could not recognize geometry type %s\n", params);
+			exit(FILE_COMMAND_IGNORED);
 		}
 	}
 	else if (strncmp(cmd, "atomtype", 8) == 0) {
@@ -392,8 +394,8 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		}
 
 		if (count == 0){
-			fprintf(temp_log, "ERROR! Couldn't read any atom type names %s\n", line);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Couldn't read any atom type names %s\n", line);
+			exit(FILE_COMMAND_IGNORED);
 		}
 
 		se->num_elements = count;
@@ -427,8 +429,8 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 			int b = parse_boolean(buf);
 			if (b < 0)
 			{
-				fprintf(temp_log, "ERROR! Could not correctly read solubility %s\n", buf);
-				return FILE_COMMAND_IGNORED;
+				fprintf(stderr, "Input parsing failed - Could not correctly read solubility %s\n", buf);
+				exit(FILE_COMMAND_IGNORED);
 			}
 			is_soluble[count] = (bool) b;
 			token = strtok(NULL, " \t");
@@ -437,14 +439,14 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 
 		if (count == 0)
 		{
-			fprintf(temp_log, "ERROR! Could not read any solubilities %s\n", line);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Could not read any solubilities %s\n", line);
+			exit(FILE_COMMAND_IGNORED);
 		}
 
 		if ((se->num_elements == 0) || (se->num_elements != count))
 		{
-			fprintf(temp_log, "ERROR! More values provided (%d) than number of elements %d\n", count, se->num_elements);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - More values provided (%d) than number of elements %d\n", count, se->num_elements);
+			exit(FILE_COMMAND_IGNORED);
 		}
 
 		int size = count * sizeof(bool);
@@ -479,20 +481,20 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 
 		if (count == 0)
 		{
-			fprintf(temp_log, "ERROR! Could not read any compositions %s\n", line);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Could not read any compositions %s\n", line);
+			exit(FILE_COMMAND_IGNORED);
 		}
 
 		if (count != se->num_elements)
 		{
-			fprintf(temp_log, "ERROR! More values provided (%d) than number of elements %d\n", count, se->num_elements);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - More values provided (%d) than number of elements %d\n", count, se->num_elements);
+			exit(FILE_COMMAND_IGNORED);
 		}
 
 		if (fabs(tot - 1) > 1e-10)
 		{
-			fprintf(temp_log, "ERROR! Compositions must add up to 1 - current: %lf\n", tot);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Compositions must add up to 1 - current: %lf\n", tot);
+			exit(FILE_COMMAND_IGNORED);
 		}
 
 		int size = count * sizeof(double);
@@ -517,8 +519,8 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 			ss->sim_end_type = SIM_END_BY_ITERATIONS;
 		}
 		else {
-			fprintf(temp_log, "ERROR! Unknown argument in 'run' command: %s\n", params);
-			return FILE_COMMAND_IGNORED;
+			fprintf(stderr, "Input parsing failed - Unknown argument in 'run' command: %s\n", params);
+			exit(FILE_COMMAND_IGNORED);
 		}
 
 		if (ss->sim_end_type == SIM_END_BY_STIME) {
@@ -530,8 +532,8 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 
 	}
 	else {
-		fprintf(temp_log, "ERROR! keyword %s not recognized\n", cmd);
-		return FILE_COMMAND_IGNORED;
+		fprintf(stderr, "Input parsing failed - keyword %s not recognized\n", cmd);
+		exit(FILE_COMMAND_IGNORED);
 	}
 	return SUCCESS;
 }
@@ -580,8 +582,8 @@ int parse_datalog_params(char* params, int cursor, struct LoggingState* ls, FILE
 		return -1;
 	}
 	else {
-		fprintf(temp_log, "ERROR! Unknown argument in 'datalog' command: %s\n", params);
-		return FILE_COMMAND_IGNORED;
+		fprintf(stderr, "Input parsing failed - Unknown argument in 'datalog' command: %s\n", params);
+		exit(FILE_COMMAND_IGNORED);
 	}
 }
 
@@ -770,7 +772,7 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 		if (fgets(command_string, BUFFER_SIZE, input_file) == NULL)	// EOF
       	{
 			fclose(input_file);
-			fprintf(temp_log, "ERROR! Ran into EOF, expected %d atoms remaining\n", nremain);
+			fprintf(stderr, "Input parsing failed - Ran into EOF, expected %d atoms remaining\n", nremain);
 			//organize(atom, atom_cnt); //do I need to call this?
 			return false;
 		}
@@ -787,7 +789,7 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 
 		if ((argsread = sscanf(command_string, "%s %lf %lf %lf %lf", xyz_type, xyz_pos, xyz_pos+1, xyz_pos+2, &radius)) != 5)
 		{
-			fprintf(temp_log, "ERROR! Failed to read 4 arguments in .xyz file, only read %d\n", argsread);
+			fprintf(stderr, "Input parsing failed - Failed to read 4 arguments in .xyz file, only read %d\n", argsread);
 			fclose(input_file);
 			return false;
         }
@@ -846,7 +848,7 @@ int match_atom_type(char* type, char* types[], int* num_types, FILE* temp_log) {
 	else
 	{
 		//unrecognized!
-		fprintf(temp_log, "ERROR! Did not recognize atom type %s\n", type);
+		fprintf(stderr, "Input parsing failed - Did not recognize atom type %s\n", type);
 		return -1;
 	}
 }
