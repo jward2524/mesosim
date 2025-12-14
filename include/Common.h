@@ -30,7 +30,8 @@ struct SimulationEnv
     int zone_count_u, zone_count_v, zone_count_w;
 
     int lattice_type;
-    int max_neighbors;
+    int num_transition_vectors;
+    int num_energy_contributors; // based on num_nn_levels, directions must be hard-coded
 
     int sheet_thickness;
     int cluster_radius;
@@ -43,9 +44,10 @@ struct SimulationEnv
     double *substrate_composition;
     int num_nn_levels;
     int num_elements;
-    int num_bond_types; // Cr(num_elements,2), combination with replacement
+    int num_bond_types; // Cr(num_elements,2), combination with replacement [two atoms per bond]
     int num_neighbor_types;
     int num_nn_types;  // number of distinct bond types, se->num_nn_levels * se->num_bond_types
+    int *atoms_per_nn_level; // number of atoms per nn level, [num_nn_levels]
 
     double normal_x, normal_y, normal_z; // XXX: likely vistigal
 
@@ -69,10 +71,10 @@ struct SimulationEnv
     double centroid[3]; // coordinates for center of gravity
     
     // possible atom jumps in simulation
-    CrystalOffset *jump_offset;
+    LatticeVector *transition_vectors;
     
-    // index in jump_offset that has the jump in the opposite direction in simulation; opposite_offset[0]=11 means the opposite direction of se->jump_offset[0] is se->jump_offset[11]
-    int *opposite_offset;
+    // index in transition_vectors that has the jump in the opposite direction in simulation; opposite_tvectors[0]=11 means the opposite direction of se->transition_vectors[0] is se->transition_vectors[11]
+    int *opposite_tvectors;
     
     // primitive unit cell basis vectors + inverted; primitive_basis[*][0] = basis1, primitive_basis[0][*] = x component of basises
     // is also transformation matrix for [lattice to cartesian coordinates] [cartesian to lattice coordinates] respectively

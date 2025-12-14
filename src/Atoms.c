@@ -14,72 +14,79 @@
 // Atom_Color atom_color[10];
 
 // direction of possible atom jumps for each crystal lattice type
-const CrystalOffset BCC_OFFSET[8] = 
-		{ // not normalized, in lattice coordinates
-		{-1, -1, -1},
-		{0, 0, -1},
-		{1, 0, 0},
-		{-1, 0, 0},
-		{0, 1, 0},
-		{0, -1, 0},
-		{0, 0, 1},
-		{1, 1, 1}
-		};
-
-const CrystalOffset FCC_OFFSET[12] = 
-		{
-		{0, 1, -1},
-		{1, 0, -1},
-		{0, 0, -1},
-		{1, 0, 0},
-		{-1, 0, 0},
-		{0, 1, 0},
-		{0, -1, 0},
-		{0, 0, 1},
-		{-1, 1, 0},
-		{1, -1, 0},
-		{-1, 0, 1},
-		{0, -1, 1}
+const LatticeVector BCC_OFFSET[8] = 
+{ // not normalized, in lattice coordinates
+	{-1, -1, -1},
+	{0, 0, -1},
+	{1, 0, 0},
+	{-1, 0, 0},
+	{0, 1, 0},
+	{0, -1, 0},
+	{0, 0, 1},
+	{1, 1, 1}
 };
 
-const CrystalOffset SC_OFFSET[6] = 
-		{
-		{0, 0, -1},
-		{0, 0, 1},
-		{0, 1, 0},
-		{0, -1, 0},
-		{1, 0, 0},
-		{-1, 0, 0}};
+const LatticeVector FCC_OFFSET[12] = 
+{
+	{0, 1, -1},
+	{1, 0, -1},
+	{0, 0, -1},
+	{1, 0, 0},
+	{-1, 0, 0},
+	{0, 1, 0},
+	{0, -1, 0},
+	{0, 0, 1},
+	{-1, 1, 0},
+	{1, -1, 0},
+	{-1, 0, 1},
+	{0, -1, 1}
+};
 
-const CrystalOffset SC_OFFSET_2[12] = 
-		{{1, 1, 0},
-		{1, -1, 0},
-		{-1, 1, 0},
-		{-1, -1, 0},
-		{1, 0, 1},
-		{-1, 0, 1},
-		{1, 0, -1},
-		{-1, 0, -1},
-		{0, 1, 1},
-		{0, -1, 1},
-		{0, 1, -1},
-		{0, -1, -1}};
+const LatticeVector SC_OFFSET[6] = 
+{
+	{0, 0, -1},
+	{0, 0, 1},
+	{0, 1, 0},
+	{0, -1, 0},
+	{1, 0, 0},
+	{-1, 0, 0}
+};
 
-const CrystalOffset FCC_OFFSET_2[6] = 
-		{{1, -1, 1},
-		{-1, 1, 1},
-		{-1, -1, 1},
-		{-1, 1, -1},
-		{1, 1, -1},
-		{1, -1, -1}};
+const LatticeVector SC_OFFSET_2[12] = 
+{
+	{1, 1, 0},
+	{1, -1, 0},
+	{-1, 1, 0},
+	{-1, -1, 0},
+	{1, 0, 1},
+	{-1, 0, 1},
+	{1, 0, -1},
+	{-1, 0, -1},
+	{0, 1, 1},
+	{0, -1, 1},
+	{0, 1, -1},
+	{0, -1, -1}
+};
 
-const CrystalOffset BCC_OFFSET_2[6] = 
-		{{1, 0, 1},
-		{-1, 0, -1},
-		{1, 1, 0},
-		{-1, -1, 0},
-		{0, 1, 1},
-		{0, -1, -1}};
+const LatticeVector FCC_OFFSET_2[6] = 
+{
+	{1, -1, 1},
+	{-1, 1, 1},
+	{-1, -1, 1},
+	{-1, 1, -1},
+	{1, 1, -1},
+	{1, -1, -1}
+};
+
+const LatticeVector BCC_OFFSET_2[6] = 
+{
+	{1, 0, 1},
+	{-1, 0, -1},
+	{1, 1, 0},
+	{-1, -1, 0},
+	{0, 1, 1},
+	{0, -1, -1}
+};
 
 // updates atom_arr // [ ]: but doesn't update atom_cnt?
 void create_default_atom(int atom_idx, Atom** atom_arr, struct SimulationEnv *se)
@@ -103,10 +110,10 @@ void create_default_atom(int atom_idx, Atom** atom_arr, struct SimulationEnv *se
 		atom_arr[atom_idx]->lattice[i] = 0.0;
 	}
 
-	for (int i=0; i<se->max_neighbors + se->dissolution; ++i)
+	for (int i=0; i<se->num_transition_vectors + se->dissolution; ++i)
 		atom_arr[atom_idx]->transition_indices[i] = -1;
 
-	for (int i=0; i<se->max_neighbors; ++i)
+	for (int i=0; i<se->num_transition_vectors; ++i)
 		atom_arr[atom_idx]->neighbor_atom_idxs[i] = -1;
 
 	// linked list structure, for faster finding of atoms by position
@@ -211,13 +218,13 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 	// update neighbor's neighbor (only updates index pointing to current atom)
 	// find (or set) the occupied neighbor sites
 	// identify neighbors and notify them of presence
-	for (int i=0; i < se->max_neighbors; ++i)
+	for (int i=0; i < se->num_transition_vectors; ++i)
 	{
 		// mark that this atom cannot yet jump in direction i
 
 		ss->atom_arr[pos]->transition_indices[i] = -1;
 		// [ ]: if system size is still 1 (in w direction?) and jump isn't zero, skip it?
-		// if ((system_size_z == 1)&&(se->jump_offset[i].dz != 0))
+		// if ((system_size_z == 1)&&(se->transition_vectors[i].dz != 0))
 		// {
 		// 	continue;
 		// }
@@ -225,9 +232,9 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 		// query_u, query_v, query_w point to the neighboring site
 		// so update occupied neighbor site according to atom_at(query_u, query_v, query_w);
 
-		query_u = u + se->jump_offset[i].dx;
-		query_v = v + se->jump_offset[i].dy;
-		query_z = w + se->jump_offset[i].dz;
+		query_u = u + se->transition_vectors[i].dx;
+		query_v = v + se->transition_vectors[i].dy;
+		query_z = w + se->transition_vectors[i].dz;
 
 		adjust_pbc(&query_u, &query_v, &query_z, se);
 
@@ -241,7 +248,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 
 				// if atom is present at potential jump site, fill position in neighbor_atom_idxs of this atom and the found neighbor atom
 				if (ss->atom_arr[pos]->neighbor_atom_idxs[i] >= 0 ) {
-					ss->atom_arr[ss->atom_arr[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
+					ss->atom_arr[ss->atom_arr[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
 				}
 
 				break;
@@ -252,7 +259,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 				if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
 				else
 					atom[pos]->neighbor_atom_idxs[i] = -3;
 				break;
@@ -261,9 +268,9 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 				if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
 				else
-					if (se->jump_offset[i].dz < 0)
+					if (se->transition_vectors[i].dz < 0)
 						atom[pos]->neighbor_atom_idxs[i] = -2;
 				break;
 
@@ -275,18 +282,18 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 				if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
-				else if (se->jump_offset[i].dz < 0)
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
+				else if (se->transition_vectors[i].dz < 0)
 					atom[pos]->neighbor_atom_idxs[i] = -3;
 				break;
 
 			case RANDOM_ALL_AROUND:						// bond to bulk - all bonds downward are to buried atoms.
-				if (i == se->opposite_offset[niod])
+				if (i == se->opposite_tvectors[niod])
 				{
 					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
 					else
 						atom[pos]->neighbor_atom_idxs[i] = -1;
 				}
@@ -295,7 +302,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
 					else
 						atom[pos]->neighbor_atom_idxs[i] = -3;
 				}
@@ -306,15 +313,15 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 				atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
 				if (atom[pos]->neighbor_atom_idxs[i] >= 0)
-					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
+					atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
 				else if (i != no_bond_direction)
 					atom[pos]->neighbor_atom_idxs[i] = -3;
 				break;
 
 			case RANDOM_INWARD:
-				sp[0] = se->jump_offset[i].dx;
-				sp[1] = se->jump_offset[i].dy;
-				sp[2] = se->jump_offset[i].dz;
+				sp[0] = se->transition_vectors[i].dx;
+				sp[1] = se->transition_vectors[i].dy;
+				sp[2] = se->transition_vectors[i].dz;
 					
 				vecmul(sp, primitive_basis, spo);
 				unit(spo, spo);
@@ -324,7 +331,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 					// normal points inward, make buried
 
 					if ((atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz)) >= 0)
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
 					else
 						atom[pos]->neighbor_atom_idxs[i] = -3;
 					break;
@@ -336,14 +343,14 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 	
 					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
 					break;
 				}
 
 			case BURIED_INWARD:
-				sp[0] = se->jump_offset[i].dx;
-				sp[1] = se->jump_offset[i].dy;
-				sp[2] = se->jump_offset[i].dz;
+				sp[0] = se->transition_vectors[i].dx;
+				sp[1] = se->transition_vectors[i].dy;
+				sp[2] = se->transition_vectors[i].dz;
 					
 				vecmul(sp, primitive_basis, spo);
 				unit(spo, spo);
@@ -353,7 +360,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 					// normal points inward, make buried
 
 					if ((atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz)) >= 0)
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
 					else
 						atom[pos]->neighbor_atom_idxs[i] = -2;
 					break;
@@ -365,7 +372,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 					atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 	
 					if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = pos;
+						atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
 					break;
 				}
 			*/
@@ -382,7 +389,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 	//printf("bond saturated\n");
 	// can't evaporate either
 	// bc bonds saturated, except they aren't? so don't let it evaporate
-	// ss->atom_arr[pos]->transition_indices[se->max_neighbors] = -1;
+	// ss->atom_arr[pos]->transition_indices[se->num_transition_vectors] = -1;
 
 	//printf("did you cause a problem\n");
 	// set the hopping rates for this atom
@@ -398,7 +405,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState*
 	// cycle through the nearest neighbors, refresh their transitions [or bury as necessary]
 
 	// XXX
-	for (int i=0; i < se->max_neighbors; ++i)
+	for (int i=0; i < se->num_transition_vectors; ++i)
 	{
 		//printf("trying to refresh neighbor %d\n", i);
 		atom_idx = ss->atom_arr[pos]->neighbor_atom_idxs[i];
@@ -464,14 +471,14 @@ void move_atom(int initial_idx, int final_idx, Atom** atom_arr, Zone zone_arr[ZO
 	}
 
 	int n2;
-	for (int n=0; n < se->max_neighbors; ++n)
+	for (int n=0; n < se->num_transition_vectors; ++n)
 	{
 		atom_arr[final_idx]->neighbor_atom_idxs[n] = atom_arr[initial_idx]->neighbor_atom_idxs[n];
 
 		n2 = atom_arr[initial_idx]->neighbor_atom_idxs[n];
 		if (n2 >= 0)
 		{
-			atom_arr[n2]->neighbor_atom_idxs[se->opposite_offset[n]] = final_idx;
+			atom_arr[n2]->neighbor_atom_idxs[se->opposite_tvectors[n]] = final_idx;
 		}
 
 		atom_arr[final_idx]->transition_indices[n] = atom_arr[initial_idx]->transition_indices[n];
@@ -482,11 +489,11 @@ void move_atom(int initial_idx, int final_idx, Atom** atom_arr, Zone zone_arr[ZO
 		}
 	}
 
-	atom_arr[final_idx]->transition_indices[se->max_neighbors] = atom_arr[initial_idx]->transition_indices[se->max_neighbors];
+	atom_arr[final_idx]->transition_indices[se->num_transition_vectors] = atom_arr[initial_idx]->transition_indices[se->num_transition_vectors];
 
-	if (atom_arr[final_idx]->transition_indices[se->max_neighbors] >= 0)
+	if (atom_arr[final_idx]->transition_indices[se->num_transition_vectors] >= 0)
 	{
-		transition_arr[atom_arr[final_idx]->transition_indices[se->max_neighbors]]->atom_idx = final_idx;
+		transition_arr[atom_arr[final_idx]->transition_indices[se->num_transition_vectors]]->atom_idx = final_idx;
 	}
 
 	return;
@@ -531,7 +538,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 	// [ ]: isn't this done in refresh_transitions too?
   	type = ss->atom_arr[at]->type;
 
-	for (i=0; i < se->max_neighbors; ++i)
+	for (i=0; i < se->num_transition_vectors; ++i)
 	{
 		neighbor_idx = ss->atom_arr[at]->neighbor_atom_idxs[i];
 
@@ -544,11 +551,11 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 				// only after we remove the existence of the current atom
 							
 
-				new_atom[number_of_new_atoms].u = ss->atom_arr[at]->lattice[0] + se->jump_offset[i].dx;
-				new_atom[number_of_new_atoms].v = ss->atom_arr[at]->lattice[1] + se->jump_offset[i].dy;
-				new_atom[number_of_new_atoms].w = ss->atom_arr[at]->lattice[2] + se->jump_offset[i].dz;
+				new_atom[number_of_new_atoms].u = ss->atom_arr[at]->lattice[0] + se->transition_vectors[i].dx;
+				new_atom[number_of_new_atoms].v = ss->atom_arr[at]->lattice[1] + se->transition_vectors[i].dy;
+				new_atom[number_of_new_atoms].w = ss->atom_arr[at]->lattice[2] + se->transition_vectors[i].dz;
 
-				new_atom[number_of_new_atoms].vc = se->opposite_offset[i];	// only allowed direction
+				new_atom[number_of_new_atoms].vc = se->opposite_tvectors[i];	// only allowed direction
 
 				adjust_pbc(&new_atom[number_of_new_atoms].u,
 							&new_atom[number_of_new_atoms].v,
@@ -560,11 +567,11 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 			case -3:
 				// incarnate a random atom
 
-				new_random_atom[number_of_new_random_atoms].u = ss->atom_arr[at]->lattice[0] + se->jump_offset[i].dx;
-				new_random_atom[number_of_new_random_atoms].v = ss->atom_arr[at]->lattice[1] + se->jump_offset[i].dy;
-				new_random_atom[number_of_new_random_atoms].w = ss->atom_arr[at]->lattice[2] + se->jump_offset[i].dz;
+				new_random_atom[number_of_new_random_atoms].u = ss->atom_arr[at]->lattice[0] + se->transition_vectors[i].dx;
+				new_random_atom[number_of_new_random_atoms].v = ss->atom_arr[at]->lattice[1] + se->transition_vectors[i].dy;
+				new_random_atom[number_of_new_random_atoms].w = ss->atom_arr[at]->lattice[2] + se->transition_vectors[i].dz;
 
-				new_random_atom[number_of_new_random_atoms].vc = se->opposite_offset[i];	// only allowed direction
+				new_random_atom[number_of_new_random_atoms].vc = se->opposite_tvectors[i];	// only allowed direction
 
 				adjust_pbc(&new_random_atom[number_of_new_random_atoms].u,
                      		&new_random_atom[number_of_new_random_atoms].v,
@@ -581,7 +588,7 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 				break;
 
 			default:	// make other atom see this spot as empty
-				ss->atom_arr[neighbor_idx]->neighbor_atom_idxs[se->opposite_offset[i]] = -1;
+				ss->atom_arr[neighbor_idx]->neighbor_atom_idxs[se->opposite_tvectors[i]] = -1;
 				occupied_neighbors[occupied_neighbors_cnt] = neighbor_idx;
 				++occupied_neighbors_cnt;
 				break;
@@ -590,8 +597,8 @@ void remove_atom(int at, struct SimulationState* ss, struct SimulationEnv* se)
 
 	// dissolution - if not soluble, won't have dissolution transition
 	// TODO: if dissolution is even possible
-	if (ss->atom_arr[at]->transition_indices[se->max_neighbors] != -1)
-		take_off_transition_list(at, se->max_neighbors, ss);
+	if (ss->atom_arr[at]->transition_indices[se->num_transition_vectors] != -1)
+		take_off_transition_list(at, se->num_transition_vectors, ss);
 
 	ss->total_internal_energy -= ss->atom_arr[at]->energy;
 
@@ -771,11 +778,11 @@ int reincarnate(int u, int v, int w, int type, int vc, int buried) {
 	// // find (or set) the occupied neighbor sites
 	// // except for the vc direction, all other spots should be occupied
 
-	// for (i=0;i < max_neighbors; ++i)
+	// for (i=0;i < num_transition_vectors; ++i)
 	// {
-	// 	checkx = u + se->jump_offset[i].dx;
-	// 	checky = v + se->jump_offset[i].dy;
-	// 	checkz = w + se->jump_offset[i].dz;
+	// 	checkx = u + se->transition_vectors[i].dx;
+	// 	checky = v + se->transition_vectors[i].dy;
+	// 	checkz = w + se->transition_vectors[i].dz;
 
 	// 	adjust_pbc(&checkx, &checky, &checkz, se);
 
@@ -788,15 +795,15 @@ int reincarnate(int u, int v, int w, int type, int vc, int buried) {
 	// // we'll have to add this atom to the transition lists, and also
 	// // update the configuration of the atoms contained in n[i]
 
-	// for (i=0; i < max_neighbors; ++i)
+	// for (i=0; i < num_transition_vectors; ++i)
 	// {
 	// 	if (atom_arr[atom_cnt]->neighbor_atom_idxs[i] >= 0)
-	// 		atom_arr[atom_arr[atom_cnt]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_offset[i]] = atom_cnt;
+	// 		atom_arr[atom_arr[atom_cnt]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] = atom_cnt;
 
 	// 	atom_arr[atom_cnt]->transition_indices[i] = -1;		// initialization
 	// }
 
-	// atom_arr[atom_cnt]->transition_indices[max_neighbors] = -1;
+	// atom_arr[atom_cnt]->transition_indices[num_transition_vectors] = -1;
 
 	// refresh_transitions(atom_cnt, ss, se);
 
@@ -881,12 +888,12 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
 
 	// make all atoms whose neighbor this was see an empty spot
 
-	for (i=0; i < se->max_neighbors; ++i)
+	for (i=0; i < se->num_transition_vectors; ++i)
 	{
 		if (ss->atom_arr[atom_number]->neighbor_atom_idxs[i] >= 0)
 		{
 			j = ss->atom_arr[atom_number]->neighbor_atom_idxs[i];
-			ss->atom_arr[j]->neighbor_atom_idxs[se->opposite_offset[i]] = -1;
+			ss->atom_arr[j]->neighbor_atom_idxs[se->opposite_tvectors[i]] = -1;
 		}
 	}
 

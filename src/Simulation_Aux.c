@@ -91,7 +91,7 @@ void get_system_normal(double basis[3][3]) // XXX: supposedly only for vizualiza
 
 /******************************************************************************/
 /******************************************************************************/
-// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; zone_arr, rmat; normal_x, normal_y, normal_z; max_neighbors, se->jump_offset, se->opposite_offset; zi*, zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_stime, overpotential, next_log_checkpoint
+// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; zone_arr, rmat; normal_x, normal_y, normal_z; num_transition_vectors, se->transition_vectors, se->opposite_tvectors; zi*, zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_stime, overpotential, next_log_checkpoint
 void initialize_simulation_variables(struct SimulationState* ss, struct SimulationEnv* se)
 {
 	// finish initializing structs
@@ -137,8 +137,8 @@ void initialize_simulation_variables(struct SimulationState* ss, struct Simulati
 	se->centroid[1] = 0.;
 	se->centroid[2] = 0.;
 
-	se->jump_offset = malloc(se->max_neighbors * sizeof(CrystalOffset));
-	se->opposite_offset = malloc(se->max_neighbors * sizeof(*se->jump_offset));
+	se->transition_vectors = (LatticeVector *)malloc(se->num_transition_vectors * sizeof(LatticeVector));
+	se->opposite_tvectors = (int *)malloc(se->num_transition_vectors * sizeof(*se->opposite_tvectors));
 	se->ucell_params[0] = 1;
 	se->ucell_params[1] = 1;
 	se->ucell_params[2] = 1;
@@ -146,12 +146,12 @@ void initialize_simulation_variables(struct SimulationState* ss, struct Simulati
 	se->ucell_params[4] = 90;
 	se->ucell_params[5] = 90;
 	
-	if (!se->jump_offset)
+	if (!se->transition_vectors)
     {
         perror("Couldn't allocate memory for jump offset array");
         clean_and_exit(errno);
     }
-	if (!se->opposite_offset)
+	if (!se->opposite_tvectors)
     {
         perror("Couldn't allocate memory for jump offset array");
         clean_and_exit(errno);
@@ -393,70 +393,91 @@ void initialize_zones(Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct 
 
 /********************************************************************************/
 /********************************************************************************/
-// updates max_neighbors, [se->jump_offset, se->opposite_offset]
-void initialize_neighbor_offsets(int lattice_type, int* max_neighbors, CrystalOffset *jump_offset, int *opposite_offset)
+// updates num_transition_vectors, [se->transition_vectors, se->opposite_tvectors]
+void initialize_neighbor_offsets(struct SimulationEnv *se)
 {	
-	switch(lattice_type)
-		{
-			case FCC:
-				*max_neighbors = 12;
-				initialize_jump_offsets(FCC, jump_offset, opposite_offset);
-				break;
-
-			case SC:
-				*max_neighbors = 6;
-				initialize_jump_offsets(SC, jump_offset, opposite_offset);
-				break;
-
-			case BCC:
-				*max_neighbors = 8;
-				initialize_jump_offsets(BCC, jump_offset, opposite_offset);
-				break;
-		}
-
-	return;
-}
-// ENHANCE: this is redundant with initialize_neighbor_offsets
-// initializes se->jump_offset, se->opposite_offset
-void initialize_jump_offsets(int lattice_type, CrystalOffset *jump_offset, int *opposite_offset)	// lattice_type = crystal lattice type
-{
 	int i;
 	int fcc_offs[12] = {11, 10, 7, 4, 3, 6, 5, 2, 9, 8, 1, 0};
 	int sc_offs[6] = {1, 0, 3, 2, 5, 4};
 	int bcc_offs[8] = {7, 6, 3, 2, 5, 4, 1, 0};
 
-	switch (lattice_type)
+	switch(se->lattice_type)
 	{
 		case FCC:
+			se->num_transition_vectors = 12;
+			se->atoms_per_nn_level[0] = se->num_transition_vectors;
 			for (i=0;i<12;++i)
 			{
-				jump_offset[i].dx = FCC_OFFSET[i].dx;
-				jump_offset[i].dy = FCC_OFFSET[i].dy;
-				jump_offset[i].dz = FCC_OFFSET[i].dz;
-				opposite_offset[i] = fcc_offs[i];
+				se->transition_vectors[i].dx = FCC_OFFSET[i].dx;
+				se->transition_vectors[i].dy = FCC_OFFSET[i].dy;
+				se->transition_vectors[i].dz = FCC_OFFSET[i].dz;
+				se->opposite_tvectors[i] = fcc_offs[i];
+			}
+
+			if (se->num_nn_levels == 2)
+			{
+				int extra = 6;
+				for (i=0; i<extra; i++)
+				{
+					se->transition_vectors[se->num_transition_vectors+i].dx = FCC_OFFSET_2[i].dx;
+					se->transition_vectors[se->num_transition_vectors+i].dy = FCC_OFFSET_2[i].dy;
+					se->transition_vectors[se->num_transition_vectors+i].dz = FCC_OFFSET_2[i].dz;
+				}
+				se->num_energy_contributors = se->num_transition_vectors + extra;
+				se->atoms_per_nn_level[1] = extra;
 			}
 
 			break;
 
 		case SC:
-			for (i=0;i<6;++i)
+			se->num_transition_vectors = 6;
+			se->atoms_per_nn_level[0] = se->num_transition_vectors;
+			for (i=0; i<se->num_transition_vectors; ++i)
 			{
-				jump_offset[i].dx = SC_OFFSET[i].dx;
-				jump_offset[i].dy = SC_OFFSET[i].dy;
-				jump_offset[i].dz = SC_OFFSET[i].dz;
-				opposite_offset[i] = sc_offs[i];
+				se->transition_vectors[i].dx = SC_OFFSET[i].dx;
+				se->transition_vectors[i].dy = SC_OFFSET[i].dy;
+				se->transition_vectors[i].dz = SC_OFFSET[i].dz;
+				se->opposite_tvectors[i] = sc_offs[i];
 			}
 
+			if (se->num_nn_levels == 2)
+			{
+				int extra = 12;
+				for (i=0; i<extra; i++)
+				{
+					se->transition_vectors[se->num_transition_vectors+i].dx = BCC_OFFSET_2[i].dx;
+					se->transition_vectors[se->num_transition_vectors+i].dy = BCC_OFFSET_2[i].dy;
+					se->transition_vectors[se->num_transition_vectors+i].dz = BCC_OFFSET_2[i].dz;
+				}
+				se->num_energy_contributors = se->num_transition_vectors + extra;
+				se->atoms_per_nn_level[1] = extra;
+			}
 			break;
 
 		case BCC:
-			for (i=0;i<8;++i)
+			se->num_transition_vectors = 8;
+			se->atoms_per_nn_level[0] = se->num_transition_vectors;
+			for (i=0; i<se->num_transition_vectors; ++i)
 			{
-				jump_offset[i].dx = BCC_OFFSET[i].dx;
-				jump_offset[i].dy = BCC_OFFSET[i].dy;
-				jump_offset[i].dz = BCC_OFFSET[i].dz;
-				opposite_offset[i] = bcc_offs[i];
+				se->transition_vectors[i].dx = BCC_OFFSET[i].dx;
+				se->transition_vectors[i].dy = BCC_OFFSET[i].dy;
+				se->transition_vectors[i].dz = BCC_OFFSET[i].dz;
+				se->opposite_tvectors[i] = bcc_offs[i];
 			}
+
+			if (se->num_nn_levels == 2)
+			{
+				int extra = 6;
+				for (i=0; i<extra; i++)
+				{
+					se->transition_vectors[se->num_transition_vectors+i].dx = BCC_OFFSET_2[i].dx;
+					se->transition_vectors[se->num_transition_vectors+i].dy = BCC_OFFSET_2[i].dy;
+					se->transition_vectors[se->num_transition_vectors+i].dz = BCC_OFFSET_2[i].dz;
+				}
+				se->num_energy_contributors = se->num_transition_vectors + extra;
+				se->atoms_per_nn_level[1] = extra;
+			}
+			
 			break;
 	}
 
@@ -523,12 +544,12 @@ void set_primitive_basis(struct SimulationEnv *se) // lattice_type = crystal str
 /********************************************************************************/
 /********************************************************************************/
 // fills initial_config with type of neighbors to atom[at], before jump offset_idx
-int get_initial_configuration(int atom_idx, int max_neighbors, Atom** atom_arr, int initial_config[]) // atom_idx is position in atom list, offset_idx is index in se->jump_offset
+int get_initial_configuration(int atom_idx, int num_transition_vectors, Atom** atom_arr, int initial_config[]) // atom_idx is position in atom list, offset_idx is index in se->transition_vectors
 {
    	int offset_idx, neighbor_idx;
 	int nn_count = 0; // nearest-neighbors
 
-	for (offset_idx=0; offset_idx<max_neighbors; ++offset_idx)
+	for (offset_idx=0; offset_idx<num_transition_vectors; ++offset_idx)
     {
 		neighbor_idx = atom_arr[atom_idx]->neighbor_atom_idxs[offset_idx];
 
@@ -546,7 +567,7 @@ int get_initial_configuration(int atom_idx, int max_neighbors, Atom** atom_arr, 
 
 /********************************************************************************/
 /********************************************************************************/
-// fills initial_config with type of neighbors to atom[at], after jump in direction se->jump_offset[offset_idx]
+// fills initial_config with type of neighbors to atom[at], after jump in direction se->transition_vectors[offset_idx]
 int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, struct SimulationEnv *se, int final_config[]) // offset_idx is position in offset list
 {
 	int atom_idx;
@@ -555,23 +576,23 @@ int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, 
 	
 	int nn_cnt = 0; // nearest-neighbors
 	// atom position after jump offset_idx
-	new_x = ss->atom_arr[at]->lattice[0] + se->jump_offset[offset_idx].dx;
-	new_y = ss->atom_arr[at]->lattice[1] + se->jump_offset[offset_idx].dy;
-	new_z = ss->atom_arr[at]->lattice[2] + se->jump_offset[offset_idx].dz;
+	new_x = ss->atom_arr[at]->lattice[0] + se->transition_vectors[offset_idx].dx;
+	new_y = ss->atom_arr[at]->lattice[1] + se->transition_vectors[offset_idx].dy;
+	new_z = ss->atom_arr[at]->lattice[2] + se->transition_vectors[offset_idx].dz;
 
 	adjust_pbc(&new_x, &new_y, &new_z, se);
 
-	for (int i=0; i<se->max_neighbors; ++i)
+	for (int i=0; i<se->num_transition_vectors; ++i)
 	{
-		if (i == se->opposite_offset[offset_idx]) {
+		if (i == se->opposite_tvectors[offset_idx]) {
 			// if direction is where the jump came from, set as empty
 			final_config[i] = -1; //hardcode this? // [ ]: is there a case where it won't be empty?
 			continue;
 		}
 		// location of neighbor
-		neighbor_x = new_x + se->jump_offset[i].dx;
-		neighbor_y = new_y + se->jump_offset[i].dy;
-		neighbor_z = new_z + se->jump_offset[i].dz;
+		neighbor_x = new_x + se->transition_vectors[i].dx;
+		neighbor_y = new_y + se->transition_vectors[i].dy;
+		neighbor_z = new_z + se->transition_vectors[i].dz;
 
 		adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
 

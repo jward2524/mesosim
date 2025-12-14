@@ -5,13 +5,11 @@
 
 void get_system_rw_radius(struct SimulationEnv* se);
 void get_shifts(struct SimulationEnv* se);
-void initialize_neighbor_offsets(int lattice_type, int* max_neighbors, CrystalOffset *jump_offset, int *opposite_offset);
-
-void initialize_jump_offsets(int lattice_type, CrystalOffset *jump_offset, int *opposite_offset);
+void initialize_neighbor_offsets(struct SimulationEnv *se);
 void initialize_zones(Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv* se);
 void get_system_normal(double basis[3][3]);
 void set_default_orientation(Atom** atom_arr, int atom_cnt, int lattice_type, double rmat[3][3], double basis[3][3]); //double check if this is used for anything other than graphicsw
-int get_initial_configuration(int atom_index, int max_neighbors, Atom** atom_arr, int initial_config[]);
+int get_initial_configuration(int atom_index, int num_transition_vectors, Atom** atom_arr, int initial_config[]);
 int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, struct SimulationEnv *se, int final_config[]);
 void findzone(int *zone_u, int *zone_v, int *zone_w, int u, int v, int w, struct SimulationEnv* se);
 void adjust_pbc(int *u, int *v, int *w, struct SimulationEnv* se);

@@ -35,11 +35,11 @@ void lattice2cartesian(int clattice[3], double primitive_basis[3][3], double cca
 int round_towards(double val, int target);
 
 // TODO: into SimulationEnv
-extern const CrystalOffset BCC_OFFSET[8];
-extern const CrystalOffset FCC_OFFSET[12];
-extern const CrystalOffset SC_OFFSET[6];
-extern const CrystalOffset SC_OFFSET_2[12];
-extern const CrystalOffset FCC_OFFSET_2[6];
-extern const CrystalOffset BCC_OFFSET_2[6];
+extern const LatticeVector BCC_OFFSET[8];
+extern const LatticeVector FCC_OFFSET[12];
+extern const LatticeVector SC_OFFSET[6];
+extern const LatticeVector SC_OFFSET_2[12];
+extern const LatticeVector FCC_OFFSET_2[6];
+extern const LatticeVector BCC_OFFSET_2[6];
 
 #endif // ATOMS_H

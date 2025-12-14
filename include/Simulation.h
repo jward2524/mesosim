@@ -13,6 +13,7 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct S
 void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationState* ss);
 void check_system(struct SimulationState* ss, struct SimulationEnv* se);
 int get_bond_index(int a, int b, struct SimulationEnv* se);
+void update_outdated_transitions(int old_x, int old_y, int old_z, int transitioned_atom_idx, struct SimulationState* ss, struct SimulationEnv* se);
 
 double calculate_evaporation_rate(
 	unsigned char *atom_env,

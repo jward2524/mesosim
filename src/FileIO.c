@@ -125,7 +125,7 @@ bool process_in_file(FILE* temp_log, FILE* input_file, struct SimulationState* s
 		}
 	}
 	fclose(input_file);
-	se->max_rates = (unsigned long long int) pow(se->max_neighbors + se->dissolution, se->num_nn_types);
+	se->max_rates = (unsigned long long int) pow(se->num_transition_vectors + se->dissolution, se->num_nn_types);
 	return true;
 }
 
@@ -259,7 +259,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		// expect num_bond_types numbers
 		if (se->nn_energy == NULL)
 			calloc_nnE(se);
-		int bond_index = get_env_index(nn_level, 0, se);
+		int bond_index = get_env_index(nn_level-1, 0, se);
 		int count = 0;
 
 		int len = strlen(params); // BUFFER_SIZE?
@@ -285,6 +285,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 	else if (strncmp(cmd, "nnlevels", 8) == 0) 
 	{
 		argsread = sscanf(params, "%d", &(se->num_nn_levels));
+		se->atoms_per_nn_level = (int *)malloc(se->num_nn_levels * sizeof(int));
 		// if (se->num_bond_types != 0)
 		// 	calloc_nnE(se);
 	}
@@ -339,7 +340,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 			fprintf(stderr, "Input parsing failed - Structure type %s not valid\n", structtype);
 			exit(FILE_COMMAND_IGNORED);
 		}
-		se->max_neighbors = MAXIMUM_NUMBER_OF_NEIGHBORS;
+		se->num_transition_vectors = MAXIMUM_NUMBER_OF_NEIGHBORS;
 	}
 	else if (strncmp(cmd, "output", 6) == 0) {
 		//set file name for log output
@@ -597,7 +598,8 @@ void calloc_nnE(struct SimulationEnv* se)
 // gets the index in atom_env, nnE arrays (nearest_neighbor - bond_type combo)
 int get_env_index(int nn, int bond_idx, struct SimulationEnv* se)
 {
-	return (nn-1) * se->num_bond_types + bond_idx;
+	// nn - nearest neighbor level minus 1 (0 for 1st nn, 1 for 2nd nn, etc.)
+	return nn * se->num_bond_types + bond_idx;
 }
 
 // int get_env_index_types(int nn, int a, int b, struct SimulationEnv* se)
@@ -889,10 +891,10 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 			&temp_atom.cartesian[0], &temp_atom.cartesian[1], &temp_atom.cartesian[2],
 			&temp_atom.lattice[0], &temp_atom.lattice[1], &temp_atom.lattice[2]); //get rid of lattice coords too?
 
-		for (int j=0; j<se->max_neighbors + se->dissolution; ++j) //when do we pick lattice?
+		for (int j=0; j<se->num_transition_vectors + se->dissolution; ++j) //when do we pick lattice?
 			fscanf(input_file, "%d\t", &temp_atom.transition_indices[j]);
 
-		for (int j=0; j<se->max_neighbors; ++j)
+		for (int j=0; j<se->num_transition_vectors; ++j)
 			fscanf(input_file, "%d\t", &temp_atom.neighbor_atom_idxs[j]);
 				
 		fscanf(input_file, "%d\t%d\t", &temp_atom.next_atom, &temp_atom.previous_atom);
@@ -921,7 +923,7 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 bool output_log_file(FILE* sim_log_file, int frame_num, unsigned long int iter, double elapsed_stime, double temperature, double overpotential, int atom_cnt, double total_internal_energy)
 {
 	fprintf(sim_log_file, "![%d]\t", frame_num);
-	fprintf(sim_log_file, "iter%lu\t", iter);
+	fprintf(sim_log_file, "iteration = %lu\t", iter);
 	fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t", elapsed_stime, temperature, overpotential); // TODO: add iteration number to this
 	fprintf(sim_log_file, "atoms = %d\tinternal energy = %lf [eV]\n", atom_cnt, total_internal_energy);
 	fflush(sim_log_file);

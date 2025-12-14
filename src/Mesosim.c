@@ -104,9 +104,8 @@ int main(int argc, char* argv[]) {
     initialize_simulation_variables(sim_state, sim_env);
     
     // sets jump offsets for given crystal type
-	initialize_neighbor_offsets(sim_env->lattice_type, &sim_env->max_neighbors, sim_env->jump_offset, sim_env->opposite_offset);
+	initialize_neighbor_offsets(sim_env);
     initialize_initial_structure(sim_state, sim_env);
-
 
     // if (strcmp(outFile, "") == 0) {
     //     //an out file name was not defined in input file, use starttime as filename
@@ -162,13 +161,16 @@ int main(int argc, char* argv[]) {
 
     fprintf(log_state->sim_log_file, "\nBond energies\n");
     int bond_idx, env_idx;
-    for (int i = 0; i < sim_env->num_elements; i++)
+    for (int nn_level = 0; nn_level < sim_env->num_nn_levels; nn_level++)
     {
-        for (int j = i; j < sim_env->num_elements; j++)
+        for (int elem_a = 0; elem_a < sim_env->num_elements; elem_a++)
         {
-            bond_idx = get_bond_index(i, j, sim_env);
-            env_idx = get_env_index(1, bond_idx, sim_env);
-            fprintf(log_state->sim_log_file, "%s-%s: %lf\n", sim_env->atom_names[i], sim_env->atom_names[j], sim_env->nn_energy[env_idx]);
+            for (int elem_b = elem_a; elem_b < sim_env->num_elements; elem_b++)
+            {
+                bond_idx = get_bond_index(elem_a, elem_b, sim_env);
+                env_idx = get_env_index(nn_level, bond_idx, sim_env);
+                fprintf(log_state->sim_log_file, "%s-%s: %lf\n", sim_env->atom_names[elem_a], sim_env->atom_names[elem_b], sim_env->nn_energy[env_idx]);
+            }
         }
     }
 
@@ -271,8 +273,8 @@ void clean_and_exit(int error)
         free_if_exists((void **)&sim_env->substrate_composition);
         free_if_exists((void **)&sim_env->nn_energy);
         free_if_exists((void **)&sim_env->is_soluble);
-        free_if_exists((void **)&sim_env->jump_offset);
-        free_if_exists((void **)&sim_env->opposite_offset);
+        free_if_exists((void **)&sim_env->transition_vectors);
+        free_if_exists((void **)&sim_env->opposite_tvectors);
         free_if_exists((void **)&sim_env);
     }
 
