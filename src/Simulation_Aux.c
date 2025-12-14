@@ -397,88 +397,61 @@ void initialize_zones(Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct 
 void initialize_neighbor_offsets(struct SimulationEnv *se)
 {	
 	int i;
-	int fcc_offs[12] = {11, 10, 7, 4, 3, 6, 5, 2, 9, 8, 1, 0};
-	int sc_offs[6] = {1, 0, 3, 2, 5, 4};
-	int bcc_offs[8] = {7, 6, 3, 2, 5, 4, 1, 0};
+	int fcc_opposite[12] = {11, 10, 7, 4, 3, 6, 5, 2, 9, 8, 1, 0};
+	int sc_opposite[6] = {1, 0, 3, 2, 5, 4};
+	int bcc_opposite[8] = {7, 6, 3, 2, 5, 4, 1, 0};
+
+	const LatticeVector *vectors;
+	const LatticeVector *vectors2;
+	const int *opposite_vectors;
+	int extra;
 
 	switch(se->lattice_type)
 	{
 		case FCC:
 			se->num_transition_vectors = 12;
-			se->atoms_per_nn_level[0] = se->num_transition_vectors;
-			for (i=0;i<12;++i)
-			{
-				se->transition_vectors[i].dx = FCC_OFFSET[i].dx;
-				se->transition_vectors[i].dy = FCC_OFFSET[i].dy;
-				se->transition_vectors[i].dz = FCC_OFFSET[i].dz;
-				se->opposite_tvectors[i] = fcc_offs[i];
-			}
-
-			if (se->num_nn_levels == 2)
-			{
-				int extra = 6;
-				for (i=0; i<extra; i++)
-				{
-					se->transition_vectors[se->num_transition_vectors+i].dx = FCC_OFFSET_2[i].dx;
-					se->transition_vectors[se->num_transition_vectors+i].dy = FCC_OFFSET_2[i].dy;
-					se->transition_vectors[se->num_transition_vectors+i].dz = FCC_OFFSET_2[i].dz;
-				}
-				se->num_energy_contributors = se->num_transition_vectors + extra;
-				se->atoms_per_nn_level[1] = extra;
-			}
-
+			extra = 6;
+			vectors = FCC_OFFSET;
+			vectors2 = FCC_OFFSET_2;
+			opposite_vectors = fcc_opposite;
 			break;
 
 		case SC:
 			se->num_transition_vectors = 6;
-			se->atoms_per_nn_level[0] = se->num_transition_vectors;
-			for (i=0; i<se->num_transition_vectors; ++i)
-			{
-				se->transition_vectors[i].dx = SC_OFFSET[i].dx;
-				se->transition_vectors[i].dy = SC_OFFSET[i].dy;
-				se->transition_vectors[i].dz = SC_OFFSET[i].dz;
-				se->opposite_tvectors[i] = sc_offs[i];
-			}
-
-			if (se->num_nn_levels == 2)
-			{
-				int extra = 12;
-				for (i=0; i<extra; i++)
-				{
-					se->transition_vectors[se->num_transition_vectors+i].dx = BCC_OFFSET_2[i].dx;
-					se->transition_vectors[se->num_transition_vectors+i].dy = BCC_OFFSET_2[i].dy;
-					se->transition_vectors[se->num_transition_vectors+i].dz = BCC_OFFSET_2[i].dz;
-				}
-				se->num_energy_contributors = se->num_transition_vectors + extra;
-				se->atoms_per_nn_level[1] = extra;
-			}
+			extra = 12;
+			vectors = SC_OFFSET;
+			vectors2 = SC_OFFSET_2;
+			opposite_vectors = sc_opposite;
 			break;
 
 		case BCC:
 			se->num_transition_vectors = 8;
-			se->atoms_per_nn_level[0] = se->num_transition_vectors;
-			for (i=0; i<se->num_transition_vectors; ++i)
-			{
-				se->transition_vectors[i].dx = BCC_OFFSET[i].dx;
-				se->transition_vectors[i].dy = BCC_OFFSET[i].dy;
-				se->transition_vectors[i].dz = BCC_OFFSET[i].dz;
-				se->opposite_tvectors[i] = bcc_offs[i];
-			}
-
-			if (se->num_nn_levels == 2)
-			{
-				int extra = 6;
-				for (i=0; i<extra; i++)
-				{
-					se->transition_vectors[se->num_transition_vectors+i].dx = BCC_OFFSET_2[i].dx;
-					se->transition_vectors[se->num_transition_vectors+i].dy = BCC_OFFSET_2[i].dy;
-					se->transition_vectors[se->num_transition_vectors+i].dz = BCC_OFFSET_2[i].dz;
-				}
-				se->num_energy_contributors = se->num_transition_vectors + extra;
-				se->atoms_per_nn_level[1] = extra;
-			}
-			
+			extra = 6;
+			vectors = BCC_OFFSET;
+			vectors2 = BCC_OFFSET_2;
+			opposite_vectors = bcc_opposite;
 			break;
+	}
+
+	se->atoms_per_nn_level[0] = se->num_transition_vectors;
+	for (i=0;i<se->num_transition_vectors;++i)
+	{
+		se->transition_vectors[i].dx = vectors[i].dx;
+		se->transition_vectors[i].dy = vectors[i].dy;
+		se->transition_vectors[i].dz = vectors[i].dz;
+		se->opposite_tvectors[i] = opposite_vectors[i];
+	}
+
+	if (se->num_nn_levels == 2)
+	{
+		for (i=0; i<extra; i++)
+		{
+			se->transition_vectors[se->num_transition_vectors+i].dx = vectors2[i].dx;
+			se->transition_vectors[se->num_transition_vectors+i].dy = vectors2[i].dy;
+			se->transition_vectors[se->num_transition_vectors+i].dz = vectors2[i].dz;
+		}
+		se->num_energy_contributors = se->num_transition_vectors + extra;
+		se->atoms_per_nn_level[1] = extra;
 	}
 
 	return;
