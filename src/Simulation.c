@@ -101,7 +101,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	// next iteration
 
 	int old_x, old_y, old_z;
-	int neighbor_x, neighbor_y, neighbor_z, neighbor_idx;
+	// int neighbor_x, neighbor_y, neighbor_z, neighbor_idx;
 
 	while (!simulation_end)
 	{
@@ -222,44 +222,15 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 		// whether this is the 1st, 2nd, or 3rd random number in the loop affects the time (diff random numbers)
 		ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
 		
-		// update rates
 		if (se->overpotential_ramp_rate != 0.0)
 		{
 			cur_stime = ss->elapsed_stime;
 			ss->overpotential += (cur_stime-prev_stime) * se->overpotential_ramp_rate;
 			prev_stime = ss->elapsed_stime;
 		}
-
-		// refresh neighbors of previous site
-		for (int i = 0; i < se->max_neighbors; i++)
-		{
-			neighbor_x = old_x + se->jump_offset[i].dx;
-			neighbor_y = old_y + se->jump_offset[i].dy;
-			neighbor_z = old_z + se->jump_offset[i].dz;
-
-			adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
-
-			neighbor_idx = atom_at(neighbor_x, neighbor_y, neighbor_z, ss->atom_arr, ss->zone_arr, se);
-
-			if (neighbor_idx >= 0)
-				refresh_transitions(neighbor_idx, ss, se);
-		}
-
-		// if transition was not evaporation
-		if (transitioned_atom_idx >= 0)
-		{
-			// refresh moved atom - gets refreshed as neighbor of previous site
-			refresh_transitions(transitioned_atom_idx, ss, se);
-	
-			// refresh neighbors of moved-to site
-			for (int i = 0; i < se->max_neighbors; i++)
-			{
-				neighbor_idx = ss->atom_arr[transitioned_atom_idx]->neighbor_atom_idxs[i];
-	
-				if (neighbor_idx >= 0)
-					refresh_transitions(neighbor_idx, ss, se);
-			}
-		}
+		
+		// update rates
+		update_outdated_transitions(old_x, old_y, old_z, transitioned_atom_idx, ss, se);
 		
 		// ENHANCE - not all are necessary if overpotential/temperature don't change?
 		compute_transition_array(ss, se);
@@ -315,7 +286,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			}
 
 			// record the elapsed time in a file here
-			printf("writing file %d: elapsed_stime = %lf\n", framenum, ss->elapsed_stime);
+			printf("writing file %d: elapsed_stime = %le\n", framenum, ss->elapsed_stime);
 			output_log_file(ls->sim_log_file, framenum, ss->elapsed_stime, ss->iter, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 			write_xyz_file(ls->position_log_prefix, framenum, suffix, ss, se);
 
@@ -376,7 +347,7 @@ void compute_transition_array(struct SimulationState* ss, struct SimulationEnv* 
 			}
 			else
 			{
-				rate_const = calculate_surf_diffusion_rate(r->atom_env, ss->temperature, se);
+				rate_const = calculate_surf_diffusion_rate(r->atom_env, r->final_config_neighbor_cnt, ss->temperature, se);
 			}
 			if (isnan(rate_const))
 			{
@@ -429,6 +400,42 @@ int get_bond_index(int a, int b, struct SimulationEnv* se)
 	
 	// a=1, b=2 -> (1*3)+(2-1)=4
 	return (first * (se->num_elements)) + (second-first);
+}
+
+int update_outdated_transitions(int old_x, int old_y, int old_z, int transitioned_atom_idx, struct SimulationState* ss, struct SimulationEnv* se)
+{
+	int neighbor_x, neighbor_y, neighbor_z, neighbor_idx;
+	
+	// refresh neighbors of previous site
+	for (int i = 0; i < se->max_neighbors; i++)
+	{
+		neighbor_x = old_x + se->jump_offset[i].dx;
+		neighbor_y = old_y + se->jump_offset[i].dy;
+		neighbor_z = old_z + se->jump_offset[i].dz;
+
+		adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
+
+		neighbor_idx = atom_at(neighbor_x, neighbor_y, neighbor_z, ss->atom_arr, ss->zone_arr, se);
+
+		if (neighbor_idx >= 0)
+			refresh_transitions(neighbor_idx, ss, se);
+	}
+
+	// if transition was not evaporation
+	if (transitioned_atom_idx >= 0)
+	{
+		// refresh moved atom - gets refreshed as neighbor of previous site
+		refresh_transitions(transitioned_atom_idx, ss, se);
+
+		// refresh neighbors of moved-to site
+		for (int i = 0; i < se->max_neighbors; i++)
+		{
+			neighbor_idx = ss->atom_arr[transitioned_atom_idx]->neighbor_atom_idxs[i];
+
+			if (neighbor_idx >= 0)
+				refresh_transitions(neighbor_idx, ss, se);
+		}
+	}
 }
 
 /******************************************************************************/
@@ -503,28 +510,30 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 		return atom_rates_cnt;
 
 	// create transitions to each unoccupied neighbor
+	int final_config_neighbor_cnt;
 	for (int i=0; i < se->max_neighbors; ++i) 
 	{
 		// if unoccupied, consider transition
 		if (ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] == -1) 
 		{ 
 			// end_config is only used to identify the transitions that are functionally evaporations (no neighbors in end configuration)
-			int final_config_neighbor_cnt = get_final_configuration(atom_idx, i, ss, se, end_config);
+			final_config_neighbor_cnt = get_final_configuration(atom_idx, i, ss, se, end_config);
 
-			if (final_config_neighbor_cnt < 1)
+			if (final_config_neighbor_cnt <= 1)
 			{
 				// transition in this direction leaves stray atom
+				// or leads to pair climbs
 				// these types are handled by evaporation
 				continue;
 			}
-					
+
 			++atom_rates_cnt;
 
-			rate_idx = get_rate(atom_env, 0, ss, se);
+			rate_idx = get_rate(atom_env, final_config_neighbor_cnt, 0, ss, se);
 			if (rate_idx == -1)
 			{
 				// if rate doesn't already exist, make new one
-				rate_idx = create_new_rate(atom_env, 0, ss, se);
+				rate_idx = create_new_rate(atom_env, final_config_neighbor_cnt, 0, ss, se);
 			}
 			add_to_transition_list(rate_idx, atom_idx, i, ss, se);
 		}
@@ -534,11 +543,12 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	if (se->is_soluble[ss->atom_arr[atom_idx]->type])
 	{
 		// dissolution / evaporation transition
-		rate_idx = get_rate(atom_env, 1, ss, se);
+		final_config_neighbor_cnt = -1;
+		rate_idx = get_rate(atom_env, final_config_neighbor_cnt, 1, ss, se);
 		if (rate_idx == -1)
 		{
 			// if rate doesn't already exist, make new one
-			rate_idx = create_new_rate(atom_env, 1, ss, se);
+			rate_idx = create_new_rate(atom_env, final_config_neighbor_cnt, 1, ss, se);
 		}
 		// evaporation is considered to be last in se->jump_offset (not really in array but uses that index number)
 		add_to_transition_list(rate_idx, atom_idx, se->max_neighbors, ss, se);
@@ -555,16 +565,17 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 
 //is there a better way of doing this?
 // checks if the rate constant is already in the rate list
-int get_rate(unsigned char* atom_env, unsigned char is_evaporation, struct SimulationState* ss, struct SimulationEnv* se) 
+int get_rate(unsigned char* atom_env, int final_config_neighbor_cnt, unsigned char is_evaporation, struct SimulationState* ss, struct SimulationEnv* se) 
 {
-	int env_cmp, evap_cmp;
+	int env_cmp, evap_cmp, finalcnt_cmp;
 
 	for (int i=0; i < ss->rate_cnt; ++i)
 	{
 		env_cmp = memcmp(ss->rate_arr[i].atom_env, atom_env, se->num_nn_types);
 		env_cmp = env_cmp == 0;
 		evap_cmp = ss->rate_arr[i].is_evaporation == is_evaporation;
-		if (env_cmp && evap_cmp)
+		finalcnt_cmp = ss->rate_arr[i].final_config_neighbor_cnt == final_config_neighbor_cnt;
+		if (env_cmp && evap_cmp && finalcnt_cmp)
 			return i;
 	}
 
@@ -575,7 +586,7 @@ int get_rate(unsigned char* atom_env, unsigned char is_evaporation, struct Simul
 /******************************************************************************/
 // create new Rate struct in rate array
 // updates rate_array[rate_cnt], rate_cnt
-int create_new_rate(unsigned char *atom_env, unsigned char is_evaporation, struct SimulationState* ss, struct SimulationEnv* se)
+int create_new_rate(unsigned char *atom_env, int final_config_neighbor_cnt, unsigned char is_evaporation, struct SimulationState* ss, struct SimulationEnv* se)
 {
 	// ss->rate_arr[ss->rate_cnt].k = rate;
 	Rate *r = &ss->rate_arr[ss->rate_cnt];
@@ -998,6 +1009,7 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 // calculates surface diffusion rate using atom environment
 double calculate_surf_diffusion_rate(
 	unsigned char* atom_env,
+	int final_config_neighbor_cnt,
 	double temperature,						// system temperature
 	// double overpotential,					// system overpotential
 	struct SimulationEnv* se
@@ -1023,6 +1035,12 @@ double calculate_surf_diffusion_rate(
 	{
 		// no neighbors - this condition corresponds to a diffuser walking through a lattice (a lattice gas)
 		energy = -1.0;
+	}
+	
+	// to simulate Ehrlich-Schwoebel barrier
+	if (final_config_neighbor_cnt <= 2)
+	{
+		energy = 100;
 	}
 
 	// ENHANCE: replace calculating the exp with memoizing up the value (uhash?) -> speedup?

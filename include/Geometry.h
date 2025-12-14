@@ -134,6 +134,9 @@ typedef struct
 		unsigned char *atom_env; 	// can't do variable length arrays, so pointer instead
 		// pointer to start of 2D array num_bond_types*idx1 + idx2
 
+		// ENHANCE: combine final_config_neighbor_cnt and is_evaporation
+		int final_config_neighbor_cnt;			// number of neighbors after transition
+
 		// same format as se->nn_energy[][]: atom_env[num_nn_levels][num_bond_types]
 		// int env_hash; // hash of atom_env array, for comparison of environments - based on number of distinct environments?
 		// can't use memcmp bc atom_env[0] is char*, not char

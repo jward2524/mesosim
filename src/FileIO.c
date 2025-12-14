@@ -973,7 +973,7 @@ bool write_xyz_file(char* xyz_filename, int frame_num, char* suffix, struct Simu
 		fprintf(file, "pbc=\"T T T\" ");
 		fprintf(file, "Properties=id:I:1:species:S:1:pos:R:3 ");
 	}
-	fprintf(file, "time=%lf temperature=%lf potential=%lf energy=%lf\n", ss->elapsed_stime, ss->temperature, ss->overpotential, ss->total_internal_energy); //need to compute energy here!
+	fprintf(file, "time=%le temperature=%lf potential=%lf energy=%lf\n", ss->elapsed_stime, ss->temperature, ss->overpotential, ss->total_internal_energy); //need to compute energy here!
 
 	Atom **atoms = ss->atom_arr;
 	for (int i = 0; i < ss->atom_cnt; ++i)
