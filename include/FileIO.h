@@ -22,5 +22,6 @@ bool output_kmc_file(char *kmc_filename); //need to rework
 
 int get_num_bond_types(int num_elements);
 int get_env_index(int nn, int bond_idx, struct SimulationEnv* se);
+int get_bond_index(int a, int b, struct SimulationEnv* se);
 
 #endif // FILEIO_H

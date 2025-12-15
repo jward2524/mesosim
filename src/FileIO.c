@@ -607,6 +607,28 @@ int get_env_index(int nn, int bond_idx, struct SimulationEnv* se)
 // 	return get_env_index(nn, get_bond_index(a, b, se), se);
 // }
 
+int get_bond_index(int a, int b, struct SimulationEnv* se)
+{
+	// aa, ab, ac; bb, bc; cc [num_elements=3]
+	// 00, 01, 02; 11, 12; 22
+	// assume 0-indexed
+	int first, second;
+
+	// larger number (later element) is second
+	if (a < b)
+	{
+		first = a;
+		second = b;
+	}
+	else {
+		first = b;
+		second = a;
+	}
+	
+	// a=1, b=2 -> (1*3)+(2-1)=4
+	return (first * (se->num_elements)) + (second-first);
+}
+
 // calculate the number of bond types
 int get_num_bond_types(int num_elements)
 {
