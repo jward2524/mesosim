@@ -280,7 +280,6 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 			fprintf(stderr, "Input parsing failed - Expected %d bond energies, recieved %d\n", se->num_bond_types, count);
 			exit(FILE_COMMAND_IGNORED);
 		}
-
 	}
 	else if (strncmp(cmd, "nnlevels", 8) == 0) 
 	{
@@ -289,7 +288,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 		// if (se->num_bond_types != 0)
 		// 	calloc_nnE(se);
 	}
-	else if (strncmp(cmd, "datalog", 4) == 0) { // ENHANCE: linear list and ln list do the same thing - improve semantics to eliminate this duplicity
+	else if (strncmp(cmd, "datalog", 7) == 0) { // ENHANCE: linear list and ln list do the same thing - improve semantics to eliminate this duplicity
 		// set time increments for data logging
 		int cursor;
 		if (strncmp(params, "linear", 6) == 0) // linear data recording
@@ -553,7 +552,7 @@ void parse_log_list(char* input_str, double* list, int* len){
 	char delim[] = " ";
 	char* token = strtok(input_str, delim);
 	while (token) {
-		list[*len] = strtod(token, NULL);
+		list[*len] = strtod(token, NULL); // string to double
 		(*len)++;
 		token = strtok(NULL, delim);
 	}
@@ -773,29 +772,70 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 	double xyz_pos[3] = {0.0, 0.0, 0.0};
 	double radius;
 	int atype;
-	char command_string[1024];
+	char command_string[BUFFER_SIZE];
 
 	//set_primitive_basis(SC); //is this always true? this should be set somewhere else (beforehand or after?)
 
 	//first line should be the number of atoms
 	int nremain; //number of expected atoms
 
-	if (fgets(command_string, BUFFER_SIZE, input_file) == NULL)	// EOF, bad
+	fgets(command_string, BUFFER_SIZE, input_file);
+	if (command_string == NULL)	// EOF, bad
     {
 		fclose(input_file);
 		return false;
 	}
 
-	nremain = atoi(command_string); //first line of a file is the number of expected atoms
+	// first line is the number of atoms (lines with atom info)
+	nremain = atoi(command_string); 
 
-	fgets(command_string, BUFFER_SIZE, input_file); //comment line
+	// read comment line
+	int comment_buffer_multiplier = 3;
+	char comment_string[comment_buffer_multiplier*BUFFER_SIZE];
+	fgets(comment_string, comment_buffer_multiplier*BUFFER_SIZE, input_file);
+	
+	// capture any simulation variables in the comment line that are used to continue a started simulation
+	// ss->elapsed_stime, ss->temperature, ss->overpotential; all doubles
+	// ls->framenum; int
+	// ss->iter; unsigned long
+	char delim[] = "=";
+	char *key = strtok(comment_string, delim);
+	char *value;
+	while (key) {
+		value = strtok(NULL, delim);
+		if (strncmp(key, "time", 4) == 0)
+		{
+			ss->elapsed_stime = strtod(value, NULL);
+		}
+		else if (strncmp(key, "temperature", 11) == 0)
+		{
+			ss->temperature = strtod(value, NULL);
+		}
+		else if (strncmp(key, "potential", 9) == 0)
+		{
+			ss->overpotential = strtod(value, NULL);
+		}
+		else if (strncmp(key, "iteration", 9) == 0)
+		{
+			ss->iter = strtoul(value, NULL, 10);
+		}
+		else if (strncmp(key, "frame", 5) == 0)
+		{
+			ls->framenum = atoi(value);
+		}
 
-	//copy command string here to save comment
+		key = strtok(NULL, delim);
+	}
+
 	int argsread;
 
-	for (; nremain > 0; --nremain){
-		if (fgets(command_string, BUFFER_SIZE, input_file) == NULL)	// EOF
-      	{
+	for (; nremain > 0; --nremain)
+	{
+		fgets(command_string, BUFFER_SIZE, input_file);
+		
+		// if EOF
+		if (command_string == NULL)	
+		{
 			fclose(input_file);
 			fprintf(stderr, "Input parsing failed - Ran into EOF, expected %d atoms remaining\n", nremain);
 			//organize(atom, atom_cnt); //do I need to call this?
@@ -803,7 +843,7 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 		}
 
 		i = ss->atom_cnt;	
-				
+		
 		create_default_atom(i, ss->atom_arr, se);
 		++ss->atom_cnt;
 		if (ss->atom_cnt > se->max_atoms)
@@ -812,7 +852,9 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 			clean_and_exit(errno);
 		}
 
-		if ((argsread = sscanf(command_string, "%s %lf %lf %lf %lf", xyz_type, xyz_pos, xyz_pos+1, xyz_pos+2, &radius)) != 5)
+		// TODO: make flexible based on presence of Properties key and its value
+		argsread = sscanf(command_string, "%s %lf %lf %lf %lf", xyz_type, xyz_pos, xyz_pos+1, xyz_pos+2, &radius);
+		if (argsread != 5)
 		{
 			fprintf(stderr, "Input parsing failed - Failed to read 4 arguments in .xyz file, only read %d\n", argsread);
 			fclose(input_file);
@@ -1078,12 +1120,12 @@ bool write_xyz_file(char* xyz_filename, int frame_num, char* suffix, struct Simu
 		fprintf(file, "pbc=\"T T T\" ");
 		fprintf(file, "Properties=id:I:1:species:S:1:pos:R:3 ");
 	}
-	fprintf(file, "time=%le temperature=%lf potential=%lf energy=%lf\n", ss->elapsed_stime, ss->temperature, ss->overpotential, ss->total_internal_energy); //need to compute energy here!
+	fprintf(file, "frame=%d iteration=%lu time=%le temperature=%lf potential=%lf energy=%lf\n", frame_num, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->total_internal_energy);
 
 	Atom **atoms = ss->atom_arr;
 	for (int i = 0; i < ss->atom_cnt; ++i)
 	{
-		fprintf(file, "%d %s %lf %lf %lf %lf\n", i, atoms[i]->name, atoms[i]->cartesian[0], atoms[i]->cartesian[1], atoms[i]->cartesian[2], atoms[i]->bsradius); //name is now element type
+		fprintf(file, "%d %s %lf %lf %lf\n", i, atoms[i]->name, atoms[i]->cartesian[0], atoms[i]->cartesian[1], atoms[i]->cartesian[2]); //name is now element type
 	}
 	//ball and stick or space filling?
 	fclose(file);

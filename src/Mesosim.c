@@ -60,6 +60,7 @@ int main(int argc, char* argv[]) {
     fprintf(temp_log, "Start time: %lld\n", starttime);
     fprintf(temp_log, "Attempting to read in file %s\n", argv[1]);
 
+    // TODO: clean up - move error handling into simulation_parameters_from_file; move all initializers into one function in Sim_Aux
     // simulation_parameters_from_file also initializes atom list
     if (simulation_parameters_from_file(argv[1], sim_state, sim_env, log_state, temp_log, starttime) == false) {
         fprintf(temp_log, "ERROR! Something bad happened when reading the input file\n");

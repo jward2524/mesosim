@@ -37,14 +37,7 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 	int moved_flag = true;
 
-	// ls->framenum = 0; 
-
 	prev_stime = ss->elapsed_stime;
-	
-	// ss->total_atoms_dissolved = 0;
-
-	// // iteration count
-	// ss->iter = 0;
 	
 	bool simulation_end = false;
 	

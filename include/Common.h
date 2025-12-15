@@ -116,15 +116,16 @@ struct SimulationState
     unsigned long final_iteration; // max number of iterations
     double run_stime; // simulation max runtime default (in seconds)
     bool simulation_should_kill_itself;
-    double elapsed_stime;
+    double elapsed_stime; // current simulation time (in seconds)
     int sim_end_type;
 
     double frequency_sum;
 
     // sum of all bond energies in system (no double-counting)
-    // incremental modification of this value throughout simulation and storage as a floating-point number
+    // currently: incremental modification of this value throughout simulation and storage as a floating-point number
+    // in refresh_transitions and remove_atom
     // means it loses some accuracy over iterations
-    // return to sum over all atom energies if want to regain some precision
+    // return to sum over all atom energies (during log checkpoint) if want to regain some precision
     double total_internal_energy;
     
     double temperature;
