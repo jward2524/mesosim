@@ -179,17 +179,16 @@ void initialize_simulation_variables(struct SimulationState* ss, struct Simulati
 
 void initialize_initial_structure(struct SimulationState* ss, struct SimulationEnv* se) // index represents simulation_type, from macros
 {
-	//printf("I'm in here, simulation index is %d\n", simulation_index);
-	switch(se->simulation_type) // TODO: just use the damn macros instead
+	switch(se->simulation_type)
 	{
-		case 1:										// flat plane
+		case SIMULATION_TYPE_FLAT_SHEET:	// flat plane
 			initialize_flat_sheet(ss, se);
 			break;
 
-		case 2:
+		case SIMULATION_TYPE_CLUSTER:
 			initialize_spherical_cluster(ss, se);
 			break;
-		case 3:
+		case SIMULATION_TYPE_FROM_FILE:
 			initialize_from_file(se->atoms_filename); //TODO! THIS IS BIG!
 			break;
 	}
