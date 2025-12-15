@@ -313,6 +313,7 @@ int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, struct S
 			fprintf(stderr, "Input parsing failed - Unknown argument in 'datalog' command: %s\n", params);
 			exit(FILE_COMMAND_IGNORED);
 		}
+		ls->framenum = 0;
 	}
 	/*else if (strncmp(cmd, "runs", 4) == 0) {
 		//set number of runs
@@ -939,9 +940,89 @@ bool process_kmx_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 	return true;
 }
 
+//print a lot of information to the log
+void input_logging(struct SimulationState* sim_state, struct SimulationEnv* sim_env, struct LoggingState* log_state)
+{
+    fprintf(log_state->sim_log_file, "successfully read input file and preprocessed\n");
+    fprintf(log_state->sim_log_file, "system size is %d x %d x %d\n", sim_env->system_size_x, sim_env->system_size_y, sim_env->system_size_z);
+
+    switch (sim_env->lattice_type) {
+        case FCC:
+            fprintf(log_state->sim_log_file, "crystal structure is FCC\n");
+            break;
+        case BCC:
+            fprintf(log_state->sim_log_file, "crystal structure is BCC\n");
+            break;
+        case SC:
+            fprintf(log_state->sim_log_file, "crystal structure is SC\n");
+            break;
+    }
+
+    fprintf(log_state->sim_log_file, "Initializing atom types: ");
+    for (int i = 0; i < sim_env->num_elements; i++)
+    {
+        fprintf(log_state->sim_log_file, "%s ", sim_env->atom_names[i]);
+    }
+    fprintf(log_state->sim_log_file, "\nComposition: ");
+    for (int i = 0; i < sim_env->num_elements; i++)
+    {
+        fprintf(log_state->sim_log_file, "%lf ", sim_env->substrate_composition[i]);
+    }
+
+    fprintf(log_state->sim_log_file, "\nSolubility: ");
+    for (int i = 0; i < sim_env->num_elements; i++)
+    {
+        fprintf(log_state->sim_log_file, "%s ", sim_env->is_soluble[i] ? "true" : "false");
+    }
+
+    fprintf(log_state->sim_log_file, "\nBond energies\n");
+    int bond_idx, env_idx;
+    for (int nn_level = 0; nn_level < sim_env->num_nn_levels; nn_level++)
+    {
+        for (int elem_a = 0; elem_a < sim_env->num_elements; elem_a++)
+        {
+            for (int elem_b = elem_a; elem_b < sim_env->num_elements; elem_b++)
+            {
+                bond_idx = get_bond_index(elem_a, elem_b, sim_env);
+                env_idx = get_env_index(nn_level, bond_idx, sim_env);
+                fprintf(log_state->sim_log_file, "%s-%s: %lf\n", sim_env->atom_names[elem_a], sim_env->atom_names[elem_b], sim_env->nn_energy[env_idx]);
+            }
+        }
+    }
+
+    fprintf(log_state->sim_log_file, "Temperature is %lf K\n", sim_state->temperature);
+
+    if (sim_env->overpotential_ramp_rate > 0.)
+        fprintf(log_state->sim_log_file, "Potential sweep [eV/s] from %lf to %lf at %lf\n", sim_state->overpotential, sim_env->overpotential_ramp_rate, sim_env->max_overpotential);
+    else
+        fprintf(log_state->sim_log_file, "Potential constant [eV] at %lf\n", sim_state->overpotential);
+
+    if (log_state->analysis_type == REGULAR_TIME_INTERVALS)
+        fprintf(log_state->sim_log_file, "Recording data at linear intervals [s] from %lf to %lf at %lf increments\n", log_state->next_log_checkpoint, sim_state->run_stime, log_state->log_interval);
+    else if (log_state->analysis_type == LN_TIME_INTERVALS)
+        fprintf(log_state->sim_log_file, "Recording data at log intervals [s] from %lf to %lf at %lf multiples\n", log_state->next_log_checkpoint, sim_state->run_stime, log_state->log_interval);
+    // TODO: fill out for other analysis_types
+
+    fprintf(log_state->sim_log_file, "Random seed is %ld\n", rand_seed);
+
+    switch (sim_env->simulation_type) {
+        case SIMULATION_TYPE_FLAT_SHEET:
+            fprintf(log_state->sim_log_file, "Initialized flat sheet with monolayer depth %d\n", sim_env->sheet_thickness);
+            break;
+        case SIMULATION_TYPE_CLUSTER:
+            fprintf(log_state->sim_log_file, "Initialized spherical cluster with radius %d\n", sim_env->cluster_radius);
+            break;
+        case SIMULATION_TYPE_FROM_FILE:
+            fprintf(log_state->sim_log_file, "Initialized user-defined structure with filename %s\n", sim_env->atoms_filename);
+            break;
+    }
+
+    fprintf(log_state->sim_log_file, "Atoms created, %lld total\n", sim_state->atom_cnt);
+}
+
+
 /*******************************************************************************
 *******************************************************************************/
-
 bool output_log_file(FILE* sim_log_file, int frame_num, unsigned long int iter, double elapsed_stime, double temperature, double overpotential, int atom_cnt, double total_internal_energy)
 {
 	fprintf(sim_log_file, "![%d]\t", frame_num);

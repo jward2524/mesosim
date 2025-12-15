@@ -37,9 +37,17 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 	int moved_flag = true;
 
-	int framenum = 0; // counter/id for number of outputs / output files
+	// ls->framenum = 0; 
 
-	ss->elapsed_stime = 0.0;
+	prev_stime = ss->elapsed_stime;
+	
+	// ss->total_atoms_dissolved = 0;
+
+	// // iteration count
+	// ss->iter = 0;
+	
+	bool simulation_end = false;
+	
 	//writes data time intervals and run time in original code
 
 	//simulation_is_going = true;
@@ -64,11 +72,6 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	
 	// TODO: move this out from here, to only where output is necessary
 	organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); //replacement for copy_xyz_to_coord but might not be necessary
-	
-	ss->total_atoms_dissolved = 0;
-
-	// iteration count
-	ss->iter = 0;
 
 	char suffix[BUFFER_SIZE];
 	if (ls->analysis_type == REGULAR_TIME_INTERVALS)
@@ -85,13 +88,9 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	}
 
 	// initial state
-	output_log_file(ls->sim_log_file, framenum, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-	write_xyz_file(ls->position_log_prefix, framenum, suffix, ss, se);
-	framenum++;
-
-	prev_stime = 0.0;
-	
-	bool simulation_end = false;
+	output_log_file(ls->sim_log_file, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+	write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+	ls->framenum++;
 
 	// start with everything current to the current state
 	// choose a transition
@@ -110,8 +109,8 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 
 		if (ss->simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
 		{
-			output_log_file(ls->sim_log_file, framenum, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-			write_xyz_file(ls->position_log_prefix, framenum, suffix, ss, se);
+			output_log_file(ls->sim_log_file, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+			write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
 
 			ss->simulation_should_kill_itself = false;
 
@@ -287,11 +286,11 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 			}
 
 			// record the elapsed time in a file here
-			printf("writing file %d: elapsed_stime = %le\n", framenum, ss->elapsed_stime);
-			output_log_file(ls->sim_log_file, framenum, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-			write_xyz_file(ls->position_log_prefix, framenum, suffix, ss, se);
+			printf("writing file %d: elapsed_stime = %le\n", ls->framenum, ss->elapsed_stime);
+			output_log_file(ls->sim_log_file, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+			write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
 
-			++framenum;
+			++ls->framenum;
 		}
 
 		// check if simulation is over
@@ -304,10 +303,10 @@ unsigned long perform_simulation(struct SimulationState* ss, struct SimulationEn
 	}
 
 	//write elapsed_stime to mark finish
-	output_log_file(ls->sim_log_file, framenum, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+	output_log_file(ls->sim_log_file, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 	
 	snprintf(suffix, BUFFER_SIZE, "%s_final", suffix);
-	write_xyz_file(ls->position_log_prefix, framenum, suffix, ss, se);
+	write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
 	
 	if ((ss->final_iteration > 0) && (ss->iter >= ss->final_iteration))
 	{

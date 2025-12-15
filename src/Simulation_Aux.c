@@ -130,6 +130,11 @@ void initialize_simulation_variables(struct SimulationState* ss, struct Simulati
 	ss->frequency_sum = 0.0;
 
 	ss->elapsed_stime = 0.0;
+	
+	ss->total_atoms_dissolved = 0;
+
+	// iteration count
+	ss->iter = 0;
 
 	ss->overpotential = se->initial_overpotential;
 

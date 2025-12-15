@@ -143,10 +143,11 @@ struct LoggingState {
     char position_log_prefix[256];
 
     int analysis_type;
-    double log_interval;
+    double log_interval; // interval between log checkpoints, based on analysis_type?
     double next_log_checkpoint;
-    double* log_list;
-    int log_list_len;
+    double* log_list; // list of log checkpoints
+    int log_list_len; // length of log_list
+    int framenum; // counter/id for number of outputs / output files
 
 };
 
