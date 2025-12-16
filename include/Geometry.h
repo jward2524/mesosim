@@ -8,7 +8,7 @@
 typedef struct
 	{
 		char name[24]; 			// name, 24 characters long
-		unsigned char type;				// up to 255 atom types
+		unsigned char type;		// another representation of name/aelement, up to 255 atom types
 
 		// half of sum of bond energies
 		double energy;

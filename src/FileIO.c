@@ -6,9 +6,10 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <math.h>
+#include <ctype.h>
 
-const int BUFFER_SIZE = 200;
-const int ARR_BUFFER_SIZE = 20;
+const int BUFFER_SIZE = 256;
+const int ARR_BUFFER_SIZE = 32;
 char outFile[260] = ""; //MAX_PATH variable Windows related, default 260
 
 int fact(int n);
@@ -759,12 +760,400 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 
 /*******************************************************************************
 *******************************************************************************/
+// key-value pairs
+struct KV 
+{
+	// malloc'd in parse_key_value
+	char *key;
+	char *value;
+};
+
+// Property descriptor
+typedef struct {
+    char name[32];   // e.g. "species", "pos", "force"
+    char type;       // 'S' (string), 'R' (real), 'I' (int)
+    int ncols;       // number of columns for this property
+} PropertyDesc;
+
+// mallocs strings in KVs
+// kv_str is null-terminated at kv_len
+// kv_str should already be lowercase
+static int parse_key_value(const char *kv_str, size_t kv_len, struct KV *kv)
+{
+	const char *key_start = kv_str;
+	const char *value_start;
+	// size_t key_len, value_len;
+	// int has_eq = 0;
+
+	const char *eq = memchr(kv_str, '=', kv_len);
+	if (!eq) {
+		return 1;
+	}
+	value_start = eq + 1;
+
+	// start to '=' 
+	size_t key_len = (size_t)(eq - key_start);
+	char *key = (char *)malloc(key_len + 1);
+	if (!key) {
+		return 2;
+	}
+	memcpy(key, key_start, key_len);
+	key[key_len] = '\0';
+
+	// '=' to end
+	// remove quotes if escaped
+	size_t value_len;
+	char c = (char)*value_start;
+	if ((c == '\"') || (c == '\'')) {
+		value_start++;
+		const char *q = strchr(value_start, c);
+		if (!q) return 4;
+		value_len = (size_t)(q - value_start);
+	}
+	else
+	{
+		value_len = (size_t)(kv_len - key_len - 1);
+	}
+	char *value = (char *)malloc(value_len + 1);
+	if (!value) {
+		return 3;
+	}
+	memcpy(value, value_start, value_len);
+	value[value_len] = '\0';
+
+	kv->key = key;
+	kv->value = value;
+	return 0;
+}
+
+// pointer to array of KVs
+static int parse_comment(const char *line, struct KV **outpairs, size_t *outpairs_cnt) 
+{
+	// if (!line || !out_pairs || !out_count) return -1;
+
+	unsigned char pairs_max_cnt = 64;
+	// array of KVs
+	struct KV *pairs = (struct KV *)malloc(sizeof(struct KV) * pairs_max_cnt);
+	if (!pairs)
+	{
+		fprintf(stderr, "Out of memory allocating %zu bytes\n", sizeof(struct KV) * pairs_max_cnt);
+		return 1;
+	}
+
+	unsigned char pairs_cnt = 0;
+
+	// loop over characters in line
+	int has_eq = 0;
+	const char *p = line;
+    while (*p) 
+	{
+		if (pairs_cnt >= pairs_max_cnt)
+		{
+			fprintf(stderr, "There too many key-value pairs in comment line - max %d. Last parsed key was %s\n", pairs_max_cnt, pairs[pairs_cnt].key);
+			// free(pairs);
+			// for (int i = 0; i < pairs_cnt; i++)
+			// {
+			// 	if (pairs[i].key) free(pairs[i].key);
+			// 	if (pairs[i].value) free(pairs[i].value);
+			// }
+			return 1;
+		}
+
+		// trim leading whitespace
+        while (*p && isspace((unsigned char)*p)) p++;
+        if (!*p) break;
+
+        const char *start = p;
+        int in_quote = 0;      // tracks first quote with 0, or '\'' or '"'
+        const char *end = NULL;
+
+		// scan until next unquoted whitespace -> token
+        while (*p) {
+            unsigned char c = p[0];
+            if ((c == '\'') || (c == '"')) 
+			{
+                if (!in_quote) 
+				{
+                    in_quote = c;
+                } else if (in_quote == c) 
+				{
+                    in_quote = 0; /* closing quote */
+                }
+                p++;
+                continue;
+            }
+			if (!in_quote && (c == '='))
+			{
+				has_eq = 1;
+			}
+            if (!in_quote && isspace(c)) 
+			{
+                end = p;
+                break;
+            }
+            p++;
+        }
+		// if (!end) end = p; // token goes to end of string
+		
+		// only keep tokens that contain '='
+		if (!has_eq) continue;
+
+		// trim whitespace from token boundaries
+        const char *t_start = start;
+        while (t_start < end && isspace((unsigned char)*t_start)) t_start++;
+        const char *t_end = end;
+        while (t_end > t_start && isspace((unsigned char)*(t_end - 1))) t_end--;
+		
+		if (t_end <= t_start) {
+			// empty token after trimming
+            continue; 
+        }
+
+		// copy token into a new string
+        size_t len = (size_t)(t_end - t_start);
+        char *token = (char *)malloc(len + 1);
+        if (!token) {
+            return -2;
+        }
+        memcpy(token, t_start, len);
+        token[len] = '\0';
+		for (int i = 0; i < (int) len; i++)
+		{
+			token[i] = tolower(token[i]);
+		}
+		printf("%s\n", token);
+		
+		// parse lowercase token into key-value pair
+		parse_key_value(token, len, &pairs[pairs_cnt]);
+		free(token);
+		pairs_cnt++;
+    }
+	*outpairs = pairs;
+	*outpairs_cnt = pairs_cnt;
+	return 0;
+}
+
+// Parse Properties value like: "species:S:1:pos:R:3:force:R:3"
+// pointer to array of PropertyDesc
+// mallocs array of PropertyDesc
+static int parse_properties_value(const char *propval, PropertyDesc **out_props, int *out_nprops) {
+    int nprops_max = 64;
+    int nprops = 0;
+	PropertyDesc *props = (PropertyDesc *)malloc(sizeof(PropertyDesc) * nprops_max);
+	if (!props)
+	{
+		fprintf(stderr, "Out of memory allocating %zu bytes\n", sizeof(PropertyDesc) * nprops_max);
+		return 1;
+	}
+
+    const char *p = propval;
+    while (*p) 
+	{
+		if (nprops >= nprops_max)
+		{
+			fprintf(stderr, "There too many key-value pairs in comment line - max %d\n", nprops_max);
+			free(props);
+			return 1;
+		}
+
+        // trim starting whitespace
+        while (*p && isspace((unsigned char)*p)) ++p;
+        if (!*p) break;
+
+        // read name up to ':'
+        const char *name_start = p;
+        while (*p && (*p != ':') && !isspace((unsigned char)*p)) ++p;
+        if (*p != ':')
+		{
+			fprintf(stderr, "Error in 'properties' value: %s", name_start);
+			break;
+		}
+
+        size_t name_len = (size_t)(p - name_start);
+
+		// if name is zero length or is too long for PropertyDesc struct, error
+		// .name includes a byte for null-terminating char
+        if (name_len == 0 || name_len >= sizeof(props[nprops].name))
+		{
+			fprintf(stderr, "Property name '%.*s' is too long (>%zu characters)\n", (int) name_len-1, name_start, sizeof(props[nprops].name));
+			break;
+		}
+
+		// copy name into struct and terminate with null char
+        memcpy(props[nprops].name, name_start, name_len);
+        props[nprops].name[name_len] = '\0';
+        ++p; // skip ':'
+
+        // read type char
+        if (!*p) break;
+        char type = *p;
+        props[nprops].type = type;
+        ++p;
+        if (*p != ':')
+		{
+			fprintf(stderr, "Error in 'properties' value: %s", name_start);
+			break;
+		}
+        ++p;
+
+        // read ncols integer
+		// checks for all consecutive digits until end of buffer size
+        char buf[32];
+        int bi = 0;
+        while (*p && isdigit((unsigned char)*p)) 
+		{
+            if (bi < (int)sizeof(buf)-1)
+			{
+				buf[bi] = *p;
+				bi++;
+			}
+            ++p;
+        }
+        buf[bi] = '\0';
+        if (bi == 0)
+		{
+			fprintf(stderr, "Number of columns not found for %s", props[nprops].name);
+			break;
+		}
+        props[nprops].ncols = atoi(buf);
+
+		if (*p && isdigit((unsigned char)*p))
+		{
+			fprintf(stderr, "Number of columns for %s truncated to %s", props[nprops].name, buf);
+			break;
+		}
+		
+        // If there's a ':' next, the next token begins; skip one ':' and continue.
+        if (*p == ':') p++;
+
+        nprops++;
+        // Skip any spaces before next descriptor
+        // while (*p && isspace((unsigned char)*p)) ++p;
+    }
+
+    if (nprops == 0) {
+        free(props);
+        return -1;
+    }
+    *out_props = props;
+    *out_nprops = nprops;
+    return 0;
+}
+
+// Tokenize in-place a line into an array of tokens (whitespace-delimited)
+// turns spaces into null characters
+static int tokenize_line(char *line, char **tokens, int maxtok) {
+    int ntok = 0;
+    char *p = line;
+    while (*p && ntok < maxtok) {
+		// trim whitespace between tokens
+        while (*p && isspace((unsigned char)*p)) ++p;
+        if (!*p) break;
+
+		// mark start of next token
+		ntok++;
+		tokens[ntok] = p;
+        
+		// find next whitespace and replace it with null character
+        while (*p && !isspace((unsigned char)*p)) ++p;
+        if (*p) 
+		{ 
+			*p = '\0'; 
+			p++;
+		}
+    }
+    return ntok;
+}
+
+// Map property tokens into Atom fields
+// check before use that token count is correct
+static int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, PropertyDesc *props, int nprops) {
+    // Defaults
+    // memset(atom, 0, sizeof(*atom));
+    // atom->bsradius = 1.0; // default unless overridden by symbol mapping below
+
+	// Check we have enough tokens for declared properties
+	int expected = 0;
+	for (int k = 0; k < nprops; ++k)
+	{
+		expected += props[k].ncols;
+	}
+	if (ntokens < expected) 
+	{
+		return expected;
+	}
+
+    int tok_idx = 0;
+    for (int i = 0; i < nprops; ++i) 
+	{
+        PropertyDesc *prop = &props[i];
+        if (prop->type == 's') 
+		{
+            // string columns
+            if (prop->ncols >= 1 && tokens[tok_idx]) 
+			{
+                if (strncmp(prop->name, "species", 7) == 0)
+				{
+                    strncpy(atom->name, tokens[tok_idx], sizeof(atom->name)-1);
+                }
+                tok_idx += prop->ncols;
+            } 
+			else 
+			{
+                tok_idx += prop->ncols; // skip unimplemented properties
+            }
+        } 
+		else if (prop->type == 'r') 
+		{
+            // real columns
+            if ((prop->ncols == 3) && (!strncmp(prop->name, "pos", 3))) 
+			{
+				for (int k = 0; k < 3; ++k) 
+				{
+					atom->cartesian[k] = atof(tokens[tok_idx]);
+					tok_idx++;
+                }
+            } 
+			else if ((prop->ncols == 1) && !strncmp(prop->name, "energy", 6)) 
+			{
+                atom->energy = atof(tokens[tok_idx]);
+                tok_idx += 1;
+            } 
+			else 
+			{
+                tok_idx += prop->ncols; // skip unimplemented properties
+            }
+        } 
+		else if (prop->type == 'i') 
+		{
+			// no integer-type properties implemented yet
+        } 
+		else 
+		{
+            tok_idx += prop->ncols; // skip unimplemented properties
+        }
+    }
+	return 0;
+}
+
+// Fallback classic XYZ parser: element + x y z
+static void fill_atom_from_xyz(Atom *a, char **tokens, int ntok) {
+    if (ntok >= 4) {
+        strncpy(a->name, tokens[0], sizeof(a->name)-1);
+        // a->type = element_to_Z(tokens[0]); // TODO: consolidate name/type
+        a->cartesian[0] = atof(tokens[1]);
+        a->cartesian[1] = atof(tokens[2]);
+        a->cartesian[2] = atof(tokens[3]);
+        // a->bsradius = default_bsradius_from_symbol(tokens[0]);
+    } else {
+        // Not enough tokens; leave zeros
+        a->bsradius = 1.0;
+    }
+}
 
 bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* ss, struct SimulationEnv* se, struct LoggingState* ls)
 {
 	// processes file with .xyz format (number of atoms / comment / type x y z)
-
-	int i;
 
 	char xyz_type[BUFFER_SIZE];
 	char* typenames[7]; //can have up to 7 atom types
@@ -776,111 +1165,144 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 
 	//set_primitive_basis(SC); //is this always true? this should be set somewhere else (beforehand or after?)
 
-	//first line should be the number of atoms
-	int nremain; //number of expected atoms
-
 	fgets(command_string, BUFFER_SIZE, input_file);
-	if (command_string == NULL)	// EOF, bad
+	if (!command_string) // TODO: doesn't return null on EOF, change to another condition
     {
+		fprintf(stderr, "Empty file or read error\n");
 		fclose(input_file);
 		return false;
 	}
 
 	// first line is the number of atoms (lines with atom info)
-	nremain = atoi(command_string); 
+	
+    char *endptr = NULL;
+    long natoms_long = strtol(command_string, &endptr, 10);
+    if (endptr == command_string || natoms_long <= 0) 
+	{
+		fprintf(stderr, "First line does not contain a valid atom count\n");
+        fclose(input_file);
+        return false;
+    }
+	int nremain = (int) natoms_long;
 
 	// read comment line
 	int comment_buffer_multiplier = 3;
 	char comment_string[comment_buffer_multiplier*BUFFER_SIZE];
 	fgets(comment_string, comment_buffer_multiplier*BUFFER_SIZE, input_file);
+
+	if (!comment_string) {
+        fprintf(stderr, "Error on reading the comment/header line\n");
+        fclose(input_file);
+        return false;
+    }
 	
+	// act upon key-value pairs - simulation variables, Properties
 	// capture any simulation variables in the comment line that are used to continue a started simulation
 	// ss->elapsed_stime, ss->temperature, ss->overpotential; all doubles
 	// ls->framenum; int
 	// ss->iter; unsigned long
-	char delim[] = "=";
-	char *key = strtok(comment_string, delim);
-	char *value;
-	while (key) {
-		value = strtok(NULL, delim);
-		if (strncmp(key, "time", 4) == 0)
-		{
-			ss->elapsed_stime = strtod(value, NULL);
-		}
-		else if (strncmp(key, "temperature", 11) == 0)
-		{
-			ss->temperature = strtod(value, NULL);
-		}
-		else if (strncmp(key, "potential", 9) == 0)
-		{
-			ss->overpotential = strtod(value, NULL);
-		}
-		else if (strncmp(key, "iteration", 9) == 0)
-		{
-			ss->iter = strtoul(value, NULL, 10);
-		}
-		else if (strncmp(key, "frame", 5) == 0)
-		{
-			ls->framenum = atoi(value);
-		}
+	size_t outpairs_cnt;
+	struct KV *outpairs; // pointer to array of KVs
+	int pc = parse_comment(comment_string, &outpairs, &outpairs_cnt);
+	if (pc)
+	{
+		return pc;
+	}
 
-		key = strtok(NULL, delim);
+	int has_props = 0;
+	struct KV kv;
+	PropertyDesc *out_props = NULL;
+	int out_nprops;
+	for (int i = 0; i < (int)outpairs_cnt; i++)
+	{
+		kv = outpairs[i];
+		if(strncmp(kv.key, "properties", 10) == 0)
+		{
+			int pp = parse_properties_value(kv.value, &out_props, &out_nprops);
+			if (pp)
+			{
+				if (out_props) free(out_props);
+				return pp;
+			}
+			has_props = 1;
+		}
+		else if (strncmp(kv.key, "time", 4) == 0)
+		{
+			ss->elapsed_stime = strtod(kv.value, NULL);
+		}
+		else if (strncmp(kv.key, "temperature", 11) == 0)
+		{
+			ss->temperature = strtod(kv.value, NULL);
+		}
+		else if (strncmp(kv.key, "potential", 9) == 0)
+		{
+			ss->overpotential = strtod(kv.value, NULL);
+		}
+		else if (strncmp(kv.key, "iteration", 9) == 0)
+		{
+			ss->iter = strtoul(kv.value, NULL, 10);
+		}
+		else if (strncmp(kv.key, "frame", 5) == 0)
+		{
+			ls->framenum = atoi(kv.value);
+		}
 	}
 
 	int argsread;
-
-	for (; nremain > 0; --nremain)
+	char *tokens[256]; // array of char arrays (array of char pointers)
+	for (int i = 0; i < nremain ; i++)
 	{
 		fgets(command_string, BUFFER_SIZE, input_file);
 		
 		// if EOF
-		if (command_string == NULL)	
+		if (!command_string)	
 		{
 			fclose(input_file);
 			fprintf(stderr, "Input parsing failed - Ran into EOF, expected %d atoms remaining\n", nremain);
 			//organize(atom, atom_cnt); //do I need to call this?
-			return false;
-		}
-
-		i = ss->atom_cnt;	
-		
-		create_default_atom(i, ss->atom_arr, se);
-		++ss->atom_cnt;
-		if (ss->atom_cnt > se->max_atoms)
-		{
-			fprintf(stderr, "Number of atoms (%lld) is exceeding set maximum (%lld)", ss->atom_cnt, se->max_atoms);
-			clean_and_exit(errno);
-		}
-
-		// TODO: make flexible based on presence of Properties key and its value
-		argsread = sscanf(command_string, "%s %lf %lf %lf %lf", xyz_type, xyz_pos, xyz_pos+1, xyz_pos+2, &radius);
-		if (argsread != 5)
-		{
-			fprintf(stderr, "Input parsing failed - Failed to read 4 arguments in .xyz file, only read %d\n", argsread);
-			fclose(input_file);
-			return false;
-        }
-
-		ss->atom_arr[i]->cartesian[0] = xyz_pos[0];
-		ss->atom_arr[i]->cartesian[1] = xyz_pos[1];
-		ss->atom_arr[i]->cartesian[2] = xyz_pos[2];
-		atype = match_atom_type(xyz_type, typenames, &ntypes, temp_log);
-
-		if (atype == -1) //check to see if atom type is successfully added
-		{
-			for (int i = 0; i < ntypes; ++i){
-				free(typenames[i]);
-				typenames[i] = NULL;
+			if (outpairs)
+			{
+				for (int j = 0; j < (int)outpairs_cnt; j++)
+				{
+					free(outpairs[j].key);
+					free(outpairs[j].value);
+				}
 			}
-			//organize(atoms, atom_cnt) //???
+			if (out_props)
+			{
+				free(out_props);
+			}
 			return false;
 		}
 
-		ss->atom_arr[i]->type = atype;
-		ss->atom_arr[i]->bsradius = radius;
+		int ntok = tokenize_line(command_string, tokens, (int)(sizeof(tokens)/sizeof(tokens[0]))); // aka 256
 
-		//vecmul(atom[i]->cart_coord, invert_primitive_basis, atom[i]->lattice); // TODO: need to do this later now!
+		Atom temp_atom;
+		if (has_props)
+		{
+			// Check we have enough tokens for declared properties
+			int ft = fill_atom_from_tokens(&temp_atom, tokens, ntok, out_props, out_nprops);
+            if (ft)
+			{
+                fprintf(stderr, "Atom line %d has %d tokens, expected >= %d\n", i, ntok, ft);
+            }
+		}
+		else
+		{
+			fill_atom_from_xyz(&temp_atom, tokens, ntok);
+		}
+		cartesian2lattice_site(temp_atom.cartesian, se->invert_primitive_basis, temp_atom.lattice);
+		add_atom(temp_atom.lattice[0], temp_atom.lattice[1], temp_atom.lattice[2], temp_atom.type, NORMAL, ss, se);
 		
+	}
+	if (has_props) 
+	{
+		free(out_props);
+		for (int i = 0; i < (int)outpairs_cnt; i++)
+		{
+			free(outpairs[i].key);
+			free(outpairs[i].value);
+		}
 	}
 
 	//TODO: does this now just get turned into the atom name array?
