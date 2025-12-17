@@ -1,9 +1,10 @@
 ﻿#include "Simulation.h"
 #include "Random.h"
-#include "Simulation_Aux.h"
+#include "Utils.h"
 #include "FileIO.h"
 #include "Atoms.h"
 #include "Mesosim.h"
+#include "ErrorM.h"
 #include <math.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -594,6 +595,7 @@ int create_new_rate(unsigned char *atom_env, int final_config_neighbor_cnt, unsi
 	r->atom_env = (unsigned char *)malloc(se->num_nn_types * sizeof(unsigned char));
 	memcpy(r->atom_env, atom_env, se->num_nn_types * sizeof(unsigned char));
 	r->is_evaporation = is_evaporation;
+	r->final_config_neighbor_cnt = final_config_neighbor_cnt;
 
 	++ss->rate_cnt;
 	if (ss->rate_cnt > se->max_rates)
@@ -872,7 +874,6 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 	while (errors != 0);
 
 	// now we'll reconcile random buried atoms.
-
 	do
 	{
 		errors = 0;
@@ -918,7 +919,6 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 			}
 	}
 	while (errors != 0);
-
 	// now let's bury any atoms that should be buried - DON'T WANT THIS NOW!
 	/*for (j=0;j<atom_cnt;++j)
 	{
@@ -995,10 +995,8 @@ void check_system(struct SimulationState* ss, struct SimulationEnv* se)
 	}*/
 
 	// now we can recalculate diffusion rates
-
 	for (int j = 0; j < ss->atom_cnt; ++j)
 		refresh_transitions(j, ss, se);
-
 	return;
 }
 

@@ -2,8 +2,8 @@
 #define COMMON_H
 
 #include "Geometry.h"
-#include <stdio.h>
-#include <stdbool.h>
+#include <stdio.h> // FILE
+#include <stdbool.h> // bool
 
 // general note: 
 // uvw refer to coordinates in lattice vector space

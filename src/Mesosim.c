@@ -1,10 +1,8 @@
 ﻿#include "Mesosim.h"
 #include "FileIO.h"
-#include "Random.h"
-#include "Simulation_Aux.h"
 #include "Simulation.h"
-#include "Atoms.h"
-#include "Vector.h"
+#include "ErrorM.h"
+#include "Initialization.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +38,8 @@ int main(int argc, char* argv[]) {
     sim_state = calloc(1, sizeof(struct SimulationState));
     sim_env = calloc(1, sizeof(struct SimulationEnv));
     log_state = calloc(1, sizeof(struct LoggingState));
+
+    set_state(sim_state, sim_env, log_state);
 
     sim_env->zone_count_u = TTS;
     sim_env->zone_count_v = TTS;
@@ -107,6 +107,7 @@ int main(int argc, char* argv[]) {
     // sets jump offsets for given crystal type
 	initialize_neighbor_offsets(sim_env);
     initialize_initial_structure(sim_state, sim_env);
+    check_system(sim_state, sim_env);
 
     // if (strcmp(outFile, "") == 0) {
     //     //an out file name was not defined in input file, use starttime as filename
@@ -146,111 +147,4 @@ int main(int argc, char* argv[]) {
     clean_and_exit(0);
 
     return 0;
-}
-
-// frees pointer only if it isn't NULL and sets pointer to NULL after free
-void free_if_exists(void **pointer)
-{
-    if (*pointer == NULL)
-    {
-        return;
-    }
-        
-    free(*pointer);
-    *pointer = NULL;
-    return;
-}
-
-// emits generic error message to log file, frees allocated memory, and exits
-void clean_and_exit(int error)
-{
-    // errors during: reading input, m/calloc'ing, usage(), making temp file
-    
-    if (error != 0)
-    {
-        fprintf(log_state->sim_log_file, "Error encountered - check stderr\n");
-        fprintf(log_state->sim_log_file, "%s", strerror(errno));
-    }
-
-    // SimulationState
-    if (sim_state != NULL)
-    {
-        for (int i = 0; i < sim_state->atom_cnt; i++)
-        {
-            free_if_exists((void **)&(sim_state->atom_arr[i]));
-        }
-        free_if_exists((void **)&sim_state->atom_arr);
-        
-        for (int i = 0; i < sim_state->transition_cnt; i++)
-        {
-            free_if_exists((void **)&sim_state->transition_arr[i]);
-        }
-        free_if_exists((void **)&sim_state->transition_arr);
-
-        free_if_exists((void **)&sim_state->rate_arr);
-        free_if_exists((void **)&sim_state); // we know it exists, but still useful
-    }
-
-    // SimulationEnv
-    if (sim_env != NULL)
-    {
-        free_if_exists((void **)&sim_env->atom_names);
-        free_if_exists((void **)&sim_env->substrate_composition);
-        free_if_exists((void **)&sim_env->nn_energy);
-        free_if_exists((void **)&sim_env->is_soluble);
-        free_if_exists((void **)&sim_env->transition_vectors);
-        free_if_exists((void **)&sim_env->opposite_tvectors);
-        free_if_exists((void **)&sim_env);
-    }
-
-    // LoggingState
-    if (log_state != NULL)
-    {
-        fclose(log_state->sim_log_file);
-        free_if_exists((void **)&log_state->log_list);
-        free_if_exists((void **)&log_state);
-    }
-
-    if (error !=0) 
-    {
-        exit(error);
-    }
-}
-
-// initializes primitve_basis, ucell_params, ss*
-void initialize_lattice_geometry(struct SimulationEnv* sim_env)
-{
-	// Initializes the generic lattice geometry to be simple cubic (i.e., a=1, b=1, c=1, alpha = 90, beta = 90, gamma = 90)
-
-	// int i,j;
-
-	// for (i=0;i<3;++i)
-	// 	for (j=0;j<3;++j)
-	// 		if (i == j) primitive_basis[i][j] = 1.0; else primitive_basis[i][j] = 0.0;
-
-    double pb[3][3] = {
-        {1., 0., 0.},
-        {0., 1., 0.},
-        {0., 0., 1.},
-    };
-    memcpy(sim_env->primitive_basis, pb, 3*3*sizeof(double));
-
-	inver(sim_env->primitive_basis, sim_env->invert_primitive_basis);
-	primitive_basis2ucell_params(sim_env->primitive_basis, sim_env->ucell_params);
-
-	sim_env->system_size_x = 1;
-	sim_env->system_size_y = 1;
-	sim_env->system_size_z = 1;
-
-	return;
-}
-
-void write_backlog(FILE* tempFile, FILE* logFile)
-{
-    //transfers everything from the temporary log file to a permanent log
-    rewind(tempFile);
-    char buffer[256];
-    while (fgets(buffer, sizeof(buffer), tempFile) != NULL) {
-        fputs(buffer, logFile);
-    }
 }

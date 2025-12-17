@@ -2,9 +2,8 @@
 #include "Vector.h"
 #include "Random.h"
 #include "Simulation.h"
-#include "Simulation_Aux.h"
-#include "Mesosim.h"
-#include <assert.h>
+#include "Utils.h"
+#include "ErrorM.h"
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -12,81 +11,6 @@
 
 // [ ]: atoms, zones, orientation
 // Atom_Color atom_color[10];
-
-// direction of possible atom jumps for each crystal lattice type
-const LatticeVector BCC_OFFSET[8] = 
-{ // not normalized, in lattice coordinates
-	{-1, -1, -1},
-	{0, 0, -1},
-	{1, 0, 0},
-	{-1, 0, 0},
-	{0, 1, 0},
-	{0, -1, 0},
-	{0, 0, 1},
-	{1, 1, 1}
-};
-
-const LatticeVector FCC_OFFSET[12] = 
-{
-	{0, 1, -1},
-	{1, 0, -1},
-	{0, 0, -1},
-	{1, 0, 0},
-	{-1, 0, 0},
-	{0, 1, 0},
-	{0, -1, 0},
-	{0, 0, 1},
-	{-1, 1, 0},
-	{1, -1, 0},
-	{-1, 0, 1},
-	{0, -1, 1}
-};
-
-const LatticeVector SC_OFFSET[6] = 
-{
-	{0, 0, -1},
-	{0, 0, 1},
-	{0, 1, 0},
-	{0, -1, 0},
-	{1, 0, 0},
-	{-1, 0, 0}
-};
-
-const LatticeVector SC_OFFSET_2[12] = 
-{
-	{1, 1, 0},
-	{1, -1, 0},
-	{-1, 1, 0},
-	{-1, -1, 0},
-	{1, 0, 1},
-	{-1, 0, 1},
-	{1, 0, -1},
-	{-1, 0, -1},
-	{0, 1, 1},
-	{0, -1, 1},
-	{0, 1, -1},
-	{0, -1, -1}
-};
-
-const LatticeVector FCC_OFFSET_2[6] = 
-{
-	{1, -1, 1},
-	{-1, 1, 1},
-	{-1, -1, 1},
-	{-1, 1, -1},
-	{1, 1, -1},
-	{1, -1, -1}
-};
-
-const LatticeVector BCC_OFFSET_2[6] = 
-{
-	{1, 0, 1},
-	{-1, 0, -1},
-	{1, 1, 0},
-	{-1, -1, 0},
-	{0, 1, 1},
-	{0, -1, -1}
-};
 
 // updates atom_arr // [ ]: but doesn't update atom_cnt?
 void create_default_atom(int atom_idx, Atom** atom_arr, struct SimulationEnv *se)
@@ -1027,77 +951,69 @@ void centerg(Atom** atom_arr, int atom_cnt, double centroid[3])
 	return;
 }
 
-// converts lattice basis vectors to unit cell parameters
-void primitive_basis2ucell_params(double primitive_basis[3][3], double ucell_params[6]) // primitive_basis = basis vectors (rows/first index), ucell_params = unit cell parameters
+
+// fills initial_config with type of neighbors to atom[at], before jump offset_idx
+int get_initial_configuration(int atom_idx, int num_transition_vectors, Atom** atom_arr, int initial_config[]) // atom_idx is position in atom list, offset_idx is index in se->transition_vectors
 {
-	double rad2deg = 180.0/PI; // radians to degrees conversion factor
-	// a b c - magnitude of basis0 basis1 basis2 vectors
-	// ENHANCE: if a vector was primitive_basis[0][*], then this could be done with fdot(u,u) and mag(u)
-	// TODO: flip indices of primitive_basis
-	ucell_params[0] = sqrt(primitive_basis[0][0]*primitive_basis[0][0] + primitive_basis[1][0]*primitive_basis[1][0] + primitive_basis[2][0]*primitive_basis[2][0]);
-	ucell_params[1] = sqrt(primitive_basis[0][1]*primitive_basis[0][1] + primitive_basis[1][1]*primitive_basis[1][1] + primitive_basis[2][1]*primitive_basis[2][1]);
-	ucell_params[2] = sqrt(primitive_basis[0][2]*primitive_basis[0][2] + primitive_basis[1][2]*primitive_basis[1][2] + primitive_basis[2][2]*primitive_basis[2][2]);
-	// gamma - angle between basis0 and basis1 = arccos(fdot(basis0, basis1) / (mag(basis0) * mag(basis1))); from cos(theta) = fdot(a,b) / (mag(a)*mag(b))
-	ucell_params[5] = primitive_basis[0][0]*primitive_basis[0][1] + primitive_basis[1][0]*primitive_basis[1][1] + primitive_basis[2][0]*primitive_basis[2][1];
-	ucell_params[5] = ucell_params[5]/(ucell_params[0]*ucell_params[1]);
-	ucell_params[5] = rad2deg*acos(ucell_params[5]);
-	// beta - angle between basis0 and basis2
-	ucell_params[4] = primitive_basis[0][0]*primitive_basis[0][2] + primitive_basis[1][0]*primitive_basis[1][2] + primitive_basis[2][0]*primitive_basis[2][2];
-	ucell_params[4] = ucell_params[4]/(ucell_params[0]*ucell_params[2]);
-	ucell_params[4] = rad2deg*acos(ucell_params[4]);
-	// alpha - angle between basis1 and basis2
-	ucell_params[3] = primitive_basis[0][2]*primitive_basis[0][1] + primitive_basis[1][2]*primitive_basis[1][1] + primitive_basis[2][2]*primitive_basis[2][1];
-	ucell_params[3] = ucell_params[3]/(ucell_params[1]*ucell_params[2]);
-	ucell_params[3] = rad2deg*acos(ucell_params[3]);
-	// ENHANCE: double arithmetic leads to imprecise values
-	return;
-}
+   	int offset_idx, neighbor_idx;
+	int nn_count = 0; // nearest-neighbors
 
-const double DEFAULT_EPSILON = 1e-3;
+	for (offset_idx=0; offset_idx<num_transition_vectors; ++offset_idx)
+    {
+		neighbor_idx = atom_arr[atom_idx]->neighbor_atom_idxs[offset_idx];
 
-// checks if double is within range of an integer - returns 1 for true, 0 for false
-int int_check(double fvalue, int ireference, double epsilon){
-	return fabs(fvalue - (double) ireference) < epsilon;
-}
-
-void lattice2int(double fcoords[3], int coords[3], double epsilon){
-	for (int dim_idx = 0; dim_idx < 3; dim_idx++){
-		double u = fcoords[dim_idx];
-		int comp = round(u);
-		int res = int_check(u, comp, epsilon);
-		assert(res == 1);
-		coords[dim_idx] = comp;
+		if (neighbor_idx == -1)
+			initial_config[offset_idx] = -1;	// site is empty
+	    else
+		{
+			++nn_count;	// increment number of near neighbors
+			initial_config[offset_idx] = atom_arr[neighbor_idx]->type;	// site is occupied by some atom
+		}
 	}
+
+	return nn_count;
 }
 
-// convert a site from cartesian coordinates to lattice coordinates
-void cartesian2lattice_site(double ccart[3], double invert_primitive_basis[3][3], int clattice[3]){
-	double fclattice[3];
-	vecmul(ccart, invert_primitive_basis, fclattice);
-	lattice2int(fclattice, clattice, DEFAULT_EPSILON);
-}
-
-
-void cartesian2lattice(double ccart[3], double invert_primitive_basis[3][3], double clattice[3]){
-	vecmul(ccart, invert_primitive_basis, clattice);
-}
-
-// convert lattice coordinates to cartesian coordinates
-void lattice2cartesian(int clattice[3], double primitive_basis[3][3], double ccart[3]){
-	for (int dim_idx = 0; dim_idx < 3; dim_idx++){ // vecmul
-		ccart[dim_idx] = 
-			primitive_basis[dim_idx][0] * (double)clattice[0]
-			+ primitive_basis[dim_idx][1] * (double)clattice[1]
-			+ primitive_basis[dim_idx][2] * (double)clattice[2];
-	}
-}
-
-// round floating-point val towards nearest integer in direction of target
-int round_towards(double val, int target)
+// fills initial_config with type of neighbors to atom[at], after jump in direction se->transition_vectors[offset_idx]
+int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, struct SimulationEnv *se, int final_config[]) // offset_idx is position in offset list
 {
-	// ENHANCE: do using math.h rounding modes
-	if (target >= val)
-		return (int) ceil(val);
-	else
-		return (int) floor(val);
+	int atom_idx;
+	int new_x, new_y, new_z;
+	int neighbor_x, neighbor_y, neighbor_z;
+	
+	int nn_cnt = 0; // nearest-neighbors
+	// atom position after jump offset_idx
+	new_x = ss->atom_arr[at]->lattice[0] + se->transition_vectors[offset_idx].dx;
+	new_y = ss->atom_arr[at]->lattice[1] + se->transition_vectors[offset_idx].dy;
+	new_z = ss->atom_arr[at]->lattice[2] + se->transition_vectors[offset_idx].dz;
+
+	adjust_pbc(&new_x, &new_y, &new_z, se);
+
+	for (int i=0; i<se->num_transition_vectors; ++i)
+	{
+		if (i == se->opposite_tvectors[offset_idx]) {
+			// if direction is where the jump came from, set as empty
+			final_config[i] = -1; //hardcode this? // [ ]: is there a case where it won't be empty?
+			continue;
+		}
+		// location of neighbor
+		neighbor_x = new_x + se->transition_vectors[i].dx;
+		neighbor_y = new_y + se->transition_vectors[i].dy;
+		neighbor_z = new_z + se->transition_vectors[i].dz;
+
+		adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
+
+		atom_idx = atom_at(neighbor_x, neighbor_y, neighbor_z, ss->atom_arr, ss->zone_arr, se);
+
+		if (atom_idx != -1)
+		{
+			// if there is an atom present, 'return' its type
+			final_config[i] = ss->atom_arr[at]->type;
+			++nn_cnt;
+		}
+		else 
+			final_config[i] = -1;
+	}
+
+	return nn_cnt;
 }

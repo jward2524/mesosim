@@ -1,7 +1,7 @@
 #ifndef ATOMS_H
 #define ATOMS_H
 
-#include "Common.h"
+#include "State.h"
 
 int add_atom(int u, int v, int w, int type, int special, struct SimulationState* ss, struct SimulationEnv* se);
 int atom_at(int u, int v, int w, Atom** atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
@@ -25,14 +25,9 @@ void copy_atom(int i, int j, Atom** atom_arr);
 void create_default_atom(int atom_idx, Atom** atom_arr, struct SimulationEnv *se); //can modify this to remove things like color?
 
 void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv *se);
-void cell_to_latmat(double c[6], double ltmt[3][3]);
-void primitive_basis2ucell_params(double ltmt[3][3], double c[6]);
 
-void cartesian2lattice_site(double ccart[3], double invert_primitive_basis[3][3], int clattice[3]);
-void cartesian2lattice(double ccart[3], double invert_primitive_basis[3][3], double clattice[3]);
-void lattice2cartesian(int clattice[3], double primitive_basis[3][3], double ccart[3]);
-
-int round_towards(double val, int target);
+int get_initial_configuration(int atom_index, int num_transition_vectors, Atom** atom_arr, int initial_config[]);
+int get_final_configuration(int at, int offset_idx, struct SimulationState *ss, struct SimulationEnv *se, int final_config[]);
 
 // TODO: into SimulationEnv
 extern const LatticeVector BCC_OFFSET[8];
