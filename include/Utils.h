@@ -3,12 +3,12 @@
 
 #include "State.h"
 
-void get_system_rw_radius(struct SimulationEnv* se); // XXX: unused
+void get_system_rw_radius(struct SimulationEnv *se); // XXX: unused
 
-void findzone(int *zone_u, int *zone_v, int *zone_w, int u, int v, int w, struct SimulationEnv* se);
-void adjust_pbc(int *u, int *v, int *w, struct SimulationEnv* se);
+void findzone(int *zone_u, int *zone_v, int *zone_w, int u, int v, int w, struct SimulationEnv *se);
+void adjust_pbc(int *u, int *v, int *w, struct SimulationEnv *se);
 
-void check_pbc(int* u, int* v, int* w, double basis[3][3]);
+void check_pbc(int *u, int *v, int *w, double basis[3][3]);
 
 void pbc_translate(int coords_lat[3], int translation_vector[3]);
 

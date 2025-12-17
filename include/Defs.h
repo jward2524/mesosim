@@ -1,54 +1,58 @@
 #pragma once
 
 // The definitions in this file primarily relate specifically to the simulation module
-// #define MAXIMUM_NUMBER_OF_ATOMS (int) 5e5					// maximum number of atoms; each atom is allocated dynamically
-//#define MAXIMUM_NUMBER_OF_SURFACE_ATOMS 2000000		// TODO: move this to input file or calculated from system size
+// #define MAXIMUM_NUMBER_OF_ATOMS (int) 5e5					// maximum number of atoms;
+// each atom is allocated dynamically
+// #define MAXIMUM_NUMBER_OF_SURFACE_ATOMS 2000000		// TODO: move this to input file or
+// calculated from system size
 
-// #define MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS 100		//used! // maximum number of distinct activation barriers for different
-														// processes.  This number is large so as to accomodate a
-														// time dependent activation barrier, such as in dissolution.
+// #define MAXIMUM_NUMBER_OF_ACTIVATION_BARRIERS 100		//used! // maximum number of distinct
+// activation barriers for different processes.  This number is large so as to accomodate a time
+// dependent activation barrier, such as in dissolution.
 
 // this is (diffusion)+(deposition)
 
-// #define MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS ((MAXIMUM_NUMBER_OF_NEIGHBORS+DISSOLUTION)*((unsigned long long int) MAXIMUM_NUMBER_OF_ATOMS))+10
+// #define MAXIMUM_NUMBER_OF_CONCURRENT_TRANSITIONS
+// ((MAXIMUM_NUMBER_OF_NEIGHBORS+DISSOLUTION)*((unsigned long long int) MAXIMUM_NUMBER_OF_ATOMS))+10
 
-														// The maximum number of transitions going on simulataneously
-														// is equal to (the number of atoms) * (the number of things
-														// each atom can do)
+// The maximum number of transitions going on simulataneously
+// is equal to (the number of atoms) * (the number of things
+// each atom can do)
 
-#define MAXIMUM_NUMBER_OF_BONDS 1000					// total maximum number of bonds that can be drawn.  Reducing
-														// this number is a big memory saver.
-#define DISSOLUTION 1 //used
+#define MAXIMUM_NUMBER_OF_BONDS                                                                    \
+    1000              // total maximum number of bonds that can be drawn.  Reducing
+                      // this number is a big memory saver.
+#define DISSOLUTION 1 // used
 
 // simulation initial geometries
 
-#define SIMULATION_TYPE_UNDEFINED -1 //used by default!
+#define SIMULATION_TYPE_UNDEFINED -1 // used by default!
 #define SIMULATION_TYPE_FLAT_SHEET 1
 #define SIMULATION_TYPE_CLUSTER 2
 #define SIMULATION_TYPE_FROM_FILE 3
 
 // the default number of zones is tts
 
-#define DSIMSIZE 256 //used - system size
+#define DSIMSIZE 256 // used - system size
 
 #define TTS 256 // zone size
 
-#define ZONES_IN_X TTS		
-#define ZONES_IN_Y TTS	
+#define ZONES_IN_X TTS
+#define ZONES_IN_Y TTS
 #define ZONES_IN_Z TTS
 
 // numerical and fundamental constants
 
-#define kBoltz 8.617e-5  // eV per Kelvin
+#define kBoltz 8.617e-5 // eV per Kelvin
 #define PI 3.141592654
-#define RT 1.0//0.70710678	// 1/sqrt(2); gives the nn spacing in fcc to be exactly 1
+#define RT 1.0 // 0.70710678	// 1/sqrt(2); gives the nn spacing in fcc to be exactly 1
 
-#define NUMBER_OF_ZONES ZONES_IN_X*ZONES_IN_Y*ZONES_IN_Z
+#define NUMBER_OF_ZONES ZONES_IN_X *ZONES_IN_Y *ZONES_IN_Z
 
 // different types of default atom configurations
 
 #define NORMAL 0
-#define SPECIFIED 9 //needed for fileIO
+#define SPECIFIED 9 // needed for fileIO
 /*#define BONDED_BELOW 1
 #define NOT_IN_ONE_DIRECTION 2
 #define RANDOM_BELOW 3
@@ -61,15 +65,15 @@
 
 // bonding configuration definitions
 
-#define MAXIMUM_NUMBER_OF_NEIGHBORS 12		//(1nns) default is just FCC
-#define MAXIMUM_NUMBER_OF_NEIGHBORS_FCC 12			
-#define MAXIMUM_NUMBER_OF_NEIGHBORS_BCC 8			
-#define MAXIMUM_NUMBER_OF_NEIGHBORS_SC 6			
+#define MAXIMUM_NUMBER_OF_NEIGHBORS 12 //(1nns) default is just FCC
+#define MAXIMUM_NUMBER_OF_NEIGHBORS_FCC 12
+#define MAXIMUM_NUMBER_OF_NEIGHBORS_BCC 8
+#define MAXIMUM_NUMBER_OF_NEIGHBORS_SC 6
 
-#define MAXIMUM_NUMBER_OF_NEIGHBORS2 12	//(2nns) default is SC to make it large
+#define MAXIMUM_NUMBER_OF_NEIGHBORS2 12 //(2nns) default is SC to make it large
 #define MAXIMUM_NUMBER_OF_NEIGHBORS2_FCC 6
-#define MAXIMUM_NUMBER_OF_NEIGHBORS2_BCC 6		
-#define MAXIMUM_NUMBER_OF_NEIGHBORS2_SC 12		
+#define MAXIMUM_NUMBER_OF_NEIGHBORS2_BCC 6
+#define MAXIMUM_NUMBER_OF_NEIGHBORS2_SC 12
 
 // TODO: make these into an enum
 // TODO: then use enum to get features of lattice
@@ -96,17 +100,17 @@
 
 // fcc primitive lattice vectors in orthogonal space (xyz axes)
 // RT should be 1/2, not 1/sqrt(2) or 1, for primitive cell
-#define FCCXV1 1.0*RT
-#define FCCYV1 1.0*RT
-#define FCCZV1 0.0*RT
+#define FCCXV1 1.0 * RT
+#define FCCYV1 1.0 * RT
+#define FCCZV1 0.0 * RT
 
-#define FCCXV2 1.0*RT
-#define FCCYV2 0.0*RT
-#define FCCZV2 1.0*RT
+#define FCCXV2 1.0 * RT
+#define FCCYV2 0.0 * RT
+#define FCCZV2 1.0 * RT
 
-#define FCCXV3 0.0*RT
-#define FCCYV3 1.0*RT
-#define FCCZV3 1.0*RT
+#define FCCXV3 0.0 * RT
+#define FCCYV3 1.0 * RT
+#define FCCZV3 1.0 * RT
 
 // bcc primitve lattice vectors in orthogonal space
 
@@ -135,15 +139,14 @@
 
 /* DEFINITIONS FOR THE CONSOLE INTERFACE */
 
-//#define NUMBER_OF_COMMANDS 200
+// #define NUMBER_OF_COMMANDS 200
 
-//#define COMMAND_FILE 1
-//#define COMMAND_SCREEN 2
-
+// #define COMMAND_FILE 1
+// #define COMMAND_SCREEN 2
 
 #define MAXIMUM_NUMBER_OF_COSMETIC_BONDS 4
 
-//#define IMPURITY_CONCENTRATION 0.0
+// #define IMPURITY_CONCENTRATION 0.0
 
 // simulation defaults
 
@@ -162,22 +165,22 @@
 #define DEFAULT_COMPOSITION_A 0.70
 #define DEFAULT_COMPOSITION_B 0.30
 
-//#define DEFAULT_DEPOSITION_RATE_OF_A 0.0
-//#define DEFAULT_DEPOSITION_RATE_OF_B 0.0
-//#define DEFAULT_DEPOSITION_RATE_OF_C 0.0
+// #define DEFAULT_DEPOSITION_RATE_OF_A 0.0
+// #define DEFAULT_DEPOSITION_RATE_OF_B 0.0
+// #define DEFAULT_DEPOSITION_RATE_OF_C 0.0
 
 // atom defaults
 
 #define DEFAULT_ATOM_NAME "New Atom"
 #define DEFAULT_BS_RADIUS 0.25
 #define DEFAULT_SF_RADIUS 0.75
-#define DEFAULT_ATOM_STYLE 1 //FILLED
+#define DEFAULT_ATOM_STYLE 1 // FILLED
 
 #define DEFAULT_ATOM_COLOR_R 0.0
 #define DEFAULT_ATOM_COLOR_G 0.0
 #define DEFAULT_ATOM_COLOR_B 0.0
 
-//got rid of command mnemonics :)
+// got rid of command mnemonics :)
 
 /*error messages (not all used)*/
 #define SUCCESS 0
@@ -210,8 +213,8 @@
 #define INVALID_PARAMS 27
 #define GENERAL_ERROR 28
 
-//#define NUMBER_OF_ATOM_TYPES 40
-//#define NUMBER_OF_ATOM_TYPES_PROTEINS 7
+// #define NUMBER_OF_ATOM_TYPES 40
+// #define NUMBER_OF_ATOM_TYPES_PROTEINS 7
 
-//#define DEPOSITION_TYPE_RAINFALL 1
-//#define DEPOSITION_TYPE_RANDOM_WALKER 2
+// #define DEPOSITION_TYPE_RAINFALL 1
+// #define DEPOSITION_TYPE_RANDOM_WALKER 2

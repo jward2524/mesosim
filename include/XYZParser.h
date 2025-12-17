@@ -4,18 +4,17 @@
 #include <ctype.h>
 
 // key-value pairs
-struct KV 
-{
-	// malloc'd in parse_key_value
-	char *key;
-	char *value;
+struct KV {
+    // malloc'd in parse_key_value
+    char *key;
+    char *value;
 };
 
 // Property descriptor
 typedef struct {
-    char name[32];   // e.g. "species", "pos", "force"
-    char type;       // 'S' (string), 'R' (real), 'I' (int)
-    int ncols;       // number of columns for this property
+    char name[32]; // e.g. "species", "pos", "force"
+    char type;     // 'S' (string), 'R' (real), 'I' (int)
+    int ncols;     // number of columns for this property
 } PropertyDesc;
 
 int parse_key_value(const char *kv_str, size_t kv_len, struct KV *kv);

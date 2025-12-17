@@ -2,17 +2,16 @@
 #define COMMON_H
 
 #include "Geometry.h"
-#include <stdio.h> // FILE
 #include <stdbool.h> // bool
+#include <stdio.h>   // FILE
 
-// general note: 
+// general note:
 // uvw refer to coordinates in lattice vector space
 // xyz refer to coordinates in cartesian (orthogonal basis) space
 
 // variables for simulation conditions
 // (generally) initialized and then never edited again, only read
-struct SimulationEnv
-{
+struct SimulationEnv {
     long long int max_atoms;
     long long int max_transitions;
     long long int max_rates;
@@ -46,7 +45,7 @@ struct SimulationEnv
     int num_elements;
     int num_bond_types; // Cr(num_elements,2), combination with replacement [two atoms per bond]
     int num_neighbor_types;
-    int num_nn_types;  // number of distinct bond types, se->num_nn_levels * se->num_bond_types
+    int num_nn_types; // number of distinct bond types, se->num_nn_levels * se->num_bond_types
     int *atoms_per_nn_level; // number of atoms per nn level, [num_nn_levels]
 
     double normal_x, normal_y, normal_z; // XXX: likely vistigal
@@ -60,36 +59,38 @@ struct SimulationEnv
     double simbox_origin_cart[3];
 
     double *nn_energy; // nnE[num_nn_levels][num_bond_types]
-    
+
     bool *is_soluble; // [num_elements] (implemented as always [8])
 
-    int dissolution; // flag for whether dissolution events can occur
+    int dissolution;   // flag for whether dissolution events can occur
     char **atom_names; // [num_elements][BUFFER_SIZE or 3 or something]
     int atom_names_cnt;
 
     /* symmetry related variables */
-    double rmat[3][3]; // visualization?
+    double rmat[3][3];  // visualization?
     double centroid[3]; // coordinates for center of gravity
-    
+
     // possible atom jumps in simulation
     LatticeVector *transition_vectors;
-    
-    // index in transition_vectors that has the jump in the opposite direction in simulation; opposite_tvectors[0]=11 means the opposite direction of se->transition_vectors[0] is se->transition_vectors[11]
+
+    // index in transition_vectors that has the jump in the opposite direction in simulation;
+    // opposite_tvectors[0]=11 means the opposite direction of se->transition_vectors[0] is
+    // se->transition_vectors[11]
     int *opposite_tvectors;
-    
-    // primitive unit cell basis vectors + inverted; primitive_basis[*][0] = basis1, primitive_basis[0][*] = x component of basises
-    // is also transformation matrix for [lattice to cartesian coordinates] [cartesian to lattice coordinates] respectively
+
+    // primitive unit cell basis vectors + inverted; primitive_basis[*][0] = basis1,
+    // primitive_basis[0][*] = x component of basises is also transformation matrix for [lattice to
+    // cartesian coordinates] [cartesian to lattice coordinates] respectively
     // [[u1 v1 w1], [u2 v2 w2], [u3 v3 w3]]
     double primitive_basis[3][3];
-    double invert_primitive_basis[3][3]; 
-    double ucell_params[6]; // unit cell parameters; a b c alpha beta gamma // TODO: this is never used except for printing?
-
+    double invert_primitive_basis[3][3];
+    double ucell_params[6]; // unit cell parameters; a b c alpha beta gamma // TODO: this is never
+                            // used except for printing?
 };
 
 // variables that describe the simulation state
 // change on every iteration
-struct SimulationState
-{
+struct SimulationState {
     Bond bond[MAXIMUM_NUMBER_OF_BONDS];
 
     // array of Atom structs, initialized in ____
@@ -115,7 +116,7 @@ struct SimulationState
 
     unsigned long iter;
     unsigned long final_iteration; // max number of iterations
-    double run_stime; // simulation max runtime default (in seconds)
+    double run_stime;              // simulation max runtime default (in seconds)
     bool simulation_should_kill_itself;
     double elapsed_stime; // current simulation time (in seconds)
     int sim_end_type;
@@ -123,16 +124,15 @@ struct SimulationState
     double frequency_sum;
 
     // sum of all bond energies in system (no double-counting)
-    // currently: incremental modification of this value throughout simulation and storage as a floating-point number
-    // in refresh_transitions and remove_atom
-    // means it loses some accuracy over iterations
-    // return to sum over all atom energies (during log checkpoint) if want to regain some precision
+    // currently: incremental modification of this value throughout simulation and storage as a
+    // floating-point number in refresh_transitions and remove_atom means it loses some accuracy
+    // over iterations return to sum over all atom energies (during log checkpoint) if want to
+    // regain some precision
     double total_internal_energy;
-    
+
     double temperature;
     double overpotential;
     int total_atoms_dissolved;
-    
 };
 
 // variables that describe state of logging
@@ -147,10 +147,9 @@ struct LoggingState {
     int analysis_type;
     double log_interval; // interval between log checkpoints, based on analysis_type?
     double next_log_checkpoint;
-    double* log_list; // list of log checkpoints
+    double *log_list; // list of log checkpoints
     int log_list_len; // length of log_list
-    int framenum; // counter/id for number of outputs / output files
-
+    int framenum;     // counter/id for number of outputs / output files
 };
 
 #endif // COMMON_H

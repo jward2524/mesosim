@@ -1,0 +1,16 @@
+# Options: https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+# K&R based: https://github.com/RyanJeong/clang-format/blob/main/.clang-format-knr (Munseong Jeong <ryan.m.jeong@hotmail.com>)
+
+BasedOnStyle: LLVM
+IndentWidth: 4
+UseTab: Never
+
+BreakBeforeBraces: Linux
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+IndentCaseLabels: false
+
+ColumnLimit: 100
+MaxEmptyLinesToKeep: 1
+
+LinEnding: LF
