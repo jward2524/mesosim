@@ -25,4 +25,26 @@ int get_num_bond_types(int num_elements);
 int get_env_index(int nn, int bond_idx, struct SimulationEnv* se);
 int get_bond_index(int a, int b, struct SimulationEnv* se);
 
+// key-value pairs
+struct KV 
+{
+	// malloc'd in parse_key_value
+	char *key;
+	char *value;
+};
+
+// Property descriptor
+typedef struct {
+    char name[32];   // e.g. "species", "pos", "force"
+    char type;       // 'S' (string), 'R' (real), 'I' (int)
+    int ncols;       // number of columns for this property
+} PropertyDesc;
+
+int parse_key_value(const char *kv_str, size_t kv_len, struct KV *kv);
+int parse_comment(const char *line, struct KV **outpairs, size_t *outpairs_cnt);
+int parse_properties_value(const char *propval, PropertyDesc **out_props, int *out_nprops);
+int tokenize_line(char *line, char **tokens, int maxtok);
+int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, PropertyDesc *props, int nprops);
+void fill_atom_from_xyz(Atom *a, char **tokens, int ntok);
+
 #endif // FILEIO_H

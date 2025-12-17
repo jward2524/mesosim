@@ -760,25 +760,12 @@ bool process_kmc_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 
 /*******************************************************************************
 *******************************************************************************/
-// key-value pairs
-struct KV 
-{
-	// malloc'd in parse_key_value
-	char *key;
-	char *value;
-};
 
-// Property descriptor
-typedef struct {
-    char name[32];   // e.g. "species", "pos", "force"
-    char type;       // 'S' (string), 'R' (real), 'I' (int)
-    int ncols;       // number of columns for this property
-} PropertyDesc;
 
 // mallocs strings in KVs
 // kv_str is null-terminated at kv_len
 // kv_str should already be lowercase
-static int parse_key_value(const char *kv_str, size_t kv_len, struct KV *kv)
+int parse_key_value(const char *kv_str, size_t kv_len, struct KV *kv)
 {
 	const char *key_start = kv_str;
 	const char *value_start;
@@ -827,7 +814,7 @@ static int parse_key_value(const char *kv_str, size_t kv_len, struct KV *kv)
 }
 
 // pointer to array of KVs
-static int parse_comment(const char *line, struct KV **outpairs, size_t *outpairs_cnt) 
+int parse_comment(const char *line, struct KV **outpairs, size_t *outpairs_cnt) 
 {
 	// if (!line || !out_pairs || !out_count) return -1;
 
@@ -936,7 +923,8 @@ static int parse_comment(const char *line, struct KV **outpairs, size_t *outpair
 // Parse Properties value like: "species:S:1:pos:R:3:force:R:3"
 // pointer to array of PropertyDesc
 // mallocs array of PropertyDesc
-static int parse_properties_value(const char *propval, PropertyDesc **out_props, int *out_nprops) {
+int parse_properties_value(const char *propval, PropertyDesc **out_props, int *out_nprops) 
+{
     int nprops_max = 64;
     int nprops = 0;
 	PropertyDesc *props = (PropertyDesc *)malloc(sizeof(PropertyDesc) * nprops_max);
@@ -1042,7 +1030,8 @@ static int parse_properties_value(const char *propval, PropertyDesc **out_props,
 
 // Tokenize in-place a line into an array of tokens (whitespace-delimited)
 // turns spaces into null characters
-static int tokenize_line(char *line, char **tokens, int maxtok) {
+int tokenize_line(char *line, char **tokens, int maxtok)
+{
     int ntok = 0;
     char *p = line;
     while (*p && ntok < maxtok) {
@@ -1067,7 +1056,8 @@ static int tokenize_line(char *line, char **tokens, int maxtok) {
 
 // Map property tokens into Atom fields
 // check before use that token count is correct
-static int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, PropertyDesc *props, int nprops) {
+int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, PropertyDesc *props, int nprops)
+{
     // Defaults
     // memset(atom, 0, sizeof(*atom));
     // atom->bsradius = 1.0; // default unless overridden by symbol mapping below
@@ -1137,7 +1127,8 @@ static int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, Propert
 }
 
 // Fallback classic XYZ parser: element + x y z
-static void fill_atom_from_xyz(Atom *a, char **tokens, int ntok) {
+void fill_atom_from_xyz(Atom *a, char **tokens, int ntok)
+{
     if (ntok >= 4) {
         strncpy(a->name, tokens[0], sizeof(a->name)-1);
         // a->type = element_to_Z(tokens[0]); // TODO: consolidate name/type
@@ -1201,9 +1192,9 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 	// ss->elapsed_stime, ss->temperature, ss->overpotential; all doubles
 	// ls->framenum; int
 	// ss->iter; unsigned long
-	size_t outpairs_cnt;
-	struct KV *outpairs; // pointer to array of KVs
-	int pc = parse_comment(comment_string, &outpairs, &outpairs_cnt);
+	size_t kvpairs_cnt;
+	struct KV *kvpairs; // pointer to array of KVs
+	int pc = parse_comment(comment_string, &kvpairs, &kvpairs_cnt);
 	if (pc)
 	{
 		return pc;
@@ -1211,17 +1202,17 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 
 	int has_props = 0;
 	struct KV kv;
-	PropertyDesc *out_props = NULL;
-	int out_nprops;
-	for (int i = 0; i < (int)outpairs_cnt; i++)
+	PropertyDesc *properties = NULL;
+	int properties_cnt;
+	for (int i = 0; i < (int)kvpairs_cnt; i++)
 	{
-		kv = outpairs[i];
+		kv = kvpairs[i];
 		if(strncmp(kv.key, "properties", 10) == 0)
 		{
-			int pp = parse_properties_value(kv.value, &out_props, &out_nprops);
+			int pp = parse_properties_value(kv.value, &properties, &properties_cnt);
 			if (pp)
 			{
-				if (out_props) free(out_props);
+				if (properties) free(properties);
 				return pp;
 			}
 			has_props = 1;
@@ -1260,17 +1251,17 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 			fclose(input_file);
 			fprintf(stderr, "Input parsing failed - Ran into EOF, expected %d atoms remaining\n", nremain);
 			//organize(atom, atom_cnt); //do I need to call this?
-			if (outpairs)
+			if (kvpairs)
 			{
-				for (int j = 0; j < (int)outpairs_cnt; j++)
+				for (int j = 0; j < (int)kvpairs_cnt; j++)
 				{
-					free(outpairs[j].key);
-					free(outpairs[j].value);
+					free(kvpairs[j].key);
+					free(kvpairs[j].value);
 				}
 			}
-			if (out_props)
+			if (properties)
 			{
-				free(out_props);
+				free(properties);
 			}
 			return false;
 		}
@@ -1281,7 +1272,7 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 		if (has_props)
 		{
 			// Check we have enough tokens for declared properties
-			int ft = fill_atom_from_tokens(&temp_atom, tokens, ntok, out_props, out_nprops);
+			int ft = fill_atom_from_tokens(&temp_atom, tokens, ntok, properties, properties_cnt);
             if (ft)
 			{
                 fprintf(stderr, "Atom line %d has %d tokens, expected >= %d\n", i, ntok, ft);
@@ -1297,11 +1288,11 @@ bool process_xyz_file(FILE* temp_log, FILE* input_file, struct SimulationState* 
 	}
 	if (has_props) 
 	{
-		free(out_props);
-		for (int i = 0; i < (int)outpairs_cnt; i++)
+		free(properties);
+		for (int i = 0; i < (int)kvpairs_cnt; i++)
 		{
-			free(outpairs[i].key);
-			free(outpairs[i].value);
+			free(kvpairs[i].key);
+			free(kvpairs[i].value);
 		}
 	}
 
