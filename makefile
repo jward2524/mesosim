@@ -59,20 +59,26 @@ BUILD_PATHS = $(BUILD_PATH) $(DEPEND_PATH) $(OBJ_PATH) $(RESULTS_PATH)
 TEST_SRC = $(wildcard $(TEST_PATH)/*.c)
 
 RESULTS = $(patsubst $(TEST_PATH)/Test%.c,$(RESULTS_PATH)/Test%.txt,$(TEST_SRC) )
-PASSED = `grep -s PASS $(RESULTS_PATH)*.txt`
-FAIL = `grep -s FAIL $(RESULTS_PATH)*.txt`
-IGNORE = `grep -s IGNORE $(RESULTS_PATH)*.txt`
+PASSED = `grep -s :PASS $(RESULTS_PATH)/*.txt`
+FAIL = `grep -s :FAIL $(RESULTS_PATH)/*.txt`
+IGNORE = `grep -s :IGNORE $(RESULTS_PATH)/*.txt`
+SUMMARY = `tail -n2 $(RESULTS_PATH)/*.txt`
 
 # object files, use for mesosim target
 # OBJS := $(addprefix $(BUILD_PATH)/,$(object_names))
 # uses .c files in SRC_PATH to create list of object files in BUILD_PATH by pattern substitution
 OBJS := $(patsubst $(SRC_PATH)/%.c,$(OBJ_PATH)/%.o, $(wildcard $(SRC_PATH)/*.c))
+SRC_MAIN := Mesosim.c
+OBJS_MMAIN := $(filter-out $(OBJ_PATH)/$(subst .c,.o,$(SRC_MAIN)),$(OBJS))
 
 # other headers to act as dependencies that don't have corresponding .c files
-XS_HEADERS := Common.h Defs.h Geometry.h
+XS_HEADERS := State.h Defs.h Geometry.h
 XS_HPATH := $(addprefix $(INCLUDE_PATH)/,$(XS_HEADERS))
 ### -----
 
+# $(info RESULTS is $(RESULTS))
+
+.PHONY: test clean all
 all: $(BIN_PATH)/$(EXECUTABLE).$(TARGET_EXTENSION)
 
 # build binary using object files
@@ -93,25 +99,26 @@ $(BIN_PATH)/$(EXECUTABLE).$(TARGET_EXTENSION): $(BIN_PATH) $(BUILD_PATHS) $(OBJS
 print: $(SRC_PATH)/* $(INCLUDE_PATH)/*
 	@echo -ne " $(addsuffix \n,$?)"
 
-.PHONY: test
 test: $(BUILD_PATHS) $(RESULTS)
-	@echo "-----------------------\nIGNORES:\n-----------------------"
+	@echo -e "-----------------------\nIGNORES:\n-----------------------"
 	@echo "$(IGNORE)"
-	@echo "-----------------------\nFAILURES:\n-----------------------"
+	@echo -e "-----------------------\nFAILURES:\n-----------------------"
 	@echo "$(FAIL)"
-	@echo "-----------------------\nPASSED:\n-----------------------"
+	@echo -e "-----------------------\nPASSED:\n-----------------------"
 	@echo "$(PASSED)"
-	@echo "\nDONE"
+	@echo -e "-----------------------\nSUMMARY:\n-----------------------"
+	@echo "$(SUMMARY)"
+	@echo -e "\nDONE"
 
 $(RESULTS_PATH)/%.txt: $(BUILD_PATH)/%.$(TARGET_EXTENSION)
-	-./$< > $@ 2>&1
+	./$< > $@ 2>&1
 
-$(BUILD_PATH)/Test%.$(TARGET_EXTENSION): $(OBJ_PATH)/Test%.o $(OBJ_PATH)/%.o $(OBJ_PATH)/unity.o #$(DEPEND_PATH)Test%.d
+$(BUILD_PATH)/Test%.$(TARGET_EXTENSION): $(OBJS_MMAIN) $(OBJ_PATH)/Test%.o $(OBJ_PATH)/%.o $(OBJ_PATH)/unity.o #$(DEPEND_PATH)Test%.d
 	$(LINK) -o $@ $^
 
-# :: (double-colon) rules are independent
+# :: (double-colon) rules are independent from each other
 # TEST_PATH/TestSomething.c
-$(OBJ_PATH)/%.o:: $(TEST_PATH)/%.c $(INCLUDE_PATH)/%.h $(XS_HPATH)
+$(OBJ_PATH)/%.o:: $(TEST_PATH)/%.c
 	$(COMPILE) $(CFLAGS) $< -o $@
 
 # SRC_PATH/Something.c
@@ -128,17 +135,7 @@ $(DEPEND_PATH)/%.d:: $(TEST_PATH)/%.c
 $(BUILD_PATHS) $(BIN_PATH):
 	$(MKDIR) $@
 
-# $(DEPEND_PATH):
-# 	$(MKDIR) $(DEPEND_PATH)
-
-# $(OBJ_PATH):
-# 	$(MKDIR) $(OBJ_PATH)
-
-# $(RESULTS_PATH):
-# 	$(MKDIR) $(RESULTS_PATH)
-
 # Clean build and bin directories
-.PHONY: clean
 clean:
 	$(CLEANUP) -r $(BUILD_PATH) $(BIN_PATH)
 	$(CLEANUP) $(OBJ_PATH)/*.o
