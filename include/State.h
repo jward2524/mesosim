@@ -65,6 +65,7 @@ struct SimulationEnv
 
     int dissolution; // flag for whether dissolution events can occur
     char **atom_names; // [num_elements][BUFFER_SIZE or 3 or something]
+    int atom_names_cnt;
 
     /* symmetry related variables */
     double rmat[3][3]; // visualization?

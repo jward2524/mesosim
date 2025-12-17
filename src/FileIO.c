@@ -397,7 +397,7 @@ static int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, s
 		int count = 0;
 		while (token)
 		{
-			types[count] = (char *)malloc(BUFFER_SIZE * sizeof(char)); // TODO: free // ENHANCE: 3 -> BUFFER_SIZE??
+			types[count] = (char *)malloc(BUFFER_SIZE * sizeof(char));
 			sscanf(token, "%s", types[count]);
 			token = strtok(NULL, " \t");
 			count++;
@@ -411,7 +411,8 @@ static int parse_input(char* line, FILE* temp_log, struct SimulationState* ss, s
 		se->num_elements = count;
 		se->num_bond_types = get_num_bond_types(se->num_elements);
 		
-		se->atom_names = (char **)calloc(count, sizeof(char*)); // TODO: free
+		se->atom_names = (char **)calloc(count, sizeof(char*));
+		se->atom_names_cnt = count;
 		if (se->atom_names == NULL)
 		{
 			fprintf(stderr, "Couldn't allocate memory for atom names: %s", strerror(errno));

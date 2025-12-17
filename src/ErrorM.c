@@ -1,5 +1,6 @@
 #include "ErrorM.h"
 #include "State.h"
+#include "FileIO.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,19 +58,34 @@ void clean_and_exit(int error)
         }
         free_if_exists((void **)&sim_state->transition_arr);
 
+        for (int i = 0; i < sim_state->rate_cnt; i++)
+        {
+            // free_if_exists((void **)&(sim_state->rate_arr[i].atom_env));
+            free(sim_state->rate_arr[i].atom_env);
+        }
         free_if_exists((void **)&sim_state->rate_arr);
+
+        free_if_exists((void **)&(sim_state->transition_probability.rate_arr_index));
+        free_if_exists((void **)&(sim_state->transition_probability.lbound));
+        free_if_exists((void **)&(sim_state->transition_probability.ubound));
+
         free_if_exists((void **)&sim_state); // we know it exists, but still useful
     }
 
     // SimulationEnv
     if (sim_env != NULL)
     {
+        for (int i = 0; i < sim_env->atom_names_cnt; i++)
+        {
+            free_if_exists((void **)&(sim_env->atom_names[i]));
+        }
         free_if_exists((void **)&sim_env->atom_names);
         free_if_exists((void **)&sim_env->substrate_composition);
         free_if_exists((void **)&sim_env->nn_energy);
         free_if_exists((void **)&sim_env->is_soluble);
         free_if_exists((void **)&sim_env->transition_vectors);
         free_if_exists((void **)&sim_env->opposite_tvectors);
+        free_if_exists((void **)&sim_env->atoms_per_nn_level);
         free_if_exists((void **)&sim_env);
     }
 

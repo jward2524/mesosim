@@ -506,8 +506,11 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	int intial_config_neighbor_cnt = get_initial_configuration(atom_idx, se->num_transition_vectors, ss->atom_arr, start_config);		// k is number of near neighbors
 
 	// skip calculating a rate of a fully coordinated atom
-	if (intial_config_neighbor_cnt == se->num_transition_vectors) 
+	if (intial_config_neighbor_cnt == se->num_transition_vectors)
+	{
+		free(atom_env);
 		return atom_rates_cnt;
+	}
 
 	// create transitions to each unoccupied neighbor
 	int final_config_neighbor_cnt;
@@ -555,7 +558,7 @@ int refresh_transitions(int atom_idx, struct SimulationState* ss, struct Simulat
 	}
 
 	free(atom_env);
-	atom_env = NULL;
+	// atom_env = NULL;
 
 	return atom_rates_cnt;						// gives number of current transitions for that atom
 }
@@ -722,7 +725,9 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 
 		free(ss->transition_arr[ss->transition_cnt]);			// free up the very last member of the last transition_arr
 		ss->transition_arr[ss->transition_cnt] = NULL;
+		
 		// TODO: use pointers for rate array
+		free(ss->rate_arr[rate_idx].atom_env);
 		for (i = rate_idx + 1; i < ss->rate_cnt; ++i)
 		{
 			ss->rate_arr[i-1].transition_start_idx = ss->rate_arr[i].transition_start_idx;
