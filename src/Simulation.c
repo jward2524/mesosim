@@ -93,7 +93,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     int old_x, old_y, old_z;
     // int neighbor_x, neighbor_y, neighbor_z, neighbor_idx;
 
-    printf("Setup complete, iteration start");
+    printf("Setup complete, iteration start\n");
     while (!simulation_end) {
         ss->iter++;
 
