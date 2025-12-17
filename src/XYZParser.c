@@ -3,8 +3,14 @@
 #include <string.h>
 
 // mallocs strings in KVs
-// kv_str is null-terminated at kv_len
-// kv_str should already be lowercase
+/**
+ * @brief parses a key-value string to identify key and value
+ *
+ * @param kv_str [lowercase] null-terminated string containing key-value pair separated by '='
+ * @param kv_len length of kv_str
+ * @param kv struct to store the key and value
+ * @return int status
+ */
 int parse_key_value(const char *kv_str, size_t kv_len, struct KV *kv)
 {
     const char *key_start = kv_str;
