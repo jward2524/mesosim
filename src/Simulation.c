@@ -128,9 +128,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 // [ ]: third random number?
                 // picks a type of transition and then which atom that has that transition will it
                 // act on?
-                selected_transition_idx =
-                    ss->rate_arr[k].transition_start_idx +
-                    (int)(drand() * (double)ss->rate_arr[k].transition_count);
+                selected_transition_idx = ss->rate_arr[k].transition_start_idx +
+                                          (int)(drand() * (double)ss->rate_arr[k].transition_count);
 
                 // selected_transition_idx gives the location of the transition_arr, which gives
                 // the info about the specific atom
@@ -285,7 +284,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     output_log_file(ls->sim_log_file, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
                     ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
 
-    snprintf(suffix, BUFFER_SIZE, "%s_final", suffix);
+    snprintf(suffix + strlen(suffix), BUFFER_SIZE - strlen(suffix), "_final");
     write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
 
     if ((ss->final_iteration > 0) && (ss->iter >= ss->final_iteration)) {
@@ -347,6 +346,10 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
         ss->transition_probability.lbound[i] = current_probability;
         rate_idx = ss->transition_probability.rate_arr_index[i];
         current_probability += ss->rate_arr[rate_idx].frequency / ss->frequency_sum;
+        if (isnan(current_probability)) {
+            fprintf(stderr, "Probability is nan");
+            clean_and_exit(1);
+        }
         ss->transition_probability.ubound[i] = current_probability;
     }
 
@@ -681,18 +684,21 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
     if (ss->rate_arr[rate_idx].transition_count == 0) // if list is empty
     {
         for (i = rate_idx + 1; i < ss->rate_cnt; ++i) {
-            --ss->rate_arr[i]
-                  .transition_start_idx; // move rate_arr offsets of larger indicies down one
+            // move rate_arr offsets of larger indicies down one
+            --ss->rate_arr[i].transition_start_idx;
+
             // make transition at new start index (which is of different Rate than old start index)
             // have same atom and offset as new end index (which is of same Rate as old end index)
             transition_idx = ss->rate_arr[i].transition_start_idx;
-            transition_end_idx = ss->rate_arr[i].transition_start_idx +
-                                 ss->rate_arr[i].transition_count; // count is always at least 1
+            transition_end_idx =
+                ss->rate_arr[i].transition_start_idx + ss->rate_arr[i].transition_count;
+            // count is always at least 1
 
             ss->transition_arr[transition_idx]->atom_idx =
                 ss->transition_arr[transition_end_idx]->atom_idx;
             ss->transition_arr[transition_idx]->offset_idx =
                 ss->transition_arr[transition_end_idx]->offset_idx;
+
             // update the transition index in the corresponding atom in atom_arr to have the new
             // (lower) transition index
             ss->atom_arr[ss->transition_arr[transition_idx]->atom_idx]
@@ -700,20 +706,17 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
                 transition_idx;
         }
 
-        free(ss->transition_arr[ss->transition_cnt]); // free up the very last member of the last
-                                                      // transition_arr
+        // free up the very last member of the last transition_arr
+        free(ss->transition_arr[ss->transition_cnt]);
         ss->transition_arr[ss->transition_cnt] = NULL;
 
-        // TODO: use pointers for rate array
+        // TODO: use pointers for rate array to eliminate manual copying of attributes
         free(ss->rate_arr[rate_idx].atom_env);
         for (i = rate_idx + 1; i < ss->rate_cnt; ++i) {
-            ss->rate_arr[i - 1].transition_start_idx = ss->rate_arr[i].transition_start_idx;
-            ss->rate_arr[i - 1].transition_count = ss->rate_arr[i].transition_count;
-            ss->rate_arr[i - 1].k = ss->rate_arr[i].k;
-            ss->rate_arr[i - 1].frequency = ss->rate_arr[i].frequency;
-            ss->rate_arr[i - 1].atom_env = ss->rate_arr[i].atom_env;
-            ss->rate_arr[i - 1].is_evaporation = ss->rate_arr[i].is_evaporation;
+            memcpy(&ss->rate_arr[i - 1], &ss->rate_arr[i], sizeof(Rate));
         }
+        memset(&ss->rate_arr[i - 1], 0, sizeof(Rate));
+        ss->rate_arr[i - 1].is_evaporation = (unsigned char)-1;
 
         --ss->rate_cnt;
         if (ss->rate_cnt < 0) {
@@ -790,7 +793,8 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 
     for (int j = 0; j < ss->atom_cnt; ++j)
         for (int i = 0; i < se->num_transition_vectors; ++i) {
-            k = atom_at_offset(ss->atom_arr[j]->lattice[0], ss->atom_arr[j]->lattice[1], ss->atom_arr[j]->lattice[2], i, ss->atom_arr, ss->zone_arr, se);
+            k = atom_at_offset(ss->atom_arr[j]->lattice[0], ss->atom_arr[j]->lattice[1],
+                               ss->atom_arr[j]->lattice[2], i, ss->atom_arr, ss->zone_arr, se);
 
             if (k >= 0) {
                 // an atom has been found atom_idx this neighbor site.

@@ -814,8 +814,8 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
         move_atom((ss->atom_cnt - 1), atom_number, ss->atom_arr, ss->zone_arr, ss->transition_arr,
                   se);
 
-    copy_atom(atom_number, ss->atom_cnt - 1,
-              ss->atom_arr); // TODO: does this realistically need to happen?
+    // TODO: does this realistically need to happen?
+    copy_atom(atom_number, ss->atom_cnt - 1, ss->atom_arr);
 
     free(ss->atom_arr[ss->atom_cnt - 1]);
     ss->atom_arr[ss->atom_cnt - 1] = NULL;
