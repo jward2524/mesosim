@@ -12,6 +12,9 @@
 // variables for simulation conditions
 // (generally) initialized and then never edited again, only read
 struct SimulationEnv {
+
+    unsigned rand_seed;
+
     long long int max_atoms;
     long long int max_transitions;
     long long int max_rates;

@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
         clean_and_exit(errno);
     }
     fputs("MESOSIM 2024\n", temp_log);
-    fprintf(temp_log, "Start time: %lld\n", starttime);
+    fprintf(temp_log, "Start time: %s\n", ctime(&starttime));
     fprintf(temp_log, "Attempting to read in file %s\n", argv[1]);
 
     // TODO: clean up - move error handling into simulation_parameters_from_file; move all

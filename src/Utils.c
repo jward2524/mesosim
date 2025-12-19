@@ -2,6 +2,7 @@
 #include "Vector.h"
 #include "math.h"
 #include <assert.h>
+#include <stdlib.h>
 
 double ssr;
 
@@ -22,6 +23,16 @@ static int int_check(double fvalue, int ireference, double epsilon);
 static int int_check(double fvalue, int ireference, double epsilon)
 {
     return fabs(fvalue - (double)ireference) < epsilon;
+}
+
+/**
+ * @brief returns a random decimal on the interval [0,1)
+ * 
+ * @return double random value
+ */
+double drand()
+{
+    return (double)rand() / RAND_MAX;
 }
 
 void lattice2int(double fcoords[3], int coords[3], double epsilon)

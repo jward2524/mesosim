@@ -1,7 +1,6 @@
 #include "Initialization.h"
 #include "Atoms.h"
 #include "ErrorM.h"
-#include "Random.h"
 #include "Utils.h"
 #include "Vector.h"
 #include <errno.h>
@@ -115,8 +114,9 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
     // current_iteration = 0; //not needed if only running 1 simulation at a time // XXX: commented
     // code, never used
     ss->frequency_sum = 0.0;
-
-    ss->elapsed_stime = 0.0;
+    
+    // TODO: allow for reading simulation variables from intermediate xyz file
+    ss->elapsed_stime = 0.0; 
 
     ss->total_atoms_dissolved = 0;
 
@@ -148,9 +148,7 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
     while (ss->atom_cnt != 0) // TODO: start here
         kill_atom(ss->atom_cnt - 1, ss, se);
 
-    if (rand_seed > 0)
-        rand_seed = -rand_seed;
-    srandj(&rand_seed);
+    srand(se->rand_seed);
 
     return;
 }
@@ -486,7 +484,7 @@ void set_primitive_basis(struct SimulationEnv *se) // lattice_type = crystal str
 
 void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se)
 {
-    double drand;
+    double rand;
 
     int mid_w = se->simbox_limits_lat[2][0] +
                 ((se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0]) / 2);
@@ -496,7 +494,7 @@ void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se)
         for (int i = se->simbox_limits_lat[0][0]; i < se->simbox_limits_lat[0][1]; ++i) {
             // loop through x and y (two lattice directions)
             for (int j = se->simbox_limits_lat[1][0]; j < se->simbox_limits_lat[1][1]; ++j) {
-                drand = drandj(&rand_seed);
+                rand = drand();
 
                 // TODO: make into fxn
                 double bar = 0;
@@ -504,7 +502,7 @@ void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se)
                 do {
                     type++;
                     bar += se->substrate_composition[type];
-                } while (bar < drand);
+                } while (bar < rand);
                 add_atom(i, j, k, type, NORMAL, ss, se);
             }
         }
@@ -618,7 +616,7 @@ void initialize_spherical_cluster(
 
                 if (dist <= (radius_cart * radius_cart)) {
                     // particle is in bounds
-                    random_num = drandj(&rand_seed);
+                    random_num = drand();
                     // determining composition of atom to be placed
                     bar = 0;
                     type = -1;

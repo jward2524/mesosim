@@ -3,6 +3,10 @@
 
 #include "State.h"
 
+#define DEFAULT_SEED 1
+
+double drand();
+
 void get_system_rw_radius(struct SimulationEnv *se); // XXX: unused
 
 void findzone(int *zone_u, int *zone_v, int *zone_w, int u, int v, int w, struct SimulationEnv *se);

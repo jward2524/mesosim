@@ -1,6 +1,5 @@
 ﻿#include "Atoms.h"
 #include "ErrorM.h"
-#include "Random.h"
 #include "Simulation.h"
 #include "Utils.h"
 #include "Vector.h"
@@ -583,7 +582,7 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
 
         vc = new_random_atom[i].vc;
 
-        subv = drandj(&rand_seed);
+        subv = drand();
 
         double bar = 0;
         int type = -1;

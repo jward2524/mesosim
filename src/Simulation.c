@@ -3,7 +3,6 @@
 #include "ErrorM.h"
 #include "FileIO.h"
 #include "Mesosim.h"
-#include "Random.h"
 #include "Utils.h"
 #include <errno.h>
 #include <math.h>
@@ -114,7 +113,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         }
 
         // pick the type of transition to occur
-        transition_type_probability = drandj(&rand_seed);
+        transition_type_probability = drand();
         rate_skip = ss->rate_cnt / 2;
         j = rate_skip;
 
@@ -131,7 +130,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 // act on?
                 selected_transition_idx =
                     ss->rate_arr[k].transition_start_idx +
-                    (int)(drandj(&rand_seed) * (double)ss->rate_arr[k].transition_count);
+                    (int)(drand() * (double)ss->rate_arr[k].transition_count);
 
                 // selected_transition_idx gives the location of the transition_arr, which gives
                 // the info about the specific atom
@@ -209,7 +208,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         // time passed, then transition occurred
         // whether this is the 1st, 2nd, or 3rd random number in the loop affects the time (diff
         // random numbers)
-        ss->elapsed_stime -= log(drandj(&rand_seed)) / ss->frequency_sum;
+        ss->elapsed_stime -= log(drand()) / ss->frequency_sum;
 
         if (se->overpotential_ramp_rate != 0.0) {
             cur_stime = ss->elapsed_stime;

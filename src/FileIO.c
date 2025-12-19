@@ -1,7 +1,6 @@
 ﻿#include "FileIO.h"
 #include "Atoms.h"
 #include "ErrorM.h"
-#include "Random.h"
 #include "Utils.h"
 #include "XYZParser.h"
 #include <ctype.h>
@@ -197,22 +196,26 @@ static int parse_input(char *line, FILE *temp_log, struct SimulationState *ss,
             exit(FILE_COMMAND_IGNORED);
         }
     } else if (strncmp(cmd, "seed", 4) == 0) {
-        // set the random seed
+        // set the random seed // TODO: allow for setting fixed seed
         if (strncmp(params, "random", 6) == 0) {
             // rand_seed should be based on time
             time_t seedtime;
             time(&seedtime);
-            rand_seed = (long int)seedtime;
-            fprintf(temp_log, "Using random time seed %ld\n", rand_seed);
+            se->rand_seed = (unsigned int)seedtime;
+            fprintf(temp_log, "Using random time seed %u\n", se->rand_seed);
         } else if (strncmp(params, "default", 7) == 0) {
-            rand_seed = DEFAULT_SEED;
-            fprintf(temp_log, "Using default time seed %ld\n", rand_seed);
-        } else if ((argsread = sscanf(params, "%ld", &rand_seed)) != 1) // read in a long int
-        {
-            fprintf(stderr,
+            se->rand_seed = DEFAULT_SEED;
+            fprintf(temp_log, "Using default time seed %u\n", se->rand_seed);
+        } else {
+            // read in a long int
+            argsread = sscanf(params, "%u", &se->rand_seed);
+            if (argsread != 1) {
+                fprintf(
+                    stderr,
                     "Input parsing failed - Could not correctly read random seed parameter %s\n",
                     params);
-            exit(FILE_COMMAND_IGNORED);
+                exit(FILE_COMMAND_IGNORED);
+            }
         }
     } else if (strncmp(cmd, "potential", 9) == 0) {
         // set the potential sweep
@@ -1040,7 +1043,7 @@ void input_logging(struct SimulationState *sim_state, struct SimulationEnv *sim_
                 log_state->next_log_checkpoint, sim_state->run_stime, log_state->log_interval);
     // TODO: fill out for other analysis_types
 
-    fprintf(log_state->sim_log_file, "Random seed is %ld\n", rand_seed);
+    fprintf(log_state->sim_log_file, "Random seed is %u\n", sim_env->rand_seed);
 
     switch (sim_env->simulation_type) {
     case SIMULATION_TYPE_FLAT_SHEET:
@@ -1069,7 +1072,7 @@ bool output_log_file(FILE *sim_log_file, int frame_num, unsigned long int iter,
     fprintf(sim_log_file, "![%d]\t", frame_num);
     fprintf(sim_log_file, "iteration = %lu\t", iter);
     fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t",
-            elapsed_stime, temperature, overpotential); // TODO: add iteration number to this
+            elapsed_stime, temperature, overpotential);
     fprintf(sim_log_file, "atoms = %d\tinternal energy = %lf [eV]\n", atom_cnt,
             total_internal_energy);
     fflush(sim_log_file);
