@@ -7,6 +7,8 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
              struct SimulationEnv *se);
 int atom_at(int u, int v, int w, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z],
             struct SimulationEnv *se);
+int atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
+                   Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
 void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se);
 void move_atom(int ia, int fa, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z],
                Transition **transition_arr, struct SimulationEnv *se);
@@ -37,13 +39,5 @@ int get_initial_configuration(int atom_index, int num_transition_vectors, Atom *
                               int initial_config[]);
 int get_final_configuration(int at, int offset_idx, struct SimulationState *ss,
                             struct SimulationEnv *se, int final_config[]);
-
-// TODO: into SimulationEnv
-extern const LatticeVector BCC_OFFSET[8];
-extern const LatticeVector FCC_OFFSET[12];
-extern const LatticeVector SC_OFFSET[6];
-extern const LatticeVector SC_OFFSET_2[12];
-extern const LatticeVector FCC_OFFSET_2[6];
-extern const LatticeVector BCC_OFFSET_2[6];
 
 #endif // ATOMS_H

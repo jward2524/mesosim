@@ -62,7 +62,6 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
     int atom_idx;
 
     int zone_u, zone_v, zone_w;
-    int query_u, query_v, query_z; // position of potential move
 
     long long int pos;
 
@@ -159,12 +158,6 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
         // query_u, query_v, query_w point to the neighboring site
         // so update occupied neighbor site according to atom_at(query_u, query_v, query_w);
 
-        query_u = u + se->transition_vectors[i].dx;
-        query_v = v + se->transition_vectors[i].dy;
-        query_z = w + se->transition_vectors[i].dz;
-
-        adjust_pbc(&query_u, &query_v, &query_z, se);
-
         switch (special) {
         case NORMAL: // normal bonding considerations
                      // case NORMAL_NOGO:
@@ -173,7 +166,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
             //  set occupied_neighbor_site[i] to the atom at that site.
             //  If there really is an atom there, cross-link it to our new atom.
             ss->atom_arr[pos]->neighbor_atom_idxs[i] =
-                atom_at(query_u, query_v, query_z, ss->atom_arr, ss->zone_arr, se);
+                atom_at_offset(u, v, w, i, ss->atom_arr, ss->zone_arr, se);
 
             // if atom is present at potential jump site, fill position in neighbor_atom_idxs of
             // this atom and the found neighbor atom
@@ -343,12 +336,8 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
     return pos;
 }
 
-/********************************************************************************/
-/********************************************************************************/
-
 // copies one element ia of atom list to another point fa
 // used only within the simulation routines, things like bonds, etc. are not copied.
-
 void move_atom(int initial_idx, int final_idx, Atom **atom_arr,
                Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition **transition_arr,
                struct SimulationEnv *se)
@@ -556,7 +545,6 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
     }
 
     // now move atom from the end of the atom list to this spot
-
     if (at != (ss->atom_cnt - 1)) {
         // copy_atom(nat-1, at);
         move_atom((ss->atom_cnt - 1), at, ss->atom_arr, ss->zone_arr, ss->transition_arr, se);
@@ -639,6 +627,21 @@ int atom_at(int u, int v, int w, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONE
     }
 
     return -1; // no atom
+}
+
+int atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
+                   Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se)
+{
+    int neighbor_x, neighbor_y, neighbor_z;
+
+    neighbor_x = u + se->transition_vectors[offset].dx;
+    neighbor_y = v + se->transition_vectors[offset].dy;
+    neighbor_z = w + se->transition_vectors[offset].dz;
+
+    adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
+
+    int atom_idx = atom_at(neighbor_x, neighbor_y, neighbor_z, atom_arr, zone_arr, se);
+    return atom_idx;
 }
 
 int reincarnate(int u, int v, int w, int type, int vc, int buried)
@@ -968,7 +971,6 @@ int get_final_configuration(int at, int offset_idx, struct SimulationState *ss,
 {
     int atom_idx;
     int new_x, new_y, new_z;
-    int neighbor_x, neighbor_y, neighbor_z;
 
     int nn_cnt = 0; // nearest-neighbors
     // atom position after jump offset_idx
@@ -985,13 +987,7 @@ int get_final_configuration(int at, int offset_idx, struct SimulationState *ss,
             continue;
         }
         // location of neighbor
-        neighbor_x = new_x + se->transition_vectors[i].dx;
-        neighbor_y = new_y + se->transition_vectors[i].dy;
-        neighbor_z = new_z + se->transition_vectors[i].dz;
-
-        adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
-
-        atom_idx = atom_at(neighbor_x, neighbor_y, neighbor_z, ss->atom_arr, ss->zone_arr, se);
+        atom_idx = atom_at_offset(new_x, new_y, new_z, i, ss->atom_arr, ss->zone_arr, se);
 
         if (atom_idx != -1) {
             // if there is an atom present, 'return' its type

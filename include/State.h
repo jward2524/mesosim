@@ -29,8 +29,6 @@ struct SimulationEnv {
     int zone_count_u, zone_count_v, zone_count_w;
 
     int lattice_type;
-    int num_transition_vectors;
-    int num_energy_contributors; // based on num_nn_levels, directions must be hard-coded
 
     int sheet_thickness;
     int cluster_radius;
@@ -70,8 +68,10 @@ struct SimulationEnv {
     double rmat[3][3];  // visualization?
     double centroid[3]; // coordinates for center of gravity
 
-    // possible atom jumps in simulation
+    // relevant vectors to neighbors
     LatticeVector *transition_vectors;
+    int num_transition_vectors;
+    int num_energy_contributors; // based on num_nn_levels, directions must be hard-coded
 
     // index in transition_vectors that has the jump in the opposite direction in simulation;
     // opposite_tvectors[0]=11 means the opposite direction of se->transition_vectors[0] is
