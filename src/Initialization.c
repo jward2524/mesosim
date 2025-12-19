@@ -114,9 +114,9 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
     // current_iteration = 0; //not needed if only running 1 simulation at a time // XXX: commented
     // code, never used
     ss->frequency_sum = 0.0;
-    
+
     // TODO: allow for reading simulation variables from intermediate xyz file
-    ss->elapsed_stime = 0.0; 
+    ss->elapsed_stime = 0.0;
 
     ss->total_atoms_dissolved = 0;
 
@@ -386,13 +386,12 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
     int transition_length;
     se->atoms_per_nn_level[0] = se->num_transition_vectors;
     if (se->num_nn_levels == 1) {
-        transition_length = se->num_transition_vectors;
-    }
-    if (se->num_nn_levels == 2) {
+        se->num_energy_contributors = se->num_transition_vectors;
+    } else if (se->num_nn_levels == 2) {
         se->atoms_per_nn_level[1] = extra;
         se->num_energy_contributors = se->num_transition_vectors + extra;
-        transition_length = se->num_energy_contributors;
     }
+    transition_length = se->num_energy_contributors;
 
     se->transition_vectors = (LatticeVector *)malloc(transition_length * sizeof(LatticeVector));
     if (!se->transition_vectors) {

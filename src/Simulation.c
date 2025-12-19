@@ -324,7 +324,7 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
                     r->atom_env, r->final_config_neighbor_cnt, ss->temperature, se);
             }
             if (isnan(rate_const)) {
-                fprintf(stderr, "Rate constant is nan");
+                fprintf(stderr, "Rate constant is nan\n");
                 clean_and_exit(1);
             }
             r->k = rate_const;
@@ -347,7 +347,7 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
         rate_idx = ss->transition_probability.rate_arr_index[i];
         current_probability += ss->rate_arr[rate_idx].frequency / ss->frequency_sum;
         if (isnan(current_probability)) {
-            fprintf(stderr, "Probability is nan");
+            fprintf(stderr, "Probability is nan\n");
             clean_and_exit(1);
         }
         ss->transition_probability.ubound[i] = current_probability;
