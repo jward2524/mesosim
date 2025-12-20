@@ -359,7 +359,6 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
 void update_outdated_transitions(int old_x, int old_y, int old_z, int transitioned_atom_idx,
                                  struct SimulationState *ss, struct SimulationEnv *se)
 {
-
     // refresh neighbors of previous site
     for (int i = 0; i < se->num_energy_contributors; i++) {
         // transitioned_atom_index - new atom index (-1 if evaporated)
@@ -376,8 +375,7 @@ void update_outdated_transitions(int old_x, int old_y, int old_z, int transition
 
         // refresh neighbors of moved-to site
         for (int i = 0; i < se->num_energy_contributors; i++) {
-            int neighbor_idx =
-                atom_at_offset(old_x, old_y, old_z, i, ss->atom_arr, ss->zone_arr, se);
+            int neighbor_idx = ss->atom_arr[transitioned_atom_idx]->neighbor_atom_idxs[i];
 
             if (neighbor_idx >= 0)
                 refresh_transitions(neighbor_idx, ss, se);
@@ -578,20 +576,22 @@ int create_new_rate(unsigned char *atom_env, int final_config_neighbor_cnt,
 // add to rate_arr[rate_idx] the atom atom_idx going in direction offset_idx
 // updates transition_arr, rate_arr[rate_idx].transition_count,
 // atom_arr[atom_idx]->transition_indices[offset_idx]
-void add_to_transition_list(
-    int rate_idx, int atom_idx, int offset_idx, struct SimulationState *ss,
-    struct SimulationEnv *se) // rate_arr index, atom_arr index, se->transition_vectors index
-{                             // 0 2920 11
-    int i;                    // loop variable
+void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct SimulationState *ss,
+                            struct SimulationEnv *se)
+{
+    // rate_arr index, atom_arr index, se->transition_vectors index
+    // 0 2920 11
+    int i; // loop variable
     int n;
     int initial_transition_index, final_transition_index; // initial and final transition_arr index
 
     // make room for the new arrival
-    ss->transition_arr[ss->transition_cnt] =
-        (Transition *)malloc(sizeof(Transition)); // adds entry to the end of the list
+    // adds entry to the end of the list
+    ss->transition_arr[ss->transition_cnt] = (Transition *)malloc(sizeof(Transition));
+
     if (ss->transition_arr[ss->transition_cnt] == NULL) {
         // TODO: free mallocs before exiting
-        fprintf(stderr, "Couldn't allocate memory for atom %lld: %s\n", ss->transition_cnt,
+        fprintf(stderr, "Couldn't allocate memory for transition %lld: %s\n", ss->transition_cnt,
                 strerror(errno));
         clean_and_exit(errno);
     }
@@ -602,12 +602,17 @@ void add_to_transition_list(
     }
 
     // what is this
-    //		final_transition_index = rate_arr[rate_cnt-1].transition_start_idx +
-    // rate_arr[rate_cnt-1].number; 		transition_arr[final_transition_index] = (Transition
-    //*)malloc(sizeof(Transition));
+    // final_transition_index = rate_arr[rate_cnt-1].transition_start_idx +
+    // rate_arr[rate_cnt-1].number; transition_arr[final_transition_index] =
+    // (Transition*)malloc(sizeof(Transition));
 
-    for (i = ss->rate_cnt - 1; i > rate_idx;
-         --i) { // [ ]: what does this do? is this the same as in remove_transition? i=6
+    // [ ]: what does this do? is this the same as in remove_transition?
+    // new transition needs to put into transition_arr with other transitions with rate rate_idx
+    // transitions with higher indices need to be moved down to make space
+    // so for each rate in rate_arr, the first transition (lowest index) is being copied into the
+    // (initial_transition_index + transition_count) index, which was just created by the above
+    // malloc or a duplicate after the initial transition from the rate above was copied
+    for (i = ss->rate_cnt - 1; i > rate_idx; --i) {
         initial_transition_index = ss->rate_arr[i].transition_start_idx;
         final_transition_index = initial_transition_index + ss->rate_arr[i].transition_count;
 
@@ -784,8 +789,8 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
     for (int j = 0; j < ss->atom_cnt; ++j)
         for (int i = 0; i < se->num_transition_vectors + 1; ++i) // extra 1 for evaporation
         {
-            if (ss->atom_arr[j]->transition_indices[i] !=
-                -1) // something can happen in the "i" direction
+            if (ss->atom_arr[j]->transition_indices[i] != -1)
+                // something can happen in the "i" direction
                 take_off_transition_list(j, i, ss);
         }
 
@@ -798,7 +803,6 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 
             if (k >= 0) {
                 // an atom has been found atom_idx this neighbor site.
-
                 ss->atom_arr[j]->neighbor_atom_idxs[i] = k;
                 ss->atom_arr[k]->neighbor_atom_idxs[se->opposite_tvectors[i]] = j;
             }
@@ -987,14 +991,16 @@ double calculate_surf_diffusion_rate(
 
     // these override the previous energy sum
     if (neighbor_cnt_initial == 0) {
-        // no neighbors - this condition corresponds to a diffuser walking through a lattice (a
-        // lattice gas)
+        // no neighbors - this condition corresponds to a diffuser walking through a lattice
+        // aka a lattice gas
         energy = -1.0;
     }
 
     // to simulate Ehrlich-Schwoebel barrier
+    // final_config_neighbor_cnt <= 1 don't transition, handled by refresh_transitions()
+    int barrier_factor = 4;
     if (final_config_neighbor_cnt <= 2) {
-        energy = 100;
+        energy = barrier_factor * energy;
     }
 
     // ENHANCE: replace calculating the exp with memoizing up the value (uhash?) -> speedup?
