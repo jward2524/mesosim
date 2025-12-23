@@ -876,15 +876,16 @@ bool process_kmx_file(FILE *temp_log, FILE *input_file, struct SimulationState *
     for (int i = 0; i < newnat; ++i) {
         fscanf(input_file, "%s\t", temp_atom.name);
 
+        // get rid of lattice coords too?
         fscanf(input_file, "%c\t\
-			%lf\t%lf\t%lf\t\
-			%d\t%d\t%d\t",
+               %lf\t%lf\t%lf\t\
+               %d\t%d\t%d\t",
                &temp_atom.type, &temp_atom.cartesian[0], &temp_atom.cartesian[1],
                &temp_atom.cartesian[2], &temp_atom.lattice[0], &temp_atom.lattice[1],
-               &temp_atom.lattice[2]); // get rid of lattice coords too?
+               &temp_atom.lattice[2]);
 
-        for (int j = 0; j < se->num_transition_vectors + se->dissolution;
-             ++j) // when do we pick lattice?
+        // when do we pick lattice?
+        for (int j = 0; j < se->num_transition_vectors + se->dissolution; ++j)
             fscanf(input_file, "%d\t", &temp_atom.transition_indices[j]);
 
         for (int j = 0; j < se->num_transition_vectors; ++j)
@@ -1012,6 +1013,21 @@ bool output_log_file(FILE *sim_log_file, int frame_num, unsigned long int iter,
     return true;
 }
 
+// output to csv:
+// iteration number, simulation time, system energy (per atom?), x1, y1, z1, x2, y2, z2
+// and atom ids at some point
+bool log_kmc()
+{
+
+}
+
+// output to csv:
+// MCSS, system energy (per atom?), xyz1, xyz2
+bool log_mc(FILE *csv_log_file)
+{
+
+}
+
 bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct SimulationState *ss,
                     struct SimulationEnv *se)
 {
@@ -1037,7 +1053,7 @@ bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct Simu
 
     if (is_extended) {
         // using extended XYZ format
-        // (https://docs.ovito.org/reference/file_formats/input/xyz.html#file-formats-input-xyz-extended-format)
+        // https://docs.ovito.org/reference/file_formats/input/xyz.html#file-formats-input-xyz-extended-format
 
         // 3x3 matrix - rows are cell vectors [preferred]
         fprintf(file, "Lattice=\"%lf %lf %lf %lf %lf %lf %lf %lf %lf\" ",

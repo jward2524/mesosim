@@ -52,6 +52,7 @@ void create_default_atom(int atom_idx, Atom **atom_arr, struct SimulationEnv *se
 // updates [atom_arr], atom_arr[i]->lattice, [atom_arr[n]->cart_coord], atom_cnt,
 // zone_arr[xzone][yzone][zzone].offset, atom_arr[pos]->next_atom/prev_atom,
 // atom_arr[pos]->transition_indices; returns index in atom_arr
+// energy is updated in refresh_transitions
 int add_atom(int u, int v, int w, int type, int special, struct SimulationState *ss,
              struct SimulationEnv *se)
 {

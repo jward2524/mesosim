@@ -402,14 +402,6 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss,
     unsigned char *atom_env = (unsigned char *)calloc(se->num_nn_types, sizeof(unsigned char));
     // unsigned char env_hash[se->num_nn_levels * se->num_bond_types];
 
-    // first, remove all mention of this atom from transition list
-    // extra 1 for evaporation
-    for (int i = 0; i < se->num_transition_vectors + se->dissolution; ++i) {
-        // transition can happen in the "i" direction
-        if (ss->atom_arr[atom_idx]->transition_indices[i] != -1)
-            take_off_transition_list(atom_idx, i, ss);
-    }
-
     // update neighbors
     // cycle through neighbor coordinates, and check if there is an atom there
     for (int i = 0; i < se->num_transition_vectors; ++i) {
@@ -439,16 +431,27 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss,
 
         // update atom_env
         if (neighbor_idx >= 0) {
-            int env_idx = get_env_index(i, ss->atom_arr[atom_idx]->type,
-                                        ss->atom_arr[neighbor_idx]->type, se);
+            int atom_type = ss->atom_arr[atom_idx]->type;
+            int neighbor_type = ss->atom_arr[neighbor_idx]->type;
+            int env_idx = get_env_index(i, atom_type, neighbor_type, se);
 
             atom_env[env_idx]++;
             ss->atom_arr[atom_idx]->energy += se->nn_energy[env_idx];
         }
     }
 
-    ss->atom_arr[atom_idx]->energy /= 2;
+    ss->atom_arr[atom_idx]->energy /= 2.;
     ss->total_internal_energy += ss->atom_arr[atom_idx]->energy;
+
+    // update transitions
+
+    // remove all mention of this atom from transition list
+    // extra 1 for evaporation
+    for (int i = 0; i < se->num_transition_vectors + se->dissolution; ++i) {
+        // transition can happen in the "i" direction
+        if (ss->atom_arr[atom_idx]->transition_indices[i] != -1)
+            take_off_transition_list(atom_idx, i, ss);
+    }
 
     // cycle through the neighbor sites
     // if there's an empty one, calculate the transition rate to it
