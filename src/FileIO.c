@@ -13,7 +13,6 @@ const int BUFFER_SIZE = 256;
 const int ARR_BUFFER_SIZE = 32;
 char outFile[260] = ""; // MAX_PATH variable Windows related, default 260
 
-static int fact(int n);
 static void calloc_nnE(struct SimulationEnv *se);
 static int parse_datalog_params(char *params, int cursor, struct LoggingState *ls, FILE *temp_log);
 static int parse_boolean(char *str);
@@ -586,72 +585,6 @@ static void calloc_nnE(struct SimulationEnv *se)
     se->num_nn_types = se->num_nn_levels * se->num_bond_types;
     se->nn_energy = (double *)calloc(se->num_nn_types, sizeof(double));
 }
-
-// gets the index in atom_env, nnE arrays (nearest_neighbor - bond_type combo)
-int get_env_index(int nn, int bond_idx, struct SimulationEnv *se)
-{
-    // nn - nearest neighbor level minus 1 (0 for 1st nn, 1 for 2nd nn, etc.)
-    return nn * se->num_bond_types + bond_idx;
-}
-
-// int get_env_index_types(int nn, int a, int b, struct SimulationEnv* se)
-// {
-// 	return get_env_index(nn, get_bond_index(a, b, se), se);
-// }
-
-int get_bond_index(int a, int b, struct SimulationEnv *se)
-{
-    // aa, ab, ac; bb, bc; cc [num_elements=3]
-    // 00, 01, 02; 11, 12; 22
-    // assume 0-indexed
-    int first, second;
-
-    // larger number (later element) is second
-    if (a < b) {
-        first = a;
-        second = b;
-    } else {
-        first = b;
-        second = a;
-    }
-
-    // a=1, b=2 -> (1*3)+(2-1)=4
-    return (first * (se->num_elements)) + (second - first);
-}
-
-// calculate the number of bond types
-int get_num_bond_types(int num_elements)
-{
-    return fact(num_elements + 2 - 1) / (fact(2) * fact(num_elements - 1));
-}
-
-// returns the factorial of n
-int fact(int n)
-{
-    switch (n) {
-    case 0:
-        return 1;
-    case 1:
-        return 1;
-    case 2:
-        return 2;
-    case 3:
-        return 6;
-    case 4:
-        return 24;
-    case 5:
-        return 120;
-    case 6:
-        return 720;
-    case 7:
-        return 5040;
-    default:
-        fprintf(stderr, "Factorial is too large (max n is 7): %d", n);
-        return -1;
-    }
-}
-/*******************************************************************************
-*******************************************************************************/
 
 bool process_kmc_file(FILE *temp_log, FILE *input_file, struct SimulationState *ss,
                       struct SimulationEnv *se, struct LoggingState *ls)

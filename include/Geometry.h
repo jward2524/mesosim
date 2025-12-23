@@ -106,6 +106,7 @@ typedef struct {
 } Command;
 
 // the direction of an atomic jump / diffusion move
+// in lattice coordinates
 typedef struct {
     int dx;
     int dy;
@@ -141,9 +142,11 @@ typedef struct {
 } Rate;
 
 typedef struct {
-    int atom_idx; // index in atom_arr of atom that the transition belongs to / is acting on
-    unsigned char offset_idx; // this represents the translation vector, as the index in
-                              // se->transition_vectors
+    // index in atom_arr of atom that the transition belongs to / is acting on
+    int atom_idx;
+
+    // this represents the translation vector, as the index in se->transition_vectors
+    unsigned char offset_idx;
 
 } Transition;
 

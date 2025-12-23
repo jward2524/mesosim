@@ -25,7 +25,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     //  long int i;
     int j, k;
 
-    double cur_stime, prev_stime; // prev and current times, for overpotential moving
+    // prev and current times, for overpotential moving
+    double cur_stime, prev_stime;
 
     double transition_type_probability;
 
@@ -459,14 +460,14 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss,
     ss->atom_arr[atom_idx]->energy /= 2;
     ss->total_internal_energy += ss->atom_arr[atom_idx]->energy;
 
-    // cycle through the neighbor sites.  if there's an empty one, calculate the transition rate to
-    // it
+    // cycle through the neighbor sites
+    // if there's an empty one, calculate the transition rate to it
     atom_rates_cnt = 0;
 
     // ENHANCE: redundant - already calculated initial config in j loop
+    // k is number of near neighbors
     int intial_config_neighbor_cnt =
-        get_initial_configuration(atom_idx, se->num_transition_vectors, ss->atom_arr,
-                                  start_config); // k is number of near neighbors
+        get_initial_configuration(atom_idx, se->num_transition_vectors, ss->atom_arr, start_config);
 
     // skip calculating a rate of a fully coordinated atom
     if (intial_config_neighbor_cnt == se->num_transition_vectors) {

@@ -1,7 +1,7 @@
-﻿#include "Utils.h"
+﻿#include "Utils.h" // includes State.h
 #include "Vector.h"
-#include "math.h"
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 
 double ssr;
@@ -18,6 +18,7 @@ double normal_cart[6][3] = {
 const double DEFAULT_EPSILON = 1e-3;
 
 static int int_check(double fvalue, int ireference, double epsilon);
+static int fact(int n);
 
 // checks if double is within range of an integer - returns 1 for true, 0 for false
 static int int_check(double fvalue, int ireference, double epsilon)
@@ -27,12 +28,68 @@ static int int_check(double fvalue, int ireference, double epsilon)
 
 /**
  * @brief returns a random decimal on the interval [0,1)
- * 
+ *
  * @return double random value
  */
-double drand()
+double drand() { return (double)rand() / RAND_MAX; }
+
+// gets the index in atom_env, nnE arrays (nearest_neighbor - bond_type combo)
+int get_env_index(int nn, int bond_idx, struct SimulationEnv *se)
 {
-    return (double)rand() / RAND_MAX;
+    // nn - nearest neighbor level minus 1 (0 for 1st nn, 1 for 2nd nn, etc.)
+    return nn * se->num_bond_types + bond_idx;
+}
+
+int get_bond_index(int a, int b, struct SimulationEnv *se)
+{
+    // aa, ab, ac; bb, bc; cc [num_elements=3]
+    // 00, 01, 02; 11, 12; 22
+    // assume 0-indexed
+    int first, second;
+
+    // larger number (later element) is second
+    if (a < b) {
+        first = a;
+        second = b;
+    } else {
+        first = b;
+        second = a;
+    }
+
+    // a=1, b=2 -> (1*3)+(2-1)=4
+    return (first * (se->num_elements)) + (second - first);
+}
+
+// calculate the number of bond types
+int get_num_bond_types(int num_elements)
+{
+    return fact(num_elements + 2 - 1) / (fact(2) * fact(num_elements - 1));
+}
+
+// returns the factorial of n
+static int fact(int n)
+{
+    switch (n) {
+    case 0:
+        return 1;
+    case 1:
+        return 1;
+    case 2:
+        return 2;
+    case 3:
+        return 6;
+    case 4:
+        return 24;
+    case 5:
+        return 120;
+    case 6:
+        return 720;
+    case 7:
+        return 5040;
+    default:
+        fprintf(stderr, "Factorial is too large (max n is 7): %d", n);
+        return -1;
+    }
 }
 
 void lattice2int(double fcoords[3], int coords[3], double epsilon)
@@ -122,8 +179,6 @@ void primitive_basis2ucell_params(
     return;
 }
 
-/******************************************************************************/
-/******************************************************************************/
 // XXX: only used for re-deposition
 void get_system_rw_radius(struct SimulationEnv *se)
 {
@@ -149,8 +204,8 @@ void adjust_pbc(int *u, int *v, int *w, struct SimulationEnv *se) // should be l
     // if exceeds boundary, either:
     // treat as occupied site - of what composition? atoms will scale box walls like adatoms
     // *treat as not a site - doesn't contribute to energy, can't be transitioned to
-    // 		if not a site, return -2 for adjust_pbc, skip atom_at+findzone, don't collect energy or
-    // create transition
+    // 		if not a site, return -2 for adjust_pbc, skip atom_at+findzone, don't collect energy
+    // or create transition
 
     // x y z in lattice coordinates
 
@@ -174,8 +229,6 @@ void adjust_pbc(int *u, int *v, int *w, struct SimulationEnv *se) // should be l
     // check_pbc(se->primitive_basis)
 }
 
-/********************************************************************************/
-/********************************************************************************/
 // finds the zone indices xy yz zz that correspond to the lattice coordinates xxx yyy zzz
 void findzone(int *zone_u, int *zone_v, int *zone_w, int u, int v, int w, struct SimulationEnv *se)
 {

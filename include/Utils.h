@@ -5,7 +5,14 @@
 
 #define DEFAULT_SEED 1
 
+extern double normal_cart[6][3];
+// extern double normal_lat[6][3];
+
 double drand();
+
+int get_num_bond_types(int num_elements);
+int get_env_index(int nn, int bond_idx, struct SimulationEnv *se);
+int get_bond_index(int a, int b, struct SimulationEnv *se);
 
 void get_system_rw_radius(struct SimulationEnv *se); // XXX: unused
 
@@ -24,8 +31,5 @@ int round_towards(double val, int target);
 
 // void cell_to_latmat(double c[6], double ltmt[3][3]);
 void primitive_basis2ucell_params(double ltmt[3][3], double c[6]);
-
-extern double normal_cart[6][3];
-// extern double normal_lat[6][3];
 
 #endif // UTILS_H
