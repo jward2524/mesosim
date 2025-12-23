@@ -10,9 +10,10 @@ extern double normal_cart[6][3];
 
 double drand();
 
+int get_env_index(int neighbor_idx, int atom_type, int neighbor_type, struct SimulationEnv *se);
 int get_num_bond_types(int num_elements);
-int get_env_index(int nn, int bond_idx, struct SimulationEnv *se);
-int get_bond_index(int a, int b, struct SimulationEnv *se);
+int nn_bondidx_2_envidx(int nn, int bond_idx, int num_bond_types);
+int get_bond_index(int a, int b, int num_elements);
 
 void get_system_rw_radius(struct SimulationEnv *se); // XXX: unused
 

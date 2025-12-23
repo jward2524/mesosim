@@ -33,14 +33,41 @@ static int int_check(double fvalue, int ireference, double epsilon)
  */
 double drand() { return (double)rand() / RAND_MAX; }
 
-// gets the index in atom_env, nnE arrays (nearest_neighbor - bond_type combo)
-int get_env_index(int nn, int bond_idx, struct SimulationEnv *se)
+/**
+ * @brief Get the corresponding index in atom_env
+ * 
+ * @param offset_idx index in atom.neighbor_arr and se->transition_vectors
+ * @param atom_type type of 'main' atom (interchangable with neighbor_type)
+ * @param neighbor_type type of neighbor atom wrt 'main'
+ * @param se pointer to SimulationEnv state variable
+ * @return int index in atom_env
+ */
+int get_env_index(int offset_idx, int atom_type, int neighbor_type, struct SimulationEnv *se)
 {
-    // nn - nearest neighbor level minus 1 (0 for 1st nn, 1 for 2nd nn, etc.)
-    return nn * se->num_bond_types + bond_idx;
+    // find nearest-neighbor shell
+    int nn_level;
+    int diff = offset_idx;
+    for (int j = 0; j < se->num_nn_levels; j++) {
+        diff = diff - se->atoms_per_nn_level[j];
+        if (diff < 0) {
+            nn_level = j;
+            break;
+        }
+    }
+
+    int bond_idx = get_bond_index(atom_type, neighbor_type, se->num_elements);
+    int env_idx = nn_bondidx_2_envidx(nn_level, bond_idx, se->num_bond_types);
+    return env_idx;
 }
 
-int get_bond_index(int a, int b, struct SimulationEnv *se)
+// gets the index in atom_env, nnE arrays (nearest_neighbor - bond_type combo)
+int nn_bondidx_2_envidx(int nn, int bond_idx, int num_bond_types)
+{
+    // nn - nearest neighbor level minus 1 (0 for 1st nn, 1 for 2nd nn, etc.)
+    return nn * num_bond_types + bond_idx;
+}
+
+int get_bond_index(int a, int b, int num_elements)
 {
     // aa, ab, ac; bb, bc; cc [num_elements=3]
     // 00, 01, 02; 11, 12; 22
@@ -57,7 +84,7 @@ int get_bond_index(int a, int b, struct SimulationEnv *se)
     }
 
     // a=1, b=2 -> (1*3)+(2-1)=4
-    return (first * (se->num_elements)) + (second - first);
+    return (first * num_elements) + (second - first);
 }
 
 // calculate the number of bond types

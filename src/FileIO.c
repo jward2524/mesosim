@@ -262,7 +262,7 @@ static int parse_input(char *line, FILE *temp_log, struct SimulationState *ss,
         // expect num_bond_types numbers
         if (se->nn_energy == NULL)
             calloc_nnE(se);
-        int bond_index = get_env_index(nn_level - 1, 0, se);
+        int bond_index = nn_bondidx_2_envidx(nn_level - 1, 0, se->num_bond_types);
         int count = 0;
 
         int len = strlen(params); // BUFFER_SIZE?
@@ -948,8 +948,8 @@ void input_logging(struct SimulationState *sim_state, struct SimulationEnv *sim_
     for (int nn_level = 0; nn_level < sim_env->num_nn_levels; nn_level++) {
         for (int elem_a = 0; elem_a < sim_env->num_elements; elem_a++) {
             for (int elem_b = elem_a; elem_b < sim_env->num_elements; elem_b++) {
-                bond_idx = get_bond_index(elem_a, elem_b, sim_env);
-                env_idx = get_env_index(nn_level, bond_idx, sim_env);
+                bond_idx = get_bond_index(elem_a, elem_b, sim_env->num_elements);
+                env_idx = nn_bondidx_2_envidx(nn_level, bond_idx, sim_env->num_bond_types);
                 fprintf(log_state->sim_log_file, "%s-%s: %lf\n", sim_env->atom_names[elem_a],
                         sim_env->atom_names[elem_b], sim_env->nn_energy[env_idx]);
             }
