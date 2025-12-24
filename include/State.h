@@ -145,6 +145,7 @@ struct LoggingState {
     // char outFile[260];
     char default_extension[12];
     FILE *sim_log_file;
+    FILE *sim_csv_file;
     char position_log_prefix[256];
 
     int analysis_type;
