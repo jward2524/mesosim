@@ -59,10 +59,11 @@ BUILD_PATHS = $(BUILD_PATH) $(DEPEND_PATH) $(OBJ_PATH) $(RESULTS_PATH)
 TEST_SRC = $(wildcard $(TEST_PATH)/*.c)
 
 RESULTS = $(patsubst $(TEST_PATH)/Test%.c,$(RESULTS_PATH)/Test%.txt,$(TEST_SRC) )
-PASSED = `grep -s :PASS $(RESULTS_PATH)/*.txt`
-FAIL = `grep -s :FAIL $(RESULTS_PATH)/*.txt`
-IGNORE = `grep -s :IGNORE $(RESULTS_PATH)/*.txt`
-SUMMARY = `tail -n2 $(RESULTS_PATH)/*.txt`
+PASSED = `grep :PASS $(RESULTS_PATH)/*.txt`
+FAIL = `grep :FAIL $(RESULTS_PATH)/*.txt`
+IGNORE = `grep :IGNORE $(RESULTS_PATH)/*.txt`
+# SUMMARY = `tail -n2 $(RESULTS_PATH)/*.txt`
+SUMMARY = `grep -T Tests $(RESULTS_PATH)/*.txt`
 
 # object files, use for mesosim target
 # OBJS := $(addprefix $(BUILD_PATH)/,$(object_names))
