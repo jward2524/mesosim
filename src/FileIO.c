@@ -17,8 +17,6 @@ static void calloc_nnE(struct SimulationEnv *se);
 static int parse_datalog_params(char *params, int cursor, struct LoggingState *ls, FILE *temp_log);
 static int parse_boolean(char *str);
 static void parse_log_list(char *input_str, double *list, int *len);
-static int parse_input(char *line, FILE *temp_log, struct SimulationState *ss,
-                       struct SimulationEnv *se, struct LoggingState *ls);
 
 void write_backlog(FILE *tempFile, FILE *logFile)
 {
@@ -58,8 +56,8 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
         fprintf(stderr, "Input parsing failed - extension not found in file: %s\n",
                 filename); // for reading arguments
         // else
-        // fprintf(sim_log_file, "ERROR! extension not found in file: %s\n", filename); //should
-        // only happen when restarting/checkpointing
+        // fprintf(sim_log_file, "ERROR! extension not found in file: %s\n", filename);
+        // should only happen when restarting/checkpointing
     } else {
         file_ender++;
         strncpy(extension, file_ender, 3); // copy only extension into extension array
@@ -142,8 +140,8 @@ bool process_in_file(FILE *temp_log, FILE *input_file, struct SimulationState *s
     return true;
 }
 
-static int parse_input(char *line, FILE *temp_log, struct SimulationState *ss,
-                       struct SimulationEnv *se, struct LoggingState *ls)
+int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct SimulationEnv *se,
+                struct LoggingState *ls)
 {
     // TODO: use strtok?
     // printf("Trying to parse this line! \"%s\"\n", line);
@@ -703,15 +701,15 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
     // or after?)
 
     fgets(command_string, BUFFER_SIZE, input_file);
-    if (!command_string) // TODO: doesn't return null on EOF, change to another condition
-    {
+    
+    // TODO: doesn't return null on EOF, change to another condition
+    if (!command_string) {
         fprintf(stderr, "Empty file or read error\n");
         fclose(input_file);
         return false;
     }
 
     // first line is the number of atoms (lines with atom info)
-
     char *endptr = NULL;
     long natoms_long = strtol(command_string, &endptr, 10);
     if (endptr == command_string || natoms_long <= 0) {
@@ -1022,7 +1020,7 @@ bool output_log_file(FILE *sim_log_file, int frame_num, unsigned long int iter,
 // output to csv:
 // iteration number, simulation time, system energy (per atom?), x1, y1, z1, x2, y2, z2
 // and atom ids at some point
-bool log_kmc(const FILE *csv_log_file, const unsigned long int mcss, const double sim_time,
+void log_kmc(FILE *csv_log_file, const unsigned long int mcss, const double sim_time,
              const double sys_energy, const int uvw1[3], const int uvw2[3], int is_evap)
 {
     fprintf(csv_log_file, "%lu,", mcss);
@@ -1037,7 +1035,7 @@ bool log_kmc(const FILE *csv_log_file, const unsigned long int mcss, const doubl
 
 // output to csv:
 // MCSS, system energy (per atom?), uvw1, uvw2
-bool log_mc(const FILE *csv_log_file, const unsigned long int mcss, const double sys_energy,
+void log_mc(FILE *csv_log_file, const unsigned long int mcss, const double sys_energy,
             const int uvw1[3], const int uvw2[3])
 {
     fprintf(csv_log_file, "%lu,", mcss);
@@ -1057,7 +1055,7 @@ bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct Simu
     FILE *file = fopen(filename_full, "w+");
     if (file == NULL) {
         printf("ERROR! Couldn't open output file %s\n", filename_full);
-        fprintf(stderr, "Couldn't open file %s: %s", filename_full, strerror(errno));
+        fprintf(stderr, "Couldn't open file %s: %s\n", filename_full, strerror(errno));
         clean_and_exit(errno);
     }
 

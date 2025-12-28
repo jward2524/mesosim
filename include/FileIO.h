@@ -33,4 +33,9 @@ bool output_kmc_file(char *kmc_filename); // need to rework
 
 void write_backlog(FILE *, FILE *);
 
+// exposed for testing
+int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct SimulationEnv *se,
+                struct LoggingState *ls);
+
+
 #endif // FILEIO_H
