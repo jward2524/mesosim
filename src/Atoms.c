@@ -23,7 +23,6 @@ void create_default_atom(int atom_idx, Atom **atom_arr, struct SimulationEnv *se
         clean_and_exit(errno);
     }
 
-    strcpy(atom_arr[atom_idx]->name, DEFAULT_ATOM_NAME);
     atom_arr[atom_idx]->type = 1;
 
     for (int i = 0; i < 3; ++i) {
@@ -137,7 +136,6 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
                       ss->atom_arr[pos]->cartesian);
 
     ss->atom_arr[pos]->type = type;
-    strcpy(ss->atom_arr[ss->atom_cnt - 1]->name, se->atom_names[type]);
     // TODO: use pos instead of atom_cnt-1
     // TODO: use snprintf instead of strcpy
 
@@ -359,7 +357,6 @@ void move_atom(int initial_idx, int final_idx, Atom **atom_arr,
     atom_arr[final_idx]->energy = atom_arr[initial_idx]->energy;
 
     atom_arr[final_idx]->type = atom_arr[initial_idx]->type;
-    strcpy(atom_arr[final_idx]->name, atom_arr[initial_idx]->name);
 
     // atom[fa]->biso = atom[ia]->biso;
 
@@ -686,7 +683,6 @@ int reincarnate(int u, int v, int w, int type, int vc, int buried)
     // atom_arr[atom_cnt]->lattice[2] = w;
 
     // atom_arr[atom_cnt]->type = type;
-    // strcpy(atom_arr[atom_cnt]->name, atom_names[type-1]);
 
     // /*atom[atom_cnt]->color[0] = atom_color[type].r; //TODO: might not need this part
     // atom[atom_cnt]->color[1] = atom_color[type].g;
@@ -838,7 +834,6 @@ void copy_atom(int i, int j, Atom **atom_arr)
 {
     int m;
 
-    strncpy(atom_arr[i]->name, atom_arr[j]->name, 24); // limited to 24 bc buffer size
     atom_arr[i]->type = atom_arr[j]->type;
 
     for (m = 0; m < 3; ++m) {

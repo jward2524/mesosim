@@ -1,4 +1,5 @@
 #include "XYZParser.h"
+#include "Utils.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -299,7 +300,8 @@ int tokenize_line(char *line, char **tokens, int maxtok)
 
 // Map property tokens into Atom fields
 // check before use that token count is correct
-int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, PropertyDesc *props, int nprops)
+int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, char **atom_names,
+                          int atom_names_cnt, PropertyDesc *props, int nprops)
 {
     // Defaults
     // memset(atom, 0, sizeof(*atom));
@@ -321,7 +323,10 @@ int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, PropertyDesc *
             // string columns
             if (prop->ncols >= 1 && tokens[tok_idx]) {
                 if (strncmp(prop->name, "species", 7) == 0) {
-                    strncpy(atom->name, tokens[tok_idx], sizeof(atom->name) - 1);
+                    int res = get_type_from_name(tokens[tok_idx], atom_names, atom_names_cnt,
+                                                 &(atom->type));
+                    if (res > 0)
+                        return res;
                 }
                 tok_idx += prop->ncols;
             } else {
@@ -350,17 +355,17 @@ int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, PropertyDesc *
 }
 
 // Fallback classic XYZ parser: element + x y z
-void fill_atom_from_xyz(Atom *a, char **tokens, int ntok)
+void fill_atom_from_xyz(Atom *a, char **tokens, int ntok, char **atom_names, int atom_names_cnt)
 {
     if (ntok >= 4) {
-        strncpy(a->name, tokens[0], sizeof(a->name) - 1);
-        // a->type = element_to_Z(tokens[0]); // TODO: consolidate name/type
+        int res = get_type_from_name(tokens[0], atom_names, atom_names_cnt, &(a->type));
+        if (res > 0)
+            return;
+
         a->cartesian[0] = atof(tokens[1]);
         a->cartesian[1] = atof(tokens[2]);
         a->cartesian[2] = atof(tokens[3]);
-        // a->bsradius = default_bsradius_from_symbol(tokens[0]);
     } else {
         // Not enough tokens; leave zeros
-        a->bsradius = 1.0;
     }
 }

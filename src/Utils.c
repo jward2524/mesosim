@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 double ssr;
 
@@ -308,4 +309,33 @@ void check_pbc(int *u, int *v, int *w, double basis[3][3])
 void pbc_translate(int coords_lat[3], int translation_vector[3])
 {
     ivecsum(coords_lat, translation_vector, coords_lat);
+}
+
+/**
+ * @brief Get atom type from a name
+ * 
+ * @param atom_name 
+ * @param atom_names array of atom names, from input file usually
+ * @param atom_names_cnt length of atom_names array
+ * @param atom_type output variable pointer
+ * @return int 
+ */
+int get_type_from_name(char *atom_name, char **atom_names, int atom_names_cnt, unsigned char *atom_type)
+{
+    int found = 0;
+    for (int i = 0; i < atom_names_cnt; i++) {
+        int str_match = strncmp(atom_name, atom_names[i], strlen(atom_names[i])) == 0;
+        if (str_match) {
+            *atom_type = (unsigned char) i;
+            found = 1;
+            return 0;
+        }
+    }
+    if (found == 0) {
+        fprintf(stderr, "Atom name %s not found in list of atom names\n", atom_name);
+        return 1;
+    } else {
+        fprintf(stderr, "Atom name found but didn't return earlier, something went wrong");
+        return 1;
+    }
 }

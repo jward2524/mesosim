@@ -632,14 +632,18 @@ bool process_kmc_file(FILE *temp_log, FILE *input_file, struct SimulationState *
     Atom temp_atom;
 
     for (i = 0; i < newnat; ++i) {
-        fscanf(input_file, "%s\t", temp_atom.name);
+        char buf[BUFFER_SIZE];
+        fscanf(input_file, "%s\t", buf);
+        int res = get_type_from_name(buf, se->atom_names, se->atom_names_cnt, &(temp_atom.type));
+        if (res > 0)
+            return false;
 
         fscanf(input_file,
                "%c\t\
-			%lf\t%lf\t%lf\t\
-			%d\t%d\t%d\t\
-			%lf\t\
-			%*f\t%*d\t%*d\t%*d\t%*f\t%*f\t%*f\t", // these are not assigned to anything
+               %lf\t%lf\t%lf\t\
+               %d\t%d\t%d\t\
+               %lf\t\
+               %*f\t%*d\t%*d\t%*d\t%*f\t%*f\t%*f\t", // these are not assigned to anything
                &temp_atom.type, &temp_atom.cartesian[0], &temp_atom.cartesian[1],
                &temp_atom.cartesian[2], &temp_atom.lattice[0], &temp_atom.lattice[1],
                &temp_atom.lattice[2], &temp_atom.bsradius);
@@ -797,12 +801,12 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
         Atom temp_atom;
         if (has_props) {
             // Check we have enough tokens for declared properties
-            int ft = fill_atom_from_tokens(&temp_atom, tokens, ntok, properties, properties_cnt);
+            int ft = fill_atom_from_tokens(&temp_atom, tokens, ntok, se->atom_names, se->atom_names_cnt, properties, properties_cnt);
             if (ft) {
                 fprintf(stderr, "Atom line %d has %d tokens, expected >= %d\n", i, ntok, ft);
             }
         } else {
-            fill_atom_from_xyz(&temp_atom, tokens, ntok);
+            fill_atom_from_xyz(&temp_atom, tokens, ntok, se->atom_names, se->atom_names_cnt);
         }
         cartesian2lattice_site(temp_atom.cartesian, se->invert_primitive_basis, temp_atom.lattice);
         add_atom(temp_atom.lattice[0], temp_atom.lattice[1], temp_atom.lattice[2], temp_atom.type,
@@ -876,9 +880,14 @@ bool process_kmx_file(FILE *temp_log, FILE *input_file, struct SimulationState *
     fprintf(temp_log, "system size %d %d %d, number of atoms %d\n", se->system_size_x,
             se->system_size_y, se->system_size_z, newnat);
 
+    // duplicate of process_kmc
     Atom temp_atom;
     for (int i = 0; i < newnat; ++i) {
-        fscanf(input_file, "%s\t", temp_atom.name);
+        char buf[BUFFER_SIZE];
+        fscanf(input_file, "%s\t", buf);
+        int res = get_type_from_name(buf, se->atom_names, se->atom_names_cnt, &(temp_atom.type));
+        if (res > 0)
+            return false;
 
         // get rid of lattice coords too?
         fscanf(input_file, "%c\t\
@@ -1091,7 +1100,7 @@ bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct Simu
 
     Atom **atoms = ss->atom_arr;
     for (int i = 0; i < ss->atom_cnt; ++i) {
-        fprintf(file, "%d %s %lf %lf %lf\n", i, atoms[i]->name, atoms[i]->cartesian[0],
+        fprintf(file, "%d %s %lf %lf %lf\n", i, se->atom_names[atoms[i]->type], atoms[i]->cartesian[0],
                 atoms[i]->cartesian[1], atoms[i]->cartesian[2]); // name is now element type
     }
     // ball and stick or space filling?

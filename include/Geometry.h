@@ -7,8 +7,8 @@
 // atom linked list is multiple shorter lists (zone), split based on spatial location for faster
 // addressing
 typedef struct {
-    char name[24];      // name, 24 characters long
-    unsigned char type; // another representation of name/aelement, up to 255 atom types
+    // char name[24];      // name, 24 characters long
+    unsigned char type; // another representation of name/element, up to 255 atom types
 
     // half of sum of bond energies
     double energy;

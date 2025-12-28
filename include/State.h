@@ -87,8 +87,9 @@ struct SimulationEnv {
     // [[u1 v1 w1], [u2 v2 w2], [u3 v3 w3]]
     double primitive_basis[3][3];
     double invert_primitive_basis[3][3];
-    double ucell_params[6]; // unit cell parameters; a b c alpha beta gamma // TODO: this is never
-                            // used except for printing?
+    
+    // TODO: this is never used except for printing?
+    double ucell_params[6]; // unit cell parameters; a b c alpha beta gamma 
 };
 
 // variables that describe the simulation state
