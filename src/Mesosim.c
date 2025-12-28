@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 
     // sets jump offsets for given crystal type
     initialize_neighbor_offsets(sim_env);
-    initialize_initial_structure(sim_state, sim_env);
+    initialize_initial_structure(sim_state, sim_env, log_state);
 
     check_system(sim_state, sim_env); // XXX?
 

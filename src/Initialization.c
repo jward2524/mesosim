@@ -1,6 +1,7 @@
 #include "Initialization.h"
 #include "Atoms.h"
 #include "ErrorM.h"
+#include "FileIO.h"
 #include "Utils.h"
 #include "Vector.h"
 #include <errno.h>
@@ -153,10 +154,10 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
     return;
 }
 
-void initialize_initial_structure(
-    struct SimulationState *ss,
-    struct SimulationEnv *se) // index represents simulation_type, from macros
+void initialize_initial_structure(struct SimulationState *ss, struct SimulationEnv *se,
+                                  struct LoggingState *ls)
 {
+    // index represents simulation_type, from macros
     switch (se->simulation_type) {
     case SIMULATION_TYPE_FLAT_SHEET: // flat plane
         initialize_flat_sheet(ss, se);
@@ -167,7 +168,7 @@ void initialize_initial_structure(
         break;
 
     case SIMULATION_TYPE_FROM_FILE:
-        initialize_from_file(se->atoms_filename); // TODO! THIS IS BIG!
+        initialize_from_file(ss, se, ls); // TODO! THIS IS BIG!
         break;
     }
 
@@ -634,17 +635,26 @@ void initialize_spherical_cluster(
 /********************************************************************************/
 /********************************************************************************/
 // get atom positions from a file
-void initialize_from_file(char *filename)
+void initialize_from_file(struct SimulationState *ss, struct SimulationEnv *se,
+                          struct LoggingState *ls)
 {
     // does this need more to it?
     //  TODO: atom positions from file
-    //  simulation_parameters_from_file(filename);
+    FILE *atom_file = fopen(se->atoms_filename, "r");
+    if (!atom_file) {
+        printf("ERROR! Couldn't open output file %s\n", se->atoms_filename);
+        fprintf(stderr, "Couldn't open file %s: %s\n", se->atoms_filename, strerror(errno));
+        clean_and_exit(errno);
+    }
+
+    process_xyz_file(ls->sim_log_file, atom_file, ss, se, ls);
+    // TODO: compatability check between parameters in comment line of xyz file and input file
     return;
 }
 
 // int simbox_limits_lat[3][2]; // lattice limits of simulation box in each dimension - for zones
-void initialize_simulation_box(
-    struct SimulationEnv *se) // double system_size_x, double system_size_y, double system_size_z)
+// double system_size_x, double system_size_y, double system_size_z)
+void initialize_simulation_box(struct SimulationEnv *se)
 {
     // assuming simulation box/prism
     // system size in cartesian units [nearest-neighbor (or some other lattice-based) units in
