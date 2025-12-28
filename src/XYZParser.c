@@ -275,7 +275,7 @@ int tokenize_line(char *line, char **tokens, int maxtok)
 {
     int ntok = 0;
     char *p = line;
-    while (*p && ntok < maxtok) {
+    while (*p && (ntok < maxtok)) {
         // trim whitespace between tokens
         while (*p && isspace((unsigned char)*p))
             ++p;
@@ -283,8 +283,8 @@ int tokenize_line(char *line, char **tokens, int maxtok)
             break;
 
         // mark start of next token
-        ntok++;
         tokens[ntok] = p;
+        ntok++;
 
         // find next whitespace and replace it with null character
         while (*p && !isspace((unsigned char)*p))
