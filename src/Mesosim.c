@@ -41,9 +41,6 @@ int main(int argc, char *argv[])
 
     set_state(sim_state, sim_env, log_state);
 
-    sim_env->zone_count_u = TTS;
-    sim_env->zone_count_v = TTS;
-    sim_env->zone_count_w = TTS;
     // holy shit, when not =DISSOLUTION[=1], it breaks some shit heavy
     sim_env->dissolution = DISSOLUTION;
     // initialize_lattice_geometry(); //this gets overwritten by info from the input file
@@ -91,8 +88,11 @@ int main(int argc, char *argv[])
     // finish_preprocessing();   //only called when deposition matters
 
     // system geometry initialization
-
     // atom_cnt=0 for the initialization functions, so some of them end up doing nothing
+
+    // mallocs and sets to zero (or something else) simulation variables
+    initialize_simulation_variables(sim_state, sim_env);
+
     // bit shifts for periodic boundary conditions
     get_shifts(sim_env);
 
@@ -107,9 +107,6 @@ int main(int argc, char *argv[])
 
     // initialize zones - help figure out which atoms are next to which other atoms
     initialize_zones(sim_state->zone_arr, sim_env);
-
-    // mallocs and sets to zero (or something else) simulation variables
-    initialize_simulation_variables(sim_state, sim_env);
 
     // sets jump offsets for given crystal type
     initialize_neighbor_offsets(sim_env);
