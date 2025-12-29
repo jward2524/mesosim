@@ -93,8 +93,9 @@ void test_process_xyz_file(void)
     initialize_zones(ss->zone_arr, se);
     initialize_simulation_variables(ss, se);
 
-    process_xyz_file(temp_log, atom_file, ss, se, ls);
+    int res = process_xyz_file(temp_log, atom_file, ss, se, ls);
 
+    TEST_ASSERT_TRUE_MESSAGE(res, "Return value of process_xyz_file");
     TEST_ASSERT_EQUAL_INT_MESSAGE(499996, ss->atom_cnt, "Atom count");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293., ss->temperature, "Temperature");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.9, ss->overpotential, "Potential");

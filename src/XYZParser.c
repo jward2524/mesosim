@@ -369,3 +369,16 @@ void fill_atom_from_xyz(Atom *a, char **tokens, int ntok, char **atom_names, int
         // Not enough tokens; leave zeros
     }
 }
+
+void clean_xyz_structs(struct KV *kvpairs, size_t kvpairs_cnt, PropertyDesc *properties)
+{
+    if (kvpairs) {
+        for (int j = 0; j < (int)kvpairs_cnt; j++) {
+            free(kvpairs[j].key);
+            free(kvpairs[j].value);
+        }
+    }
+    if (properties) {
+        free(properties);
+    }
+}

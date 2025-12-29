@@ -24,5 +24,6 @@ int tokenize_line(char *line, char **tokens, int maxtok);
 int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, char **atom_names,
                           int atom_names_cnt, PropertyDesc *props, int nprops);
 void fill_atom_from_xyz(Atom *a, char **tokens, int ntok, char **atom_names, int atom_names_cnt);
+void clean_xyz_structs(struct KV *kvpairs, size_t kvpairs_cnt, PropertyDesc *properties);
 
 #endif // XYZ_PARSER_H

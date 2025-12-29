@@ -705,7 +705,7 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
     // or after?)
 
     ptr = fgets(command_string, BUFFER_SIZE, input_file);
-    
+
     if (!ptr) {
         fprintf(stderr, "Empty file or read error\n");
         fclose(input_file);
@@ -737,8 +737,8 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
     // capture any simulation variables in the comment line that are used to continue a started
     // simulation ss->elapsed_stime, ss->temperature, ss->overpotential; all doubles ls->framenum;
     // int ss->iter; unsigned long
-    size_t kvpairs_cnt;
-    struct KV *kvpairs; // pointer to array of KVs
+    size_t kvpairs_cnt = 0;
+    struct KV *kvpairs = NULL; // pointer to array of KVs
     int pc = parse_comment(comment_string, &kvpairs, &kvpairs_cnt);
     if (pc) {
         return pc;
@@ -753,9 +753,8 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
         if (strncmp(kv.key, "properties", 10) == 0) {
             int pp = parse_properties_value(kv.value, &properties, &properties_cnt);
             if (pp) {
-                if (properties)
-                    free(properties);
-                return pp;
+                clean_xyz_structs(kvpairs, kvpairs_cnt, properties);
+                return false;
             }
             has_props = 1;
         } else if (strncmp(kv.key, "time", 4) == 0) {
@@ -782,16 +781,7 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
             fclose(input_file);
             fprintf(stderr, "Input parsing failed - Ran into EOF, expected %d atoms remaining\n",
                     nremain);
-            // organize(atom, atom_cnt); //do I need to call this?
-            if (kvpairs) {
-                for (int j = 0; j < (int)kvpairs_cnt; j++) {
-                    free(kvpairs[j].key);
-                    free(kvpairs[j].value);
-                }
-            }
-            if (properties) {
-                free(properties);
-            }
+            clean_xyz_structs(kvpairs, kvpairs_cnt, properties);
             return false;
         }
 
@@ -801,7 +791,8 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
         Atom temp_atom = {0};
         if (has_props) {
             // Check we have enough tokens for declared properties
-            int ft = fill_atom_from_tokens(&temp_atom, tokens, ntok, se->atom_names, se->atom_names_cnt, properties, properties_cnt);
+            int ft = fill_atom_from_tokens(&temp_atom, tokens, ntok, se->atom_names,
+                                           se->atom_names_cnt, properties, properties_cnt);
             if (ft) {
                 fprintf(stderr, "Atom line %d has %d tokens, expected >= %d\n", i, ntok, ft);
             }
@@ -812,19 +803,37 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
         add_atom(temp_atom.lattice[0], temp_atom.lattice[1], temp_atom.lattice[2], temp_atom.type,
                  NORMAL, ss, se);
     }
-    if (has_props) {
-        free(properties);
-        for (int i = 0; i < (int)kvpairs_cnt; i++) {
-            free(kvpairs[i].key);
-            free(kvpairs[i].value);
+
+    ptr = fgets(command_string, BUFFER_SIZE, input_file);
+    // end of file is not reached
+    // or a final blank line is not last line
+    if (!feof(input_file)) {
+        int nonspace = 0;
+        int clean = 0;
+        for (int i = 0; i < strlen(command_string); i++) {
+            if (!isspace(command_string[i])) {
+                nonspace++;
+            }
+        }
+        if (nonspace) {
+            clean = 1;
+        } else {
+            ptr = fgets(command_string, BUFFER_SIZE, input_file);
+            if (!feof(input_file)) {
+                clean = 1;
+            }
+        }
+        if (clean) {
+            fprintf(stderr,
+                    "Unparsed content remains in input file after %d reads; first line was not "
+                    "accuraten\n",
+                    nremain);
+            clean_xyz_structs(kvpairs, kvpairs_cnt, properties);
+            return false;
         }
     }
 
-    // TODO: does this now just get turned into the atom name array?
-    for (int i = 0; i < ntypes; ++i) {
-        free(typenames[i]);
-        typenames[i] = NULL;
-    }
+    clean_xyz_structs(kvpairs, kvpairs_cnt, properties);
 
     fprintf(temp_log, "Successfully read %lld atoms from .xyz file\n", ss->atom_cnt);
     fclose(input_file);
@@ -1100,8 +1109,9 @@ bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct Simu
 
     Atom **atoms = ss->atom_arr;
     for (int i = 0; i < ss->atom_cnt; ++i) {
-        fprintf(file, "%d %s %lf %lf %lf\n", i, se->atom_names[atoms[i]->type], atoms[i]->cartesian[0],
-                atoms[i]->cartesian[1], atoms[i]->cartesian[2]); // name is now element type
+        fprintf(file, "%d %s %lf %lf %lf\n", i, se->atom_names[atoms[i]->type],
+                atoms[i]->cartesian[0], atoms[i]->cartesian[1],
+                atoms[i]->cartesian[2]); // name is now element type
     }
     // ball and stick or space filling?
     fclose(file);
