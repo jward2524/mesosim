@@ -23,9 +23,11 @@ EXECUTABLE := mesosim
 debug := 1
 # XS_CFLAGS := -mcmodel=medium
 # ?= means 'if not yet defined'
+# variables used in definitions with '=' are expanded on use
 CFLAGS ?= -std=c11
 ifeq ($(debug), 1)
-	CFLAGS += -ggdb -O0 -Wall -Wextra -Wpedantic -DTEST
+# add TEST_PATH to have access to unity_config.h 
+	CFLAGS += -ggdb -O0 -Wall -Wextra -Wpedantic -DTEST -DUNITY_INCLUDE_CONFIG_H -I$(TEST_PATH)
 else
 	CFLAGS ?= -O2
 endif
@@ -43,27 +45,21 @@ DEPEND = $(CC) -MM -MG -MF
 ### -----
 
 ### -- Paths --
-UNITY_PATH = unity/src
-SRC_PATH = src
-INCLUDE_PATH = include
-TEST_PATH = test
-BUILD_PATH = build
-DEPEND_PATH = build/depends
-OBJ_PATH = build/objs
-RESULTS_PATH = build/results
-# LIB_PATH = lib
-BIN_PATH = bin
+# := are expanded immediately
+UNITY_PATH := unity/src
+SRC_PATH := src
+INCLUDE_PATH := include
+TEST_PATH := test
+BUILD_PATH := build
+DEPEND_PATH := build/depends
+OBJ_PATH := build/objs
+RESULTS_PATH := build/results
+# LIB_PATH := lib
+BIN_PATH := bin
 
-BUILD_PATHS = $(BUILD_PATH) $(DEPEND_PATH) $(OBJ_PATH) $(RESULTS_PATH)
+BUILD_PATHS := $(BUILD_PATH) $(DEPEND_PATH) $(OBJ_PATH) $(RESULTS_PATH)
 
-TEST_SRC = $(wildcard $(TEST_PATH)/*.c)
-
-RESULTS = $(patsubst $(TEST_PATH)/Test%.c,$(RESULTS_PATH)/Test%.txt,$(TEST_SRC) )
-PASSED = `grep :PASS $(RESULTS_PATH)/*.txt`
-FAIL = `grep :FAIL $(RESULTS_PATH)/*.txt`
-IGNORE = `grep :IGNORE $(RESULTS_PATH)/*.txt`
-# SUMMARY = `tail -n2 $(RESULTS_PATH)/*.txt`
-SUMMARY = `grep -T Tests $(RESULTS_PATH)/*.txt`
+TEST_SRC := $(wildcard $(TEST_PATH)/*.c)
 
 # object files, use for mesosim target
 # OBJS := $(addprefix $(BUILD_PATH)/,$(object_names))
@@ -75,7 +71,14 @@ OBJS_MMAIN := $(filter-out $(OBJ_PATH)/$(subst .c,.o,$(SRC_MAIN)),$(OBJS))
 # other headers to act as dependencies that don't have corresponding .c files
 XS_HEADERS := State.h Defs.h Geometry.h
 XS_HPATH := $(addprefix $(INCLUDE_PATH)/,$(XS_HEADERS))
-### -----
+
+### -- Test Results --
+RESULTS := $(patsubst $(TEST_PATH)/Test%.c,$(RESULTS_PATH)/Test%.txt,$(TEST_SRC) )
+PASSED = `grep :PASS $(RESULTS_PATH)/*.txt`
+FAIL = `grep :FAIL $(RESULTS_PATH)/*.txt`
+IGNORE = `grep :IGNORE $(RESULTS_PATH)/*.txt`
+# SUMMARY = `tail -n2 $(RESULTS_PATH)/*.txt`
+SUMMARY = `grep -T Tests $(RESULTS_PATH)/*.txt`
 
 # $(info RESULTS is $(RESULTS))
 
