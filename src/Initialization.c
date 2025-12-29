@@ -80,10 +80,6 @@ void get_system_normal(double basis[3][3]) // XXX: supposedly only for vizualiza
 // next_log_checkpoint
 void initialize_simulation_variables(struct SimulationState *ss, struct SimulationEnv *se)
 {
-    se->zone_count_u = TTS;
-    se->zone_count_v = TTS;
-    se->zone_count_w = TTS;
-
     // finish initializing structs
     se->atoms_per_nn_level = (int *)malloc(se->num_nn_levels * sizeof(int));
     se->max_rates =
@@ -190,6 +186,9 @@ void initialize_initial_structure(struct SimulationState *ss, struct SimulationE
 void get_shifts(struct SimulationEnv *se)
 { // updates zi*, zi*shift, *sh
     int temp1;
+    se->zone_count_u = TTS;
+    se->zone_count_v = TTS;
+    se->zone_count_w = TTS;
 
     temp1 = se->zone_count_u;
     se->zixshift = 0;

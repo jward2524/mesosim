@@ -90,11 +90,10 @@ int main(int argc, char *argv[])
     // system geometry initialization
     // atom_cnt=0 for the initialization functions, so some of them end up doing nothing
 
-    // mallocs and sets to zero (or something else) simulation variables
-    initialize_simulation_variables(sim_state, sim_env);
-
     // bit shifts for periodic boundary conditions
     get_shifts(sim_env);
+    // initialize zones - help figure out which atoms are next to which other atoms
+    initialize_zones(sim_state->zone_arr, sim_env);
 
     set_primitive_basis(sim_env);
     // supposedly was only for visualization
@@ -105,8 +104,8 @@ int main(int argc, char *argv[])
 
     initialize_simulation_box(sim_env);
 
-    // initialize zones - help figure out which atoms are next to which other atoms
-    initialize_zones(sim_state->zone_arr, sim_env);
+    // mallocs and sets to zero (or something else) simulation variables
+    initialize_simulation_variables(sim_state, sim_env);
 
     // sets jump offsets for given crystal type
     initialize_neighbor_offsets(sim_env);
