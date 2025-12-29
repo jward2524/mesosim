@@ -693,21 +693,20 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
 {
     // processes file with .xyz format (number of atoms / comment / type x y z)
 
-    char xyz_type[BUFFER_SIZE];
-    char *typenames[7]; // can have up to 7 atom types
+    char *typenames[8]; // can have up to 7 atom types
     int ntypes = 0;
     double xyz_pos[3] = {0.0, 0.0, 0.0};
     double radius;
     int atype;
     char command_string[BUFFER_SIZE];
+    char *ptr; // for fgets return values
 
     // set_primitive_basis(SC); //is this always true? this should be set somewhere else (beforehand
     // or after?)
 
-    fgets(command_string, BUFFER_SIZE, input_file);
+    ptr = fgets(command_string, BUFFER_SIZE, input_file);
     
-    // TODO: doesn't return null on EOF, change to another condition
-    if (!command_string) {
+    if (!ptr) {
         fprintf(stderr, "Empty file or read error\n");
         fclose(input_file);
         return false;
@@ -726,9 +725,9 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
     // read comment line
     int comment_buffer_multiplier = 3;
     char comment_string[comment_buffer_multiplier * BUFFER_SIZE];
-    fgets(comment_string, comment_buffer_multiplier * BUFFER_SIZE, input_file);
+    ptr = fgets(comment_string, comment_buffer_multiplier * BUFFER_SIZE, input_file);
 
-    if (!comment_string) {
+    if (!ptr) {
         fprintf(stderr, "Error on reading the comment/header line\n");
         fclose(input_file);
         return false;
@@ -769,16 +768,17 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
             ss->iter = strtoul(kv.value, NULL, 10);
         } else if (strncmp(kv.key, "frame", 5) == 0) {
             ls->framenum = atoi(kv.value);
+        } else if (strncmp(kv.key, "energy", 6) == 0) {
+            ss->total_internal_energy = strtod(kv.value, NULL);
         }
     }
 
-    int argsread;
-    char *tokens[256]; // array of char arrays (array of char pointers)
+    char *tokens[64]; // array of char arrays (array of char pointers)
     for (int i = 0; i < nremain; i++) {
-        fgets(command_string, BUFFER_SIZE, input_file);
+        ptr = fgets(command_string, BUFFER_SIZE, input_file);
 
-        // if EOF
-        if (!command_string) {
+        // if EOF or failure
+        if (!ptr) {
             fclose(input_file);
             fprintf(stderr, "Input parsing failed - Ran into EOF, expected %d atoms remaining\n",
                     nremain);
@@ -796,9 +796,9 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
         }
 
         int ntok = tokenize_line(command_string, tokens,
-                                 (int)(sizeof(tokens) / sizeof(tokens[0]))); // aka 256
+                                 (int)(sizeof(tokens) / sizeof(tokens[0]))); // aka 64
 
-        Atom temp_atom;
+        Atom temp_atom = {0};
         if (has_props) {
             // Check we have enough tokens for declared properties
             int ft = fill_atom_from_tokens(&temp_atom, tokens, ntok, se->atom_names, se->atom_names_cnt, properties, properties_cnt);
