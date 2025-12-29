@@ -3,6 +3,10 @@
 #include "State.h"
 #include "Utils.h"
 #include <stdlib.h>
+#include <math.h>
+
+static double calculate_new_energy(const int atom_idx, const int offset_idx,
+                                   struct SimulationState *ss, struct SimulationEnv *se);
 
 /**
  * @brief
@@ -42,7 +46,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         // energy per atom contains half the sum of bond energies
         // (atoms on other end of bonds contain the other half)
         // multiply both by two to fully break and (re)form all bonds
-        double deltaE = 2*(possible_energy - current_energy);
+        double deltaE = 2 * (possible_energy - current_energy);
 
         int perform_flag = 0;
         // accept transition if deltaE < 0
@@ -79,17 +83,15 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
 
             // update system
             update_outdated_transitions(old_x, old_y, old_z, transitioned_atom_idx, ss, se);
-
         }
         ss->iter++;
-        
-        if (ss->iter % ss->atom_cnt == 0)
-        {
+
+        if (ss->iter % ss->atom_cnt == 0) {
             mmc_steps++;
             // log
-            
         }
     }
+    return 0;
 }
 
 /**
@@ -101,8 +103,8 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
  * @param se SimulationEnv
  * @return double energy contribution of the atom after the move
  */
-double calculate_new_energy(int atom_idx, int offset_idx, struct SimulationState *ss,
-                            struct SimulationEnv *se)
+static double calculate_new_energy(const int atom_idx, const int offset_idx,
+                                   struct SimulationState *ss, struct SimulationEnv *se)
 {
     // a mix of get_final_configuration and refresh_transitions
 
