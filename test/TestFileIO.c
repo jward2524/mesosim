@@ -9,9 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define UNITY_INCLUDE_FLOAT
-#define UNITY_INCLUDE_DOUBLE
-
 struct SimulationState *ss;
 struct SimulationEnv *se;
 struct LoggingState *ls;
@@ -87,12 +84,14 @@ void test_process_xyz_file(void)
     se->system_size_x = 256;
     se->system_size_y = 256;
     se->system_size_z = 256;
-    char **arr = (char *[]) {"Ag", "Au"};
+    char **arr = (char *[]){"Ag", "Au"};
     se->atom_names = arr;
-    initialize_simulation_variables(ss, se);
+    se->atom_names_cnt = 2;
+    get_shifts(se);
     set_primitive_basis(se);
     initialize_simulation_box(se);
     initialize_zones(ss->zone_arr, se);
+    initialize_simulation_variables(ss, se);
 
     process_xyz_file(temp_log, atom_file, ss, se, ls);
 
@@ -106,20 +105,20 @@ void test_process_xyz_file(void)
 
     // 0 Ag -256.000000 -96.000000 -96.000000
     // double cart[3] = {-256, -96, -96};
-    // double cart2[3] = {510, 350, 350};
+    // double cart2[3] = {83, 133, 40};
 
     int lat[3] = {-128, -128, 32};
-    int lat2[3] = {255, 255, 95};
+    int lat2[3] = {88, -5, 45};
 
     Atom at = *ss->atom_arr[0];
     TEST_ASSERT_EQUAL_INT_MESSAGE(lat[0], at.lattice[0], "Atom 0, lattice x");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(lat[0], at.lattice[1], "Atom 0, lattice y");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(lat[0], at.lattice[2], "Atom 0, lattice z");
-    
+    TEST_ASSERT_EQUAL_INT_MESSAGE(lat[1], at.lattice[1], "Atom 0, lattice y");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(lat[2], at.lattice[2], "Atom 0, lattice z");
+
     at = *ss->atom_arr[ss->atom_cnt - 1];
     TEST_ASSERT_EQUAL_INT_MESSAGE(lat2[0], at.lattice[0], "Atom max, lattice x");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(lat2[0], at.lattice[1], "Atom max, lattice y");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(lat2[0], at.lattice[2], "Atom max, lattice z");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(lat2[1], at.lattice[1], "Atom max, lattice y");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(lat2[2], at.lattice[2], "Atom max, lattice z");
 }
 
 int main(void)
