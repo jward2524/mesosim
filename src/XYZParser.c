@@ -153,7 +153,6 @@ int parse_comment(const char *line, struct KV **outpairs, size_t *outpairs_cnt)
         for (int i = 0; i < (int)len; i++) {
             token[i] = tolower(token[i]);
         }
-        printf("%s\n", token);
 
         // parse lowercase token into key-value pair
         parse_key_value(token, len, &pairs[pairs_cnt]);
@@ -347,6 +346,7 @@ int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, char **atom_na
             }
         } else if (prop->type == 'i') {
             // no integer-type properties implemented yet
+            tok_idx += prop->ncols;
         } else {
             tok_idx += prop->ncols; // skip unimplemented properties
         }
