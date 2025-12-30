@@ -15,6 +15,7 @@ struct SimulationEnv *se;
 struct LoggingState *ls;
 FILE *temp_log;
 FILE *atom_file;
+FILE *input_file;
 const char temp_name[] = "temp.log";
 
 static void fopen_error(const char *filename, FILE *file)
@@ -49,6 +50,9 @@ void tearDown(void)
     if (atom_file) {
         fclose(atom_file);
     }
+    if (input_file) {
+        fclose(input_file);
+    }
 }
 
 void test_parse_input_systemsize(void)
@@ -68,8 +72,97 @@ void test_parse_input_geometry_file(void)
 
     parse_input(line, temp_log, ss, se, ls);
 
-    TEST_ASSERT_EQUAL_INT_MESSAGE(SIMULATION_TYPE_FROM_FILE, se->simulation_type, "system size x");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/sheet.xyz", se->atoms_filename, "system size x");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(SIMULATION_TYPE_FROM_FILE, se->simulation_type, "simulation type");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/sheet.xyz", se->atoms_filename, "atoms filename");
+}
+
+void test_process_in_file_cluster(void) {
+    char filename[] = "test/cluster_nns.in";
+    input_file = fopen(filename, "r");
+    fopen_error(filename, input_file);
+
+    int ret = process_in_file(temp_log, input_file, ss, se, ls);
+    TEST_ASSERT_TRUE_MESSAGE(ret, "fxn return");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_x, "system size x");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_y, "system size y");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_z, "system size z");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(32, se->cluster_radius, "cluster radius");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293., ss->temperature, "temperature");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(12345, se->rand_seed, "random seed");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.9, se->initial_overpotential, "initial overpotential");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.03, se->overpotential_ramp_rate, "overpotential ramp");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.2, se->max_overpotential, "max overpotential");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, se->num_nn_levels, "number of nn shells");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[0], "nn energy shell 1 idx 0");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[1], "nn energy shell 1 idx 1");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[2], "nn energy shell 1 idx 2");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, se->nn_energy[3], "nn energy shell 2 idx 0");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, se->nn_energy[4], "nn energy shell 2 idx 1");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, se->nn_energy[5], "nn energy shell 2 idx 2");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ITERATION_INTERVALS, ls->analysis_type, "logging analysis type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->framenum, "frame number");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, se->lattice_type, "lattice type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors, "number of transition vectors");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(SIMULATION_TYPE_CLUSTER, se->simulation_type, "geometry type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->sheet_thickness, "sheet thickness");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(32, se->cluster_radius, "cluster radius");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("", se->atoms_filename, "geometry filename");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, se->num_elements, "number of elements");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, se->num_bond_types, "number of bond types");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, se->atom_names_cnt, "number of atom names");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("Ag", se->atom_names[0], "first atom name");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("Au", se->atom_names[1], "second atom name");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, se->dissolution, "dissolution");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, se->is_soluble[0], "Ag solubility");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->is_soluble[1], "Au solubility");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.75, se->substrate_composition[0], "Ag composition");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.25, se->substrate_composition[1], "Au composition");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, ss->sim_end_type, "simulation end type");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ss->run_stime, "simulation max runtime");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2000, ss->final_iteration, "simulation max iteration");
+}
+
+void test_process_in_file_mc(void) {
+    char filename[] = "test/mc.in";
+    input_file = fopen(filename, "r");
+    fopen_error(filename, input_file);
+
+    int ret = process_in_file(temp_log, input_file, ss, se, ls);
+    TEST_ASSERT_TRUE_MESSAGE(ret, "fxn return");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_x, "system size x");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_y, "system size y");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_z, "system size z");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(32, se->cluster_radius, "cluster radius");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293., ss->temperature, "temperature");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(12345, se->rand_seed, "random seed");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, se->initial_overpotential, "initial overpotential");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, se->overpotential_ramp_rate, "overpotential ramp");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, se->max_overpotential, "max overpotential");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, se->num_nn_levels, "number of nn shells");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[0], "nn energy shell 1 idx 0");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[1], "nn energy shell 1 idx 1");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[2], "nn energy shell 1 idx 2");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ITERATION_INTERVALS, ls->analysis_type, "logging analysis type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->framenum, "frame number");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, se->lattice_type, "lattice type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors, "number of transition vectors");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(SIMULATION_TYPE_CLUSTER, se->simulation_type, "geometry type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->sheet_thickness, "sheet thickness");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(32, se->cluster_radius, "cluster radius");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("", se->atoms_filename, "geometry filename");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, se->num_elements, "number of elements");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, se->num_bond_types, "number of bond types");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, se->atom_names_cnt, "number of atom names");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("Ag", se->atom_names[0], "first atom name");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("Au", se->atom_names[1], "second atom name");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->dissolution, "dissolution");
+    // TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->is_soluble[0], "Ag solubility");
+    // TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->is_soluble[1], "Au solubility");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.75, se->substrate_composition[0], "Ag composition");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.25, se->substrate_composition[1], "Au composition");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, ss->sim_end_type, "simulation end type");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ss->run_stime, "simulation max runtime");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2000, ss->final_iteration, "simulation max iteration");
 }
 
 void test_process_xyz_file(void)
@@ -130,6 +223,8 @@ int main(void)
     // tests to run
     RUN_TEST(test_parse_input_systemsize);
     RUN_TEST(test_parse_input_geometry_file);
+    RUN_TEST(test_process_in_file_mc);
+    RUN_TEST(test_process_in_file_cluster);
     RUN_TEST(test_process_xyz_file);
 
     UNITY_END();

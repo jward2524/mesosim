@@ -59,7 +59,7 @@ struct SimulationEnv {
     double simbox_vectors_cart[3][3]; // [[u1 u2 u3], [v1 v2 v3], [w1 w2 w3]]
     double simbox_origin_cart[3];
 
-    double *nn_energy; // nnE[num_nn_levels][num_bond_types]
+    double *nn_energy; // nnE[env_idx]
 
     bool *is_soluble; // [num_elements] (implemented as always [8])
 

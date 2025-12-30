@@ -3,13 +3,10 @@ geometry cluster 32
 atomtype Ag Au
 composition 0.75 0.25
 struct FCC
-dissolution true false
-nnlevels 2
+nnlevels 1
 1nne 0.15 0.15 0.15
-2nne 0.10 0.10 0.10
-potential 0.9 0.03 1.2
 datalog iteration interval 200
 temp 293
 seed 12345
 run iteration 2000
-output test/output/cluster.out
+output test/output/mc.out

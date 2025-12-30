@@ -228,8 +228,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
             se->overpotential_ramp_rate = 0.0;
             se->max_overpotential = se->initial_overpotential;
             fprintf(temp_log, "Using constant potential %lf\n", se->initial_overpotential);
-        } else if (argsread != 3) //
-        {
+        } else if (argsread != 3) {
             fprintf(
                 stderr,
                 "Input parsing failed - Could not correctly read potential sweep parameters %s\n",
@@ -289,9 +288,9 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         argsread = sscanf(params, "%d", &(se->num_nn_levels));
         // if (se->num_bond_types != 0)
         // 	calloc_nnE(se);
-    } else if (strncmp(cmd, "datalog", 7) ==
-               0) { // ENHANCE: linear list and ln list do the same thing - improve semantics to
-                    // eliminate this duplicity
+    } else if (strncmp(cmd, "datalog", 7) == 0) {
+        // ENHANCE: linear list and ln list do the same thing - improve semantics to
+        // eliminate this duplicity
         // set time increments for data logging
         int cursor;
         if (strncmp(params, "linear", 6) == 0) // linear data recording
@@ -342,6 +341,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
             fprintf(stderr, "Input parsing failed - Structure type %s not valid\n", structtype);
             exit(FILE_COMMAND_IGNORED);
         }
+        // TODO: Move elsewhere, to where it actually gets set
         se->num_transition_vectors = MAXIMUM_NUMBER_OF_NEIGHBORS;
     } else if (strncmp(cmd, "output", 6) == 0) {
         // set file name for log output
@@ -460,7 +460,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
             clean_and_exit(errno);
         }
         memcpy(se->is_soluble, is_soluble, size);
-        se->dissolution = soluble_count > 0 ? 1 : 0;
+        se->dissolution = (soluble_count > 0);
     } else if (strncmp(cmd, "composition", 11) == 0) {
 
         double comp[ARR_BUFFER_SIZE];
