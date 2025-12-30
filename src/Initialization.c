@@ -82,21 +82,24 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
 {
     // holy shit, when not =DISSOLUTION[=1], it breaks some shit heavy
     if (!se->dissolution) {
-        se->is_soluble = (bool *)malloc(se->num_elements);
+        se->is_soluble = (bool *)malloc(se->num_elements * sizeof(bool));
         for (int i = 0; i < se->num_elements; i++) {
             se->is_soluble[i] = false;
         }
     }
 
     // finish initializing structs
-    se->atoms_per_nn_level = (int *)malloc(se->num_nn_levels * sizeof(int));
-    
+
     // max_rates = combination of contributors and number of nn bond types
     // (and evaporation and final configuration count)
-    // each contributor can be any kind of bond: num_bonds ^ contributors
+    // each contributor can be any kind of bond:
+    // (1st nn bonds) ^ (1st nn contributors) + (2st nn bonds) ^ (2st nn contributors)
     // pow(base, exponent)
-    se->max_rates =
-        (unsigned long long int)pow(se->num_nn_types, se->num_energy_contributors + (se->dissolution ? 1 : 0));
+    se->max_rates = 0;
+    for (int i = 0; i < se->num_nn_levels; i++) {
+        se->max_rates += pow(se->num_bond_types, se->atoms_per_nn_level[i]);
+    }
+    se->max_rates = (unsigned long long int) ((1 + se->dissolution) * se->max_rates);
 
     ss->transition_probability.rate_arr_index = (int *)malloc(se->max_rates * sizeof(int));
     ss->transition_probability.lbound = (double *)malloc(se->max_rates * sizeof(double));
@@ -401,6 +404,7 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
     }
 
     int transition_length;
+    se->atoms_per_nn_level = (int *)malloc(se->num_nn_levels * sizeof(int));
     se->atoms_per_nn_level[0] = se->num_transition_vectors;
     if (se->num_nn_levels == 1) {
         se->num_energy_contributors = se->num_transition_vectors;
