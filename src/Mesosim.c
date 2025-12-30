@@ -96,18 +96,18 @@ int main(int argc, char *argv[])
 
     set_primitive_basis(sim_env);
     // supposedly was only for visualization
-    set_default_orientation(sim_state->atom_arr, sim_state->atom_cnt, sim_env->lattice_type,
-                            sim_env->rmat, sim_env->primitive_basis);
+    // set_default_orientation(sim_state->atom_arr, sim_state->atom_cnt, sim_env->lattice_type,
+                            // sim_env->rmat, sim_env->primitive_basis);
     // maybe only for visualization
-    get_system_normal(sim_env->primitive_basis);
+    // get_system_normal(sim_env->primitive_basis);
 
     initialize_simulation_box(sim_env);
 
+    // sets jump offsets for given crystal type
+    initialize_neighbor_offsets(sim_env);
     // mallocs and sets to zero (or something else) simulation variables
     initialize_simulation_variables(sim_state, sim_env);
 
-    // sets jump offsets for given crystal type
-    initialize_neighbor_offsets(sim_env);
     initialize_initial_structure(sim_state, sim_env, log_state);
 
     check_system(sim_state, sim_env); // XXX?
