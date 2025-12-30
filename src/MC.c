@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include <stdlib.h>
 #include <math.h>
+#include <limits.h>
 
 static double calculate_new_energy(const int atom_idx, const int offset_idx,
                                    struct SimulationState *ss, struct SimulationEnv *se);
