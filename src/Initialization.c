@@ -101,11 +101,8 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
     }
     se->max_rates = (unsigned long long int) ((1 + se->dissolution) * se->max_rates);
 
-    ss->transition_probability.rate_arr_index = (int *)malloc(se->max_rates * sizeof(int));
-    ss->transition_probability.lbound = (double *)malloc(se->max_rates * sizeof(double));
-    ss->transition_probability.ubound = (double *)malloc(se->max_rates * sizeof(double));
-
-    se->max_transitions = ((MAXIMUM_NUMBER_OF_NEIGHBORS + se->dissolution) * se->max_atoms) + 10;
+    se->max_atoms = se->lat_range[0] * se->lat_range[1] * se->lat_range[2];
+    se->max_transitions = ((se->num_transition_vectors + se->dissolution) * se->max_atoms) + 10;
 
     ss->atom_arr = (Atom **)malloc(se->max_atoms * sizeof(Atom *));
     ss->rate_arr = (Rate *)malloc(se->max_rates * sizeof(Rate));
@@ -125,11 +122,28 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
         clean_and_exit(errno);
     }
 
+    ss->transition_probability.rate_arr_index = (int *)malloc(se->max_rates * sizeof(int));
+    ss->transition_probability.lbound = (double *)malloc(se->max_rates * sizeof(double));
+    ss->transition_probability.ubound = (double *)malloc(se->max_rates * sizeof(double));
+
+    if (!ss->transition_probability.rate_arr_index) {
+        perror("Couldn't allocate memory for transition probability rate_arr_index");
+        clean_and_exit(errno);
+    }
+    if (!ss->transition_probability.lbound) {
+        perror("Couldn't allocate memory for transition probability lbound");
+        clean_and_exit(errno);
+    }
+    if (!ss->transition_probability.ubound) {
+        perror("Couldn't allocate memory for transition probability ubound");
+        clean_and_exit(errno);
+    }
+
     ss->rate_cnt = 0; // initialize global transition variables
     ss->transition_cnt = 0;
     ss->atom_cnt = 0; // initialize global atom variables
-    // current_iteration = 0; //not needed if only running 1 simulation at a time // XXX: commented
-    // code, never used
+    // XXX: commented code, never used
+    // current_iteration = 0; //not needed if only running 1 simulation at a time 
     ss->frequency_sum = 0.0;
 
     // TODO: allow for reading simulation variables from intermediate xyz file
@@ -142,16 +156,11 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
 
     ss->overpotential = se->initial_overpotential;
 
+    srand(se->rand_seed);
+
     se->centroid[0] = 0.;
     se->centroid[1] = 0.;
     se->centroid[2] = 0.;
-
-    se->ucell_params[0] = 1;
-    se->ucell_params[1] = 1;
-    se->ucell_params[2] = 1;
-    se->ucell_params[3] = 90;
-    se->ucell_params[4] = 90;
-    se->ucell_params[5] = 90;
 
     // // XXX: redundant
     // // next_log_checkpoint is initialized to one log_interval_step step
@@ -164,8 +173,6 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
     // [ ]: why would atom_cnt not be zero????
     while (ss->atom_cnt != 0) // TODO: start here
         kill_atom(ss->atom_cnt - 1, ss, se);
-
-    srand(se->rand_seed);
 
     return;
 }
@@ -533,9 +540,8 @@ void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se)
 /********************************************************************************/
 /********************************************************************************/
 // ENHANCE: currently adds one extra atom to radius - remove it
-void initialize_spherical_cluster(
-    struct SimulationState *ss,
-    struct SimulationEnv *se) // radius of cluster in number of atoms (nearest-neighbor distances)
+// radius of cluster in number of atoms (nearest-neighbor distances)
+void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationEnv *se)
 {
     double center_cart[3];   // cartesian/orthogonal coordinates of center point
     int center_lattice[3];   // lattice coordinates of center point
@@ -615,8 +621,8 @@ void initialize_spherical_cluster(
         }
     }
 
-    // iterates through the bounding box of the sphere to identify positions in cluster // ENHANCE:
-    // only 52% of loops will be successful - make it more efficient
+    // iterates through the bounding box of the sphere to identify positions in cluster 
+    // ENHANCE: only 52% of loops will be successful - make it more efficient
     int type;
     double bar;
     for (int u = bblimits_lattice[0][0]; u <= bblimits_lattice[0][1]; u++) {
@@ -627,12 +633,12 @@ void initialize_spherical_cluster(
                 atom_pos_lattice[1] = v;
                 atom_pos_lattice[2] = w;
 
-                lattice2cartesian(atom_pos_lattice, se->primitive_basis,
-                                  atom_pos_cart); // to cartesian coordinates
+                // to cartesian coordinates
+                lattice2cartesian(atom_pos_lattice, se->primitive_basis, atom_pos_cart);
+                // distance to center
                 dist = (atom_pos_cart[0] - center_cart[0]) * (atom_pos_cart[0] - center_cart[0]) +
                        (atom_pos_cart[1] - center_cart[1]) * (atom_pos_cart[1] - center_cart[1]) +
-                       (atom_pos_cart[2] - center_cart[2]) *
-                           (atom_pos_cart[2] - center_cart[2]); // distance to center
+                       (atom_pos_cart[2] - center_cart[2]) * (atom_pos_cart[2] - center_cart[2]);
 
                 if (dist <= (radius_cart * radius_cart)) {
                     // particle is in bounds
@@ -736,8 +742,6 @@ void initialize_simulation_box(struct SimulationEnv *se)
         lattice2cartesian(vector_lat, se->primitive_basis, se->simbox_vectors_cart[i]);
     }
 
-    se->max_atoms = se->lat_range[0] * se->lat_range[1] * se->lat_range[2];
-
     // origin is the minimum in all directions
     int origin_lat[] = {se->simbox_limits_lat[0][0], se->simbox_limits_lat[1][0],
                         se->simbox_limits_lat[2][0]};
@@ -749,9 +753,9 @@ void initialize_simulation_box(struct SimulationEnv *se)
     double scaled_normal_cart[3];
     double normal_lat[6][3]; // TODO: when reimplemented, if needs to have larger scope
     for (int side = 0; side < 6; side++) {
-        vecmul(normal_cart[side], se->invert_primitive_basis,
-               normal_lat[side]); // doesn't contribute; only for sake of seeing normal in lat
-                                  // coordinates
+        // doesn't contribute; only for sake of seeing normal in lat coordinates
+        vecmul(normal_cart[side], se->invert_primitive_basis, normal_lat[side]); 
+        
         // negative normal gives negative dot product
         lhs[side] = fdot(normal_cart[side], point_cart[side]);
 
@@ -813,4 +817,56 @@ void corners2limits(double corners_cart[8][3], int limits_lat[3][2], double inv_
                     round_towards(bbcorners_lattice[corner_idx][dim_idx], limits_lat[dim_idx][1]);
         }
     }
+}
+
+void initialize_simulation(struct SimulationState *sim_state, struct SimulationEnv *sim_env,
+                           struct LoggingState *log_state)
+{
+
+    // bit shifts for periodic boundary conditions
+    // requires: zone_count_uvw, system_size_xyz
+    // updates: zixyzshift, ssxyzshift, xyzsh
+    get_shifts(sim_env);
+
+    // initialize zones - help figure out which atoms are next to which other atoms
+    // requires: zone_count_uvw
+    // updates: zone_arr
+    initialize_zones(sim_state->zone_arr, sim_env);
+
+    // requires: lattice_type
+    // updates: primitive_basis, invert_primitive_basis, ucell_params
+    set_primitive_basis(sim_env);
+
+    // supposedly was only for visualization
+    // set_default_orientation(sim_state->atom_arr, sim_state->atom_cnt, sim_env->lattice_type,
+    //                         sim_env->rmat, sim_env->primitive_basis);
+    // maybe only for visualization
+    // get_system_normal(sim_env->primitive_basis);
+
+    // requires: invert_primitive_basis, system_size_xyz
+    // updates: simbox_limits_lat, lat_range, simbox_vectors_cart, simbox_origin_cart
+    initialize_simulation_box(sim_env);
+
+    /*
+    sets jump offsets for given crystal type
+    requires: lattice_type, num_nn_levels
+    updates: num_transition_vectors, atoms_per_nn_level, num_energy_contributors,
+    transition_vectors, opposite_tvectors
+    */
+    initialize_neighbor_offsets(sim_env);
+
+    // mallocs and sets to zero (or something else) simulation variables
+    // requires: dissolution, num_elements, num_bond_types, atoms_per_nn_level, max_atoms,
+    // initial_overpotential, lat_range
+    // updates: a lot
+    initialize_simulation_variables(sim_state, sim_env);
+
+    // requires: simulation_type, system_size_xyz, primitive_basis, substrate_composition,
+    // simbox_limits_lat, sheet_thickness, cluster_radius
+    // updates: atom_arr, atom_cnt, ...
+    initialize_initial_structure(sim_state, sim_env, log_state);
+
+    // check_system(sim_state, sim_env); // XXX?
+
+    input_logging(sim_state, sim_env, log_state);
 }

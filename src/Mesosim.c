@@ -86,33 +86,7 @@ int main(int argc, char *argv[])
 
     // finish_preprocessing();   //only called when deposition matters
 
-    // system geometry initialization
-    // atom_cnt=0 for the initialization functions, so some of them end up doing nothing
-
-    // bit shifts for periodic boundary conditions
-    get_shifts(sim_env);
-    // initialize zones - help figure out which atoms are next to which other atoms
-    initialize_zones(sim_state->zone_arr, sim_env);
-
-    set_primitive_basis(sim_env);
-    // supposedly was only for visualization
-    // set_default_orientation(sim_state->atom_arr, sim_state->atom_cnt, sim_env->lattice_type,
-                            // sim_env->rmat, sim_env->primitive_basis);
-    // maybe only for visualization
-    // get_system_normal(sim_env->primitive_basis);
-
-    initialize_simulation_box(sim_env);
-
-    // sets jump offsets for given crystal type
-    initialize_neighbor_offsets(sim_env);
-    // mallocs and sets to zero (or something else) simulation variables
-    initialize_simulation_variables(sim_state, sim_env);
-
-    initialize_initial_structure(sim_state, sim_env, log_state);
-
-    check_system(sim_state, sim_env); // XXX?
-
-    input_logging(sim_state, sim_env, log_state);
+    initialize_simulation(sim_state, sim_env, log_state);
 
     printf("Beginning simulation\n");
     // perform simulations
