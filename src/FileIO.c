@@ -422,6 +422,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         snprintf(tok_params, len, "%s", params);
         char *token = strtok(tok_params, " \t");
         int count = 0;
+        int soluble_count = 0;
         while (token) {
             char buf[BUFFER_SIZE];
             sscanf(token, "%s", buf);
@@ -430,6 +431,9 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
                 fprintf(stderr, "Input parsing failed - Could not correctly read solubility %s\n",
                         buf);
                 exit(FILE_COMMAND_IGNORED);
+            }
+            if (b) {
+                soluble_count++;
             }
             is_soluble[count] = (bool)b;
             token = strtok(NULL, " \t");
@@ -442,9 +446,10 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         }
 
         if ((se->num_elements == 0) || (se->num_elements != count)) {
-            fprintf(stderr,
-                    "Input parsing failed - More values provided (%d) than number of elements %d\n",
-                    count, se->num_elements);
+            fprintf(
+                stderr,
+                "Input parsing failed - Values provided (%d) differ from number of elements %d\n",
+                count, se->num_elements);
             exit(FILE_COMMAND_IGNORED);
         }
 
@@ -456,6 +461,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
             clean_and_exit(errno);
         }
         memcpy(se->is_soluble, is_soluble, size);
+        se->dissolution = soluble_count > 0 ? 1 : 0;
     } else if (strncmp(cmd, "composition", 11) == 0) {
 
         double comp[ARR_BUFFER_SIZE];

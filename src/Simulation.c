@@ -447,7 +447,10 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss,
 
     // remove all mention of this atom from transition list
     // extra 1 for evaporation
-    for (int i = 0; i < se->num_transition_vectors + se->dissolution; ++i) {
+    // true = 1; false = 0
+    int atom_soluble = se->is_soluble[ss->atom_arr[atom_idx]->type];
+    int indices = se->num_transition_vectors + atom_soluble;
+    for (int i = 0; i < indices; ++i) {
         // transition can happen in the "i" direction
         if (ss->atom_arr[atom_idx]->transition_indices[i] != -1)
             take_off_transition_list(atom_idx, i, ss);
@@ -496,7 +499,7 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss,
     }
 
     // if atom type is soluble, add dissolution transition
-    if (se->is_soluble[ss->atom_arr[atom_idx]->type]) {
+    if (atom_soluble) {
         // dissolution / evaporation transition
         final_config_neighbor_cnt = -1;
         rate_idx = get_rate(atom_env, final_config_neighbor_cnt, 1, ss, se);
@@ -504,8 +507,8 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss,
             // if rate doesn't already exist, make new one
             rate_idx = create_new_rate(atom_env, final_config_neighbor_cnt, 1, ss, se);
         }
-        // evaporation is considered to be last in se->transition_vectors (not really in array but
-        // uses that index number)
+        // evaporation is considered to be last in se->transition_vectors
+        // (not really in array but uses that index number)
         add_to_transition_list(rate_idx, atom_idx, se->num_transition_vectors, ss, se);
     }
 

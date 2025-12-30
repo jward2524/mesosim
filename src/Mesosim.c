@@ -40,9 +40,7 @@ int main(int argc, char *argv[])
     log_state = calloc(1, sizeof(struct LoggingState));
 
     set_state(sim_state, sim_env, log_state);
-
-    // holy shit, when not =DISSOLUTION[=1], it breaks some shit heavy
-    sim_env->dissolution = DISSOLUTION;
+    
     // initialize_lattice_geometry(); //this gets overwritten by info from the input file
     sim_env->simulation_type = -1; // TODO: need to define in globals!!
 
@@ -63,8 +61,9 @@ int main(int argc, char *argv[])
     // atom list
 
     // pre-process the file information and fill in the gaps with defaults
-    if (simulation_parameters_from_file(argv[1], sim_state, sim_env, log_state, temp_log,
-                                        starttime) == false) {
+    bool res = simulation_parameters_from_file(argv[1], sim_state, sim_env, log_state, temp_log,
+                                               starttime);
+    if (res == false) {
         fprintf(temp_log, "ERROR! Something bad happened when reading the input file\n");
         return 1;
     }

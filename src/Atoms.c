@@ -504,9 +504,10 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
     }
 
     // dissolution - if not soluble, won't have dissolution transition
-    // TODO: if dissolution is even possible
-    if (ss->atom_arr[at]->transition_indices[se->num_transition_vectors] != -1)
-        take_off_transition_list(at, se->num_transition_vectors, ss);
+    if (se->is_soluble[ss->atom_arr[at]->type]) {
+        if (ss->atom_arr[at]->transition_indices[se->num_transition_vectors] != -1)
+            take_off_transition_list(at, se->num_transition_vectors, ss);
+    }
 
     ss->total_internal_energy -= ss->atom_arr[at]->energy;
 

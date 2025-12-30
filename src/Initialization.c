@@ -80,16 +80,29 @@ void get_system_normal(double basis[3][3]) // XXX: supposedly only for vizualiza
 // next_log_checkpoint
 void initialize_simulation_variables(struct SimulationState *ss, struct SimulationEnv *se)
 {
+    // holy shit, when not =DISSOLUTION[=1], it breaks some shit heavy
+    if (!se->dissolution) {
+        se->is_soluble = (bool *)malloc(se->num_elements);
+        for (int i = 0; i < se->num_elements; i++) {
+            se->is_soluble[i] = false;
+        }
+    }
+
     // finish initializing structs
     se->atoms_per_nn_level = (int *)malloc(se->num_nn_levels * sizeof(int));
+    
+    // max_rates = combination of contributors and number of nn bond types
+    // (and evaporation and final configuration count)
+    // each contributor can be any kind of bond: num_bonds ^ contributors
+    // pow(base, exponent)
     se->max_rates =
-        (unsigned long long int)pow(se->num_transition_vectors + se->dissolution, se->num_nn_types);
+        (unsigned long long int)pow(se->num_nn_types, se->num_energy_contributors + (se->dissolution ? 1 : 0));
 
     ss->transition_probability.rate_arr_index = (int *)malloc(se->max_rates * sizeof(int));
     ss->transition_probability.lbound = (double *)malloc(se->max_rates * sizeof(double));
     ss->transition_probability.ubound = (double *)malloc(se->max_rates * sizeof(double));
 
-    se->max_transitions = ((MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION) * se->max_atoms) + 10;
+    se->max_transitions = ((MAXIMUM_NUMBER_OF_NEIGHBORS + se->dissolution) * se->max_atoms) + 10;
 
     ss->atom_arr = (Atom **)malloc(se->max_atoms * sizeof(Atom *));
     ss->rate_arr = (Rate *)malloc(se->max_rates * sizeof(Rate));
