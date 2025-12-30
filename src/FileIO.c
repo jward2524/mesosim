@@ -104,6 +104,7 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
     snprintf(csv_filename, strlen(ls->position_log_prefix) + 4, "%s.csv", ls->position_log_prefix);
     ls->sim_csv_file = fopen(csv_filename, "w+");
     ret = ret && fopen_error(csv_filename, ls->sim_csv_file, "Failed to open csv file, ");
+    fclose(input_file);
 
     return ret;
 }
@@ -132,11 +133,9 @@ bool process_in_file(FILE *temp_log, FILE *input_file, struct SimulationState *s
             // should write to the temp
             fprintf(stderr, "Input parsing failed - Had issue reading the following line: \"%s\"\n",
                     parameter_line);
-            fclose(input_file);
             return false;
         }
     }
-    fclose(input_file);
     return true;
 }
 
@@ -714,7 +713,6 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
 
     if (!ptr) {
         fprintf(stderr, "Empty file or read error\n");
-        fclose(input_file);
         return false;
     }
 
@@ -723,7 +721,6 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
     long natoms_long = strtol(command_string, &endptr, 10);
     if (endptr == command_string || natoms_long <= 0) {
         fprintf(stderr, "First line does not contain a valid atom count\n");
-        fclose(input_file);
         return false;
     }
     int nremain = (int)natoms_long;
@@ -735,7 +732,6 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
 
     if (!ptr) {
         fprintf(stderr, "Error on reading the comment/header line\n");
-        fclose(input_file);
         return false;
     }
 
@@ -784,7 +780,6 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
 
         // if EOF or failure
         if (!ptr) {
-            fclose(input_file);
             fprintf(stderr, "Input parsing failed - Ran into EOF, expected %d atoms remaining\n",
                     nremain);
             clean_xyz_structs(kvpairs, kvpairs_cnt, properties);
@@ -842,7 +837,6 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
     clean_xyz_structs(kvpairs, kvpairs_cnt, properties);
 
     fprintf(temp_log, "Successfully read %lld atoms from .xyz file\n", ss->atom_cnt);
-    fclose(input_file);
     // organize(atom, atom_cnt); //???
     return true;
 }
