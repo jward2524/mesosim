@@ -13,7 +13,16 @@ void setUp(void)
     ls = calloc(1, sizeof(struct LoggingState));
 }
 
-void tearDown(void) {}
+void tearDown(void)
+{
+    free(se->nn_energy);
+    free(se->atom_names);
+    free(se->is_soluble);
+    free(se->substrate_composition);
+    free(ss);
+    free(se);
+    free(ls);
+}
 
 void test_initialize_simulation(void)
 {
@@ -27,6 +36,7 @@ void test_initialize_simulation(void)
     se->overpotential_ramp_rate = 0.03;
     se->max_overpotential = 1.2;
     se->num_nn_levels = 2;
+    se->nn_energy = (double *)malloc(6 * sizeof(double));
     se->nn_energy[0] = 0.15;
     se->nn_energy[1] = 0.15;
     se->nn_energy[2] = 0.15;
@@ -44,11 +54,14 @@ void test_initialize_simulation(void)
     se->num_elements = 2;
     se->num_bond_types = 3;
     se->atom_names_cnt = 2;
+    se->atom_names = (char **)malloc(2 * sizeof(char*));
     se->atom_names[0] = "Ag";
     se->atom_names[1] = "Au";
     se->dissolution = 1;
+    se->is_soluble = (bool *)malloc(2 * sizeof(bool));
     se->is_soluble[0] = 1;
     se->is_soluble[1] = 0;
+    se->substrate_composition = (double *)malloc(2 * sizeof(double));
     se->substrate_composition[0] = 0.75;
     se->substrate_composition[1] = 0.25;
     ss->sim_end_type = SIM_END_BY_ITERATIONS;

@@ -83,8 +83,10 @@ void clean_and_exit(int error)
 
     // LoggingState
     if (log_state != NULL) {
-        fclose(log_state->sim_log_file);
-        fclose(log_state->sim_csv_file);
+        if (log_state->sim_log_file)
+            fclose(log_state->sim_log_file);
+        if (log_state->sim_csv_file)
+            fclose(log_state->sim_csv_file);
         free_if_exists((void **)&log_state->log_list);
         free_if_exists((void **)&log_state);
     }

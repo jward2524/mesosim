@@ -41,17 +41,17 @@ void setUp(void)
 
 void tearDown(void)
 {
-    free(ss);
-    free(se);
-    free(ls);
+    clean_and_exit(0);
 
     // fclose needs to be here in case a test fails
     fclose(temp_log);
     if (atom_file) {
         fclose(atom_file);
+        atom_file = NULL;
     }
     if (input_file) {
         fclose(input_file);
+        input_file = NULL;
     }
 }
 
@@ -121,6 +121,8 @@ void test_process_in_file_cluster(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, ss->sim_end_type, "simulation end type");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ss->run_stime, "simulation max runtime");
     TEST_ASSERT_EQUAL_INT_MESSAGE(2000, ss->final_iteration, "simulation max iteration");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->log_interval, "log interval");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_log_checkpoint, "log interval");
 }
 
 void test_process_in_file_mc(void) {
@@ -180,8 +182,11 @@ void test_process_xyz_file(void)
     se->system_size_x = 256;
     se->system_size_y = 256;
     se->system_size_z = 256;
-    char **arr = (char *[]){"Ag", "Au"};
-    se->atom_names = arr;
+    se->atom_names = malloc(2 * sizeof *se->atom_names);
+    se->atom_names[0] = malloc(sizeof "Ag");
+    strcpy(se->atom_names[0], "Ag");
+    se->atom_names[1] = malloc(sizeof "Au");
+    strcpy(se->atom_names[1], "Au");
     se->atom_names_cnt = 2;
     get_shifts(se);
     set_primitive_basis(se);
