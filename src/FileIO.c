@@ -143,51 +143,54 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
                 struct LoggingState *ls)
 {
     // TODO: use strtok?
-    char *ptr = line;         // line from file
-    char cmd[BUFFER_SIZE];    // command - first word in line
-    char params[BUFFER_SIZE]; // parameters parsed from line
-
     // TODO: make all errors print to stderr with better info
-
+    int ret; // fxn return value
+    char cmd[BUFFER_SIZE];
+    char params[BUFFER_SIZE];
+    
+    // skip leading whitespace
+    char *ptr = line;
+    while (isspace(*ptr))
+    ptr++;
+    
     // line start with command word and is followed by parameters
     // split command word from parameters
-    // find the first whitespace on the line (or the end of the line)
-    while (ptr[0] != '\n' && ptr[0] != '\0' && ptr[0] != ' ' && ptr[0] != '\t')
-        ++ptr; 
+    // find end of command (first whitespace or end of string)
+    char *cmd_start = ptr;
+    while (*ptr != '\0' && !isspace(*ptr))
+        ptr++;
 
-    strcpy(params, ptr);
+    // copy command safely
+    size_t cmd_len = ptr - cmd_start;
+    if (cmd_len >= BUFFER_SIZE)
+        cmd_len = BUFFER_SIZE - 1;
+    memcpy(cmd, line, cmd_len);
+    cmd[cmd_len] = '\0';
 
-    // there are no parameters, at end of line
-    if (params[0] == '\0' || params[0] == '\n')
-        return NOT_ENOUGH_PARAMS; 
+    // skip whitespace to get parameters
+    while (*ptr != '\0' && isspace(*ptr))
+        ptr++;
 
-    // remove whitespace characters from left side of params
-    int i = 0;
-    while (params[i] != '\0' && (params[i] == ' ' || params[i] == '\t'))
-        ++i;
+    // copy remaining parameters safely
+    size_t param_len = strlen(ptr);
+    param_len = (param_len < BUFFER_SIZE) ? param_len : BUFFER_SIZE - 1;
+    memcpy(params, ptr, param_len);
+    params[param_len] = '\0';
 
-    int k = 0;
-    for (int j = i; params[j] != '\0'; ++j) {
-        params[k] = params[j];
-        ++k;
+    // check that valid parameters exist
+    if (params[0] == '\0') {
+        fprintf(stderr, "No parameters found for command '%s'\n", cmd);
+        return NOT_ENOUGH_PARAMS;
     }
-    // null-terminate the effective string
-    params[k] = '\0';
-
-    // there are no parameters, end of line
-    if (params[0] == '\0' || params[0] == '\n')
-        return NOT_ENOUGH_PARAMS; 
-
-    // puts 'original' line into cmd
-    sscanf(line, "%255s", cmd); 
 
     // now handle individual keywords - check which one is at beginning of line=cmd
     // check to see if everything got read correctly
-    int argsread; 
+    int argsread;
     if (strncmp(cmd, "systemsize", 10) == 0) {
         // set the system size using params
-        if ((argsread = sscanf(params, "%d %d %d", &se->system_size_x, &se->system_size_y,
-                               &se->system_size_z)) != 3) {
+        argsread =
+            sscanf(params, "%d %d %d", &se->system_size_x, &se->system_size_y, &se->system_size_z);
+        if (argsread != 3) {
             fprintf(stderr,
                     "Input parsing failed - Could not correctly read system size parameters %s\n",
                     params);
@@ -196,15 +199,16 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         se->max_atoms = se->system_size_x * se->system_size_y * se->system_size_z;
     } else if (strncmp(cmd, "temp", 4) == 0) {
         // set the system temperature
-        if ((argsread = sscanf(params, "%lf", &ss->temperature)) != 1) {
+        argsread = sscanf(params, "%lf", &ss->temperature);
+        if (argsread != 1) {
             fprintf(stderr,
                     "Input parsing failed - Could not correctly read temperature parameter %s\n",
                     params);
             exit(FILE_COMMAND_IGNORED);
         }
     } else if (strncmp(cmd, "seed", 4) == 0) {
-        // set the random seed // TODO: allow for setting fixed seed
         if (strncmp(params, "random", 6) == 0) {
+            // set the random seed
             // rand_seed should be based on time
             time_t seedtime;
             time(&seedtime);
@@ -242,14 +246,13 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         }
     } else if (strncmp(cmd + 1, "nne", 3) == 0) {
         int nn_level;
-
         if ((se->num_nn_levels == 0) || (se->num_bond_types == 0)) {
             fprintf(stderr, "ERROR! Number of nearest neighbor levels and number of elements \
 				needs to be set before defining nearest neighbor energies\n");
             exit(FILE_COMMAND_IGNORED);
         }
 
-        int ret = sscanf(cmd, "%dnne", &nn_level);
+        ret = sscanf(cmd, "%dnne", &nn_level);
 
         if (ret == 0) {
             fprintf(
@@ -318,15 +321,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
             exit(FILE_COMMAND_IGNORED);
         }
         ls->framenum = 0;
-    }
-    /*else if (strncmp(cmd, "runs", 4) == 0) {
-            //set number of runs
-            if ((argsread = sscanf(params, "%d", &number_of_simulation_runs)) != 1) {
-                    printf("ERROR! Could not correctly read number of simulation runs %s\n",
-    params); exit(FILE_COMMAND_IGNORED);
-            }
-    }*/
-    else if (strncmp(cmd, "struct", 6) == 0) {
+    } else if (strncmp(cmd, "struct", 6) == 0) {
         // set crystal structure
         char structtype[4];
         argsread = sscanf(params, "%3s", structtype);
@@ -351,7 +346,8 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         se->num_transition_vectors = MAXIMUM_NUMBER_OF_NEIGHBORS;
     } else if (strncmp(cmd, "output", 6) == 0) {
         // set file name for log output
-        if ((argsread = sscanf(params, "%s", outFile)) != 1) {
+        argsread = sscanf(params, "%s", outFile);
+        if (argsread != 1) {
             fprintf(stderr, "Input parsing failed - Could not correctly read output file name %s\n",
                     params);
             exit(FILE_COMMAND_IGNORED);
@@ -360,20 +356,23 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         // initialize the atoms! the options are either flat sheet, spherical cluster, or file input
         if (strncmp(params, "sheet", 5) == 0) {
             se->geometry = GEOMETRY_FLAT_SHEET;
-            if ((argsread = sscanf(params, "%*s %d", &se->sheet_thickness)) != 1) {
+            argsread = sscanf(params, "%*s %d", &se->sheet_thickness);
+            if (argsread != 1) {
                 fprintf(stderr,
                         "Input parsing failed - Could not correctly read sheet thickness\n");
                 exit(FILE_COMMAND_IGNORED);
             }
         } else if (strncmp(params, "cluster", 6) == 0) {
             se->geometry = GEOMETRY_CLUSTER;
-            if ((argsread = sscanf(params, "%*s %d", &se->cluster_radius)) != 1) {
+            argsread = sscanf(params, "%*s %d", &se->cluster_radius);
+            if (argsread != 1) {
                 fprintf(stderr, "Input parsing failed - Could not correctly read cluster radius\n");
                 exit(FILE_COMMAND_IGNORED);
             }
         } else if (strncmp(params, "file", 4) == 0) {
             se->geometry = GEOMETRY_FROM_FILE;
-            if ((argsread = sscanf(params, "%*s %s", se->atoms_filename)) != 1) {
+            argsread = sscanf(params, "%*s %s", se->atoms_filename);
+            if (argsread != 1) {
                 fprintf(stderr,
                         "Input parsing failed - Could not correctly read file name for atoms\n");
                 exit(FILE_COMMAND_IGNORED);
@@ -385,7 +384,6 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         }
     } else if (strncmp(cmd, "atomtype", 8) == 0) {
         // this determines which elements are which types of atoms
-
         char *types[ARR_BUFFER_SIZE];
         int len = strlen(params); // BUFFER_SIZE?
         char tok_params[len];
@@ -420,7 +418,6 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
 
     } else if (strncmp(cmd, "dissolution", 11) == 0) {
         // this determines which atoms dissolve
-
         bool is_soluble[ARR_BUFFER_SIZE];
         int len = strlen(params); // BUFFER_SIZE?
         char tok_params[len];
@@ -468,7 +465,6 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         memcpy(se->is_soluble, is_soluble, size);
         se->dissolution = (soluble_count > 0);
     } else if (strncmp(cmd, "composition", 11) == 0) {
-
         double comp[ARR_BUFFER_SIZE];
         int len = strlen(params); // BUFFER_SIZE?
         char tok_params[len];
