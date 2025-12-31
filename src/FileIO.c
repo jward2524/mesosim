@@ -179,7 +179,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         return NOT_ENOUGH_PARAMS; 
 
     // puts 'original' line into cmd
-    sscanf(line, "%s", cmd); 
+    sscanf(line, "%255s", cmd); 
 
     // now handle individual keywords - check which one is at beginning of line=cmd
     // check to see if everything got read correctly
@@ -328,8 +328,9 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
     }*/
     else if (strncmp(cmd, "struct", 6) == 0) {
         // set crystal structure
-        char structtype[3];
-        if ((argsread = sscanf(params, "%s", structtype)) != 1) {
+        char structtype[4];
+        argsread = sscanf(params, "%3s", structtype);
+        if (argsread != 1) {
             fprintf(stderr, "Input parsing failed - Could not correctly read structure type %s\n",
                     params);
             exit(FILE_COMMAND_IGNORED);
