@@ -36,6 +36,9 @@ void write_backlog(FILE *, FILE *);
 // exposed for testing
 int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct SimulationEnv *se,
                 struct LoggingState *ls);
-
+void log_kmc(FILE *csv_log_file, const unsigned long int mcss, const double sim_time,
+             const double sys_energy, const int uvw1[3], const int uvw2[3], int is_evap);
+void log_mc(FILE *csv_log_file, const unsigned long int mcss, const double sys_energy,
+            const int uvw1[3], const int uvw2[3]);
 
 #endif // FILEIO_H

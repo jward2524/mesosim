@@ -15,11 +15,12 @@ int adatom_before; // XXX: never used?
 int lastxt, lastyt, lastzt; // containers for coordinates of a next step
 bool checkpoint_reached = false;
 
-const double FABS_TOL = 1e-6;
+static const double FABS_TOL = 1e-6;
 
 // ENHANCE: pass struct with all simulation parameters as argument
+// potentially FILE* as arguments
 unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEnv *se,
-                                 struct LoggingState *ls) // potentially FILE* as arguments
+                                 struct LoggingState *ls)
 {
     // printf("Simulation starting\n");
     //  long int i;
@@ -65,8 +66,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     compute_transition_array(ss, se);
 
     // TODO: move this out from here, to only where output is necessary
-    organize(ss->atom_arr, ss->atom_cnt,
-             se->primitive_basis); // replacement for copy_xyz_to_coord but might not be necessary
+    // replacement for copy_xyz_to_coord but might not be necessary
+    organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis);
 
     char suffix[BUFFER_SIZE];
     if (ls->analysis_type == REGULAR_TIME_INTERVALS) {
