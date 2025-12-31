@@ -24,17 +24,21 @@ debug := 1
 # XS_CFLAGS := -mcmodel=medium
 # ?= means 'if not yet defined'
 # variables used in definitions with '=' are expanded on use
-CFLAGS ?= -std=c11
+BASE_CFLAGS = -std=c11
+DEBUG_CFLAGS = -ggdb -O0 -Wall -Wextra -Wpedantic -DTEST -DUNITY_INCLUDE_CONFIG_H -I$(TEST_PATH)
+OPT_CFLAGS = -O2
+ALL_CFLAGS += $(CFLAGS) $(BASE_CFLAGS)
+
 ifeq ($(debug), 1)
 # add TEST_PATH to have access to unity_config.h 
-	CFLAGS += -ggdb -O0 -Wall -Wextra -Wpedantic -DTEST -DUNITY_INCLUDE_CONFIG_H -I$(TEST_PATH)
+	ALL_CFLAGS += $(DEBUG_CFLAGS)
 else
-	CFLAGS ?= -O2
+	ALL_CFLAGS += $(OPT_CFLAGS)
 endif
-CFLAGS += -I. -I$(UNITY_PATH) -I$(SRC_PATH) -I$(INCLUDE_PATH)
+ALL_CFLAGS += -I. -I$(UNITY_PATH) -I$(SRC_PATH) -I$(INCLUDE_PATH)
 
 # -v verbose
-LDFLAGS += -lm
+ALL_LDFLAGS += $(LDFLAGS) -lm
 
 CC := gcc
 
@@ -60,6 +64,8 @@ BIN_PATH := bin
 BUILD_PATHS := $(BUILD_PATH) $(DEPEND_PATH) $(OBJ_PATH) $(RESULTS_PATH)
 
 TEST_SRC := $(wildcard $(TEST_PATH)/*.c)
+
+$(info CFLAGS=$(ALL_CFLAGS))
 
 # object files, use for mesosim target
 # OBJS := $(addprefix $(BUILD_PATH)/,$(object_names))
@@ -89,14 +95,14 @@ all: $(BIN_PATH)/$(EXECUTABLE).$(TARGET_EXTENSION)
 # depends on object files and the headers that don't have corresponding objects
 # requires paths as prerequisites so that folders get made if don't exist
 $(BIN_PATH)/$(EXECUTABLE).$(TARGET_EXTENSION): $(BIN_PATH) $(BUILD_PATHS) $(OBJS) $(XS_HPATH)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
+	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(ALL_LDFLAGS)
 	@touch print
 
 # make object files based on .c files in SRC_PATH, looking for header files in INCLUDE_PATH
 # wildcards needed on both sides, otherwise all .c files would be prerequisites
 # $(BUILD_PATH)/%.o: $(SRC_PATH)/%.c $(INCLUDE_PATH)/%.h $(XS_HPATH)
 # 	@mkdir -p $(BUILD_PATH) $(BIN_PATH)
-# 	$(CC) $(CFLAGS) -I$(INCLUDE_PATH) -c -o $@ $<
+# 	$(CC) $(ALL_CFLAGS) -I$(INCLUDE_PATH) -c -o $@ $<
 
 # prints the filenames of files that were updated since the last 
 # time the executable is built (tracked with the empty `print` file)
@@ -118,20 +124,20 @@ $(RESULTS_PATH)/%.txt: $(BUILD_PATH)/%.$(TARGET_EXTENSION)
 	./$< > $@ 2>&1
 
 $(BUILD_PATH)/Test%.$(TARGET_EXTENSION): $(OBJS_MMAIN) $(OBJ_PATH)/Test%.o $(OBJ_PATH)/%.o $(OBJ_PATH)/unity.o #$(DEPEND_PATH)Test%.d
-	$(LINK) -o $@ $^ $(LDFLAGS)
+	$(LINK) -o $@ $^ $(ALL_LDFLAGS)
 
 # :: (double-colon) rules are independent from each other
 # TEST_PATH/TestSomething.c
 $(OBJ_PATH)/%.o:: $(TEST_PATH)/%.c
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(ALL_CFLAGS) $< -o $@
 
 # SRC_PATH/Something.c
 $(OBJ_PATH)/%.o:: $(SRC_PATH)/%.c $(INCLUDE_PATH)/%.h $(XS_HPATH)
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(ALL_CFLAGS) $< -o $@
 
 # UNITY_PATH/unity.c
 $(OBJ_PATH)/%.o:: $(UNITY_PATH)/%.c $(UNITY_PATH)/%.h
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(ALL_CFLAGS) $< -o $@
 
 $(DEPEND_PATH)/%.d:: $(TEST_PATH)/%.c
 	$(DEPEND) $@ $<
