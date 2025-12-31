@@ -65,6 +65,12 @@ int main(void)
     UNITY_BEGIN();
     RUN_TEST(test_simulation);
     UNITY_END();
+    
+    if (temp_log) {
+        int rc = remove(temp_name);
+        if (rc)
+            perror("Remove of test log file failed");
+    }
 
     // return 0 else makefile throws error
     return 0;
