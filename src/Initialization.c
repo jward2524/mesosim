@@ -180,17 +180,17 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
 void initialize_initial_structure(struct SimulationState *ss, struct SimulationEnv *se,
                                   struct LoggingState *ls)
 {
-    // index represents simulation_type, from macros
-    switch (se->simulation_type) {
-    case SIMULATION_TYPE_FLAT_SHEET: // flat plane
+    // index represents geometry, from macros
+    switch (se->geometry) {
+    case GEOMETRY_FLAT_SHEET: // flat plane
         initialize_flat_sheet(ss, se);
         break;
 
-    case SIMULATION_TYPE_CLUSTER:
+    case GEOMETRY_CLUSTER:
         initialize_spherical_cluster(ss, se);
         break;
 
-    case SIMULATION_TYPE_FROM_FILE:
+    case GEOMETRY_FROM_FILE:
         initialize_from_file(ss, se, ls); // TODO! THIS IS BIG!
         break;
     }
@@ -861,7 +861,7 @@ void initialize_simulation(struct SimulationState *sim_state, struct SimulationE
     // updates: a lot
     initialize_simulation_variables(sim_state, sim_env);
 
-    // requires: simulation_type, system_size_xyz, primitive_basis, substrate_composition,
+    // requires: geometry, system_size_xyz, primitive_basis, substrate_composition,
     // simbox_limits_lat, sheet_thickness, cluster_radius
     // updates: atom_arr, atom_cnt, ...
     initialize_initial_structure(sim_state, sim_env, log_state);

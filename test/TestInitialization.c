@@ -37,7 +37,7 @@ void test_initialize_simulation(void)
     ls->framenum = 0;
     se->lattice_type = FCC;
     se->num_transition_vectors = MAXIMUM_NUMBER_OF_NEIGHBORS;
-    se->simulation_type = SIMULATION_TYPE_CLUSTER;
+    se->geometry = GEOMETRY_CLUSTER;
     se->sheet_thickness = 0;
     se->cluster_radius = 32;
     // se->atoms_filename = "";

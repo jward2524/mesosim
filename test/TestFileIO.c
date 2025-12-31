@@ -72,7 +72,7 @@ void test_parse_input_geometry_file(void)
 
     parse_input(line, temp_log, ss, se, ls);
 
-    TEST_ASSERT_EQUAL_INT_MESSAGE(SIMULATION_TYPE_FROM_FILE, se->simulation_type, "simulation type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(GEOMETRY_FROM_FILE, se->geometry, "simulation type");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/sheet.xyz", se->atoms_filename, "atoms filename");
 }
 
@@ -104,7 +104,7 @@ void test_process_in_file_cluster(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->framenum, "frame number");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, se->lattice_type, "lattice type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors, "number of transition vectors");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(SIMULATION_TYPE_CLUSTER, se->simulation_type, "geometry type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(GEOMETRY_CLUSTER, se->geometry, "geometry type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->sheet_thickness, "sheet thickness");
     TEST_ASSERT_EQUAL_INT_MESSAGE(32, se->cluster_radius, "cluster radius");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("", se->atoms_filename, "geometry filename");
@@ -148,7 +148,7 @@ void test_process_in_file_mc(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->framenum, "frame number");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, se->lattice_type, "lattice type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors, "number of transition vectors");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(SIMULATION_TYPE_CLUSTER, se->simulation_type, "geometry type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(GEOMETRY_CLUSTER, se->geometry, "geometry type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->sheet_thickness, "sheet thickness");
     TEST_ASSERT_EQUAL_INT_MESSAGE(32, se->cluster_radius, "cluster radius");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("", se->atoms_filename, "geometry filename");

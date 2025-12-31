@@ -19,17 +19,18 @@
 // is equal to (the number of atoms) * (the number of things
 // each atom can do)
 
-#define MAXIMUM_NUMBER_OF_BONDS                                                                    \
-    1000              // total maximum number of bonds that can be drawn.  Reducing
-                      // this number is a big memory saver.
+// total maximum number of bonds that can be drawn.  Reducing
+// this number is a big memory saver.
+#define MAXIMUM_NUMBER_OF_BONDS 1000
+
 #define DISSOLUTION 1 // used
 
 // simulation initial geometries
 
-#define SIMULATION_TYPE_UNDEFINED -1 // used by default!
-#define SIMULATION_TYPE_FLAT_SHEET 1
-#define SIMULATION_TYPE_CLUSTER 2
-#define SIMULATION_TYPE_FROM_FILE 3
+#define GEOMETRY_UNDEFINED -1 // used by default!
+#define GEOMETRY_FLAT_SHEET 1
+#define GEOMETRY_CLUSTER 2
+#define GEOMETRY_FROM_FILE 3
 
 // the default number of zones is tts
 

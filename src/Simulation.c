@@ -51,7 +51,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 
     /*if (num_sims > 0) //this probably will not happen
     {
-            initialize_initial_structure(simulation_type);
+            initialize_initial_structure(geometry);
             elapsed_stime = 0.0;
     }*/
 

@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     set_state(sim_state, sim_env, log_state);
     
     // initialize_lattice_geometry(); //this gets overwritten by info from the input file
-    sim_env->simulation_type = -1; // TODO: need to define in globals!!
+    sim_env->geometry = -1; // TODO: need to define in globals!!
 
     // write to a temporary file until a logfile is identified
     //  not supported for msvcrt.dll [msys's mingw64]
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (sim_env->simulation_type == -1) {
+    if (sim_env->geometry == -1) {
         fprintf(temp_log, "ERROR! Structure type was not specified in input file\n");
         return 1;
     }

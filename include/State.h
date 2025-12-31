@@ -24,7 +24,7 @@ struct SimulationEnv {
     long long int max_transitions;
     long long int max_rates;
 
-    int simulation_type;
+    int geometry;
     bool evaporation_flag;
 
     int zixshift, ziyshift, zizshift;

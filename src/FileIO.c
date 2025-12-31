@@ -143,7 +143,6 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
                 struct LoggingState *ls)
 {
     // TODO: use strtok?
-    // printf("Trying to parse this line! \"%s\"\n", line);
     char *ptr = line;         // line from file
     char cmd[BUFFER_SIZE];    // command - first word in line
     char params[BUFFER_SIZE]; // parameters parsed from line
@@ -359,20 +358,20 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
     } else if (strncmp(cmd, "geometry", 8) == 0) {
         // initialize the atoms! the options are either flat sheet, spherical cluster, or file input
         if (strncmp(params, "sheet", 5) == 0) {
-            se->simulation_type = SIMULATION_TYPE_FLAT_SHEET;
+            se->geometry = GEOMETRY_FLAT_SHEET;
             if ((argsread = sscanf(params, "%*s %d", &se->sheet_thickness)) != 1) {
                 fprintf(stderr,
                         "Input parsing failed - Could not correctly read sheet thickness\n");
                 exit(FILE_COMMAND_IGNORED);
             }
         } else if (strncmp(params, "cluster", 6) == 0) {
-            se->simulation_type = SIMULATION_TYPE_CLUSTER;
+            se->geometry = GEOMETRY_CLUSTER;
             if ((argsread = sscanf(params, "%*s %d", &se->cluster_radius)) != 1) {
                 fprintf(stderr, "Input parsing failed - Could not correctly read cluster radius\n");
                 exit(FILE_COMMAND_IGNORED);
             }
         } else if (strncmp(params, "file", 4) == 0) {
-            se->simulation_type = SIMULATION_TYPE_FROM_FILE;
+            se->geometry = GEOMETRY_FROM_FILE;
             if ((argsread = sscanf(params, "%*s %s", se->atoms_filename)) != 1) {
                 fprintf(stderr,
                         "Input parsing failed - Could not correctly read file name for atoms\n");
@@ -1012,16 +1011,16 @@ void input_logging(struct SimulationState *sim_state, struct SimulationEnv *sim_
 
     fprintf(log_state->sim_log_file, "Random seed is %u\n", sim_env->rand_seed);
 
-    switch (sim_env->simulation_type) {
-    case SIMULATION_TYPE_FLAT_SHEET:
+    switch (sim_env->geometry) {
+    case GEOMETRY_FLAT_SHEET:
         fprintf(log_state->sim_log_file, "Initialized flat sheet with monolayer depth %d\n",
                 sim_env->sheet_thickness);
         break;
-    case SIMULATION_TYPE_CLUSTER:
+    case GEOMETRY_CLUSTER:
         fprintf(log_state->sim_log_file, "Initialized spherical cluster with radius %d\n",
                 sim_env->cluster_radius);
         break;
-    case SIMULATION_TYPE_FROM_FILE:
+    case GEOMETRY_FROM_FILE:
         fprintf(log_state->sim_log_file, "Initialized user-defined structure with filename %s\n",
                 sim_env->atoms_filename);
         break;
