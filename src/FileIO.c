@@ -152,33 +152,39 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
 
     // line start with command word and is followed by parameters
     // split command word from parameters
+    // find the first whitespace on the line (or the end of the line)
     while (ptr[0] != '\n' && ptr[0] != '\0' && ptr[0] != ' ' && ptr[0] != '\t')
-        ++ptr; // find the first whitespace on the line (or the end of the line)
+        ++ptr; 
 
     strcpy(params, ptr);
 
+    // there are no parameters, at end of line
     if (params[0] == '\0' || params[0] == '\n')
-        return NOT_ENOUGH_PARAMS; // there are no parameters, at end of line
+        return NOT_ENOUGH_PARAMS; 
 
     // remove whitespace characters from left side of params
     int i = 0;
     while (params[i] != '\0' && (params[i] == ' ' || params[i] == '\t'))
-        ++i; // get rid of whitespace on left
+        ++i;
 
     int k = 0;
     for (int j = i; params[j] != '\0'; ++j) {
         params[k] = params[j];
         ++k;
     }
-    params[k] = '\0'; // null-terminate the effective string
+    // null-terminate the effective string
+    params[k] = '\0';
 
+    // there are no parameters, end of line
     if (params[0] == '\0' || params[0] == '\n')
-        return NOT_ENOUGH_PARAMS; // there are no parameters, end of line
+        return NOT_ENOUGH_PARAMS; 
 
-    sscanf(line, "%s", cmd); // puts `original` line into cmd
+    // puts 'original' line into cmd
+    sscanf(line, "%s", cmd); 
 
     // now handle individual keywords - check which one is at beginning of line=cmd
-    int argsread; // check to see if everything got read correctly
+    // check to see if everything got read correctly
+    int argsread; 
     if (strncmp(cmd, "systemsize", 10) == 0) {
         // set the system size using params
         if ((argsread = sscanf(params, "%d %d %d", &se->system_size_x, &se->system_size_y,
@@ -526,7 +532,12 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         } else if (ss->sim_end_type == SIM_END_BY_ITERATIONS) {
             ss->final_iteration = strtol(&params[cursor], NULL, 10);
         }
-
+    } else if (strncmp(cmd, "flavor", 6) == 0) {
+        if (strncmp(params, "KMC", 3) == 0) {
+            se->flavor = FLAVOR_KMC;
+        } else if (strncmp(params, "MC", 2) == 0) {
+            se->flavor = FLAVOR_MC;
+        }
     } else {
         fprintf(stderr, "Input parsing failed - keyword %s not recognized\n", cmd);
         exit(FILE_COMMAND_IGNORED);

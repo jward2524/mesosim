@@ -5,6 +5,10 @@
 #include <stdbool.h> // bool
 #include <stdio.h>   // FILE
 
+#define FLAVOR_UNDEFINED 0
+#define FLAVOR_KMC 1
+#define FLAVOR_MC 2
+
 // general note:
 // uvw refer to coordinates in lattice vector space
 // xyz refer to coordinates in cartesian (orthogonal basis) space
@@ -13,6 +17,7 @@
 // (generally) initialized and then never edited again, only read
 struct SimulationEnv {
 
+    unsigned flavor;
     unsigned rand_seed;
 
     long long int max_atoms;

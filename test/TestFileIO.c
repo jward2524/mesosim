@@ -83,6 +83,7 @@ void test_process_in_file_cluster(void) {
 
     int ret = process_in_file(temp_log, input_file, ss, se, ls);
     TEST_ASSERT_TRUE_MESSAGE(ret, "fxn return");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_KMC, se->flavor, "flavor");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_x, "system size x");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_y, "system size y");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_z, "system size z");
@@ -129,6 +130,7 @@ void test_process_in_file_mc(void) {
 
     int ret = process_in_file(temp_log, input_file, ss, se, ls);
     TEST_ASSERT_TRUE_MESSAGE(ret, "fxn return");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_MC, se->flavor, "flavor");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_x, "system size x");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_y, "system size y");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_z, "system size z");

@@ -868,5 +868,9 @@ void initialize_simulation(struct SimulationState *sim_state, struct SimulationE
 
     // check_system(sim_state, sim_env); // XXX?
 
+    // default flavor is KMC, if unset
+    if (sim_env->flavor == 0)
+        sim_env->flavor = FLAVOR_KMC;
+
     input_logging(sim_state, sim_env, log_state);
 }

@@ -8,5 +8,6 @@ nnlevels 1
 datalog iteration interval 200
 temp 293
 seed 12345
+flavor MC
 run iteration 2000
 output test/output/mc.out

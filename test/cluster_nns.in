@@ -11,5 +11,6 @@ potential 0.9 0.03 1.2
 datalog iteration interval 200
 temp 293
 seed 12345
+flavor KMC
 run iteration 2000
 output test/output/cluster.out
