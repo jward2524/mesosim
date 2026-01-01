@@ -3,6 +3,7 @@
 #include "FileIO.h"
 #include "Initialization.h"
 #include "Simulation.h"
+#include "MC.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,7 +41,7 @@ int main(int argc, char *argv[])
     log_state = calloc(1, sizeof(struct LoggingState));
 
     set_state(sim_state, sim_env, log_state);
-    
+
     // initialize_lattice_geometry(); //this gets overwritten by info from the input file
     sim_env->geometry = -1; // TODO: need to define in globals!!
 
@@ -91,7 +92,17 @@ int main(int argc, char *argv[])
     printf("Beginning simulation\n");
     // perform simulations
     unsigned long sim_error;
-    sim_error = perform_simulation(sim_state, sim_env, log_state);
+    switch (sim_env->flavor) {
+    case FLAVOR_KMC:
+        sim_error = perform_simulation(sim_state, sim_env, log_state);
+        break;
+    case FLAVOR_MC:
+        sim_error = perform_metropolis_mc(sim_state, sim_env, log_state);
+        break;
+    default:
+        fprintf(stderr, "Flavor %d not recognized, no simulation performed", sim_env->flavor);
+        break;
+    }
 
     if (sim_error != 0) {
         printf("ERROR! Something went wrong in the simulation\n");

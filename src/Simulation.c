@@ -38,8 +38,6 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     int transitioned_atom_idx; // changed from nan bc keyword
     int atype;
 
-    int moved_flag = true;
-
     prev_stime = ss->elapsed_stime;
 
     bool simulation_end = false;
@@ -119,9 +117,12 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         rate_skip = ss->rate_cnt / 2;
         j = rate_skip;
 
+        // used to track diffusion/evaporation vs deposition
+        int transition_found = 0;
+        int is_evaporation = -1;
+
         // binary search to select transition
-        moved_flag = false; // used to track diffusion/evaporation vs deposition
-        while (moved_flag == false) {
+        while (!transition_found) {
             if ((transition_type_probability >= ss->transition_probability.lbound[j]) &&
                 (transition_type_probability < ss->transition_probability.ubound[j])) {
                 k = ss->transition_probability.rate_arr_index[j];
@@ -139,7 +140,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 transition_jump_vector = ss->transition_arr[selected_transition_idx]->offset_idx;
 
                 // if jump_vector == se->num_transition_vectors then the atom is going to evaporate
-                moved_flag = true;
+                transition_found = 1;
 
                 adatom_before = 0;
 
@@ -150,6 +151,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 // perform transition
                 if (transition_jump_vector != se->num_transition_vectors) {
                     // diffusion
+                    is_evaporation = 0;
 
                     // coordinates atom is jumping to
                     lastxt = ss->atom_arr[transitioning_atom_idx]->lattice[0] +
@@ -168,6 +170,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                     transitioned_atom_idx = add_atom(lastxt, lastyt, lastzt, atype, NORMAL, ss, se);
                 } else {
                     // dissolution
+                    is_evaporation = 1;
 
                     // if not soluble, then there was an issue somewhere
                     if (!(se->is_soluble[ss->atom_arr[transitioning_atom_idx]->type])) {
@@ -200,7 +203,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         }
 
         // ? only happens iff jump_vector == se->num_transition_vectors? (dissolution?)
-        if (moved_flag == false) {
+        if (!transition_found) {
             fprintf(stderr, "for some reason I didn't transition\n");
             clean_and_exit(1);
         }
@@ -241,6 +244,11 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 clean_and_exit(1);
             }
         }
+
+        int uvw1[] = {old_x, old_y, old_z};
+        // lastxyzt will have old values if it wasn't diffusion
+        int uvw2[] = {lastxt, lastyt, lastzt};
+        log_kmc(ls->sim_csv_file, ss->iter, ss->elapsed_stime, ss->total_internal_energy, uvw1, uvw2, is_evaporation);
 
         if (checkpoint_reached) {
             // organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); //replaced but do i really

@@ -101,7 +101,7 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
     *lastdot = '\0';
 
     char csv_filename[256];
-    snprintf(csv_filename, strlen(ls->position_log_prefix) + 4, "%s.csv", ls->position_log_prefix);
+    snprintf(csv_filename, strlen(ls->position_log_prefix) + 5, "%s.csv", ls->position_log_prefix);
     ls->sim_csv_file = fopen(csv_filename, "w+");
     ret = ret && fopen_error(csv_filename, ls->sim_csv_file, "Failed to open csv file, ");
     fclose(input_file);
@@ -1045,25 +1045,27 @@ bool output_log_file(FILE *sim_log_file, int frame_num, unsigned long int iter,
 // output to csv:
 // iteration number, simulation time, system energy (per atom?), x1, y1, z1, x2, y2, z2
 // and atom ids at some point
-void log_kmc(FILE *csv_log_file, const unsigned long int mcss, const double sim_time,
+void log_kmc(FILE *csv_log_file, const unsigned long int iter, const double sim_time,
              const double sys_energy, const int uvw1[3], const int uvw2[3], int is_evap)
 {
-    fprintf(csv_log_file, "%lu,", mcss);
+    fprintf(csv_log_file, "%lu,", iter);
     fprintf(csv_log_file, "%lf,", sim_time);
     fprintf(csv_log_file, "%lf,", sys_energy);
     fprintf(csv_log_file, "%d,%d,%d,", uvw1[0], uvw1[1], uvw1[2]);
-    if (is_evap) {
+    if (!is_evap) {
         fprintf(csv_log_file, "%d,%d,%d", uvw2[0], uvw2[1], uvw2[2]);
+    } else {
+        fprintf(csv_log_file, ",,");
     }
     fprintf(csv_log_file, "\n");
 }
 
 // output to csv:
 // MCSS, system energy (per atom?), uvw1, uvw2
-void log_mc(FILE *csv_log_file, const unsigned long int mcss, const double sys_energy,
+void log_mc(FILE *csv_log_file, const unsigned long int iter, const double sys_energy,
             const int uvw1[3], const int uvw2[3])
 {
-    fprintf(csv_log_file, "%lu,", mcss);
+    fprintf(csv_log_file, "%lu,", iter);
     fprintf(csv_log_file, "%lf,", sys_energy);
     fprintf(csv_log_file, "%d,%d,%d,", uvw1[0], uvw1[1], uvw1[2]);
     fprintf(csv_log_file, "%d,%d,%d", uvw2[0], uvw2[1], uvw2[2]);

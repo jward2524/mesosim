@@ -112,12 +112,13 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             update_outdated_transitions(old_u, old_v, old_w, transitioned_atom_idx, ss, se);
         }
 
+        // csv log
+        int uvw1[] = {old_u, old_v, old_w};
+        int uvw2[] = {new_u, new_v, new_w};
+        log_mc(ls->sim_csv_file, ss->iter, ss->total_internal_energy, uvw1, uvw2);
+
         if (ss->iter % ss->atom_cnt == 0) {
             mmc_steps++;
-            // csv log
-            int uvw1[] = {old_u, old_v, old_w};
-            int uvw2[] = {new_u, new_v, new_w};
-            log_mc(ls->sim_csv_file, mmc_steps, ss->total_internal_energy, uvw1, uvw2);
         }
 
         if (ls->analysis_type == ITERATION_INTERVALS) {

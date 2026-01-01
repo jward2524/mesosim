@@ -49,13 +49,7 @@ void test_simulation(void)
     time(&starttime);
     simulation_parameters_from_file(filename, ss, se, ls, temp_log, starttime);
 
-    get_shifts(se);
-    initialize_zones(ss->zone_arr, se);
-    set_primitive_basis(se);
-    initialize_simulation_box(se);
-    initialize_neighbor_offsets(se);
-    initialize_simulation_variables(ss, se);
-    initialize_initial_structure(ss, se, ls);
+    initialize_simulation(ss, se, ls);
 
     perform_simulation(ss, se, ls);
 }
