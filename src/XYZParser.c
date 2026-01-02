@@ -93,7 +93,7 @@ int parse_comment(const char *line, struct KV **outpairs, size_t *outpairs_cnt)
         }
 
         // trim leading whitespace
-        while (*p && isspace((unsigned char)*p))
+        while (*p && isspace((char)*p))
             p++;
         if (!*p)
             break;
@@ -104,7 +104,7 @@ int parse_comment(const char *line, struct KV **outpairs, size_t *outpairs_cnt)
 
         // scan until next unquoted whitespace -> token
         while (*p) {
-            unsigned char c = p[0];
+            char c = p[0];
             if ((c == '\'') || (c == '"')) {
                 if (!in_quote) {
                     in_quote = c;
@@ -151,7 +151,7 @@ int parse_comment(const char *line, struct KV **outpairs, size_t *outpairs_cnt)
         memcpy(token, t_start, len);
         token[len] = '\0';
         for (int i = 0; i < (int)len; i++) {
-            token[i] = tolower(token[i]);
+            token[i] = (char)tolower(token[i]);
         }
 
         // parse lowercase token into key-value pair
@@ -169,8 +169,8 @@ int parse_comment(const char *line, struct KV **outpairs, size_t *outpairs_cnt)
 // mallocs array of PropertyDesc
 int parse_properties_value(const char *propval, PropertyDesc **out_props, int *out_nprops)
 {
-    int nprops_max = 64;
-    int nprops = 0;
+    size_t nprops_max = 64;
+    size_t nprops = 0;
     PropertyDesc *props = (PropertyDesc *)malloc(sizeof(PropertyDesc) * nprops_max);
     if (!props) {
         fprintf(stderr, "Out of memory allocating %zu bytes\n", sizeof(PropertyDesc) * nprops_max);
@@ -180,7 +180,7 @@ int parse_properties_value(const char *propval, PropertyDesc **out_props, int *o
     const char *p = propval;
     while (*p) {
         if (nprops >= nprops_max) {
-            fprintf(stderr, "There too many key-value pairs in comment line - max %d\n",
+            fprintf(stderr, "There too many key-value pairs in comment line - max %zu\n",
                     nprops_max);
             free(props);
             return 1;
@@ -265,7 +265,7 @@ int parse_properties_value(const char *propval, PropertyDesc **out_props, int *o
         return -1;
     }
     *out_props = props;
-    *out_nprops = nprops;
+    *out_nprops = (int)nprops;
     return 0;
 }
 

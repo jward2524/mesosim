@@ -54,13 +54,20 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         // select transition
         // use multiple calls to rand() to allow selection from all possible transitions, not
         // only limited to RAND_MAX
-        long long int mult = LLONG_MAX / (long long int)RAND_MAX;
-        long long int llrand = 0;
-        for (long long int i = 0; i < mult; i++) {
-            llrand += rand();
+        long long int extended_rand = 0;
+        if (ss->transition_cnt > RAND_MAX) {
+            int div = (int) floor(ss->transition_cnt / RAND_MAX);
+            int rem = ss->transition_cnt % RAND_MAX;
+            
+            for (int i = 0; i < div; i++) {
+                extended_rand += rand();
+            }
+            extended_rand += (long long)nearbyint(rem * ((double)rand() / RAND_MAX));
+        } else {
+            extended_rand = (long long)(drand() * ss->transition_cnt);
         }
 
-        long long int selected_idx = ((double)llrand / (RAND_MAX * mult)) * ss->transition_cnt;
+        long long int selected_idx = extended_rand;
         Transition *selected_transition = ss->transition_arr[selected_idx];
 
         // calculate change in energy of system if transition were performed
@@ -102,7 +109,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
 
             adjust_pbc(&new_u, &new_v, &new_w, se);
 
-            int atype = ss->atom_arr[transitioning_atom_idx]->type;
+            unsigned char atype = ss->atom_arr[transitioning_atom_idx]->type;
 
             // moves atom?
             remove_atom(transitioning_atom_idx, ss, se);
@@ -117,7 +124,8 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         int uvw2[] = {new_u, new_v, new_w};
         log_mc(ls->sim_csv_file, ss->iter, ss->total_internal_energy, uvw1, uvw2);
 
-        if (ss->iter % ss->atom_cnt == 0) {
+        if (ss->iter % (unsigned long)ss->atom_cnt == 0) {
+            printf("iteration %ld, time %le\n", ss->iter, ss->elapsed_stime);
             mmc_steps++;
         }
 
@@ -196,10 +204,12 @@ static double calculate_new_energy(const int atom_idx, const int offset_idx,
         // location of neighbor
         int neighbor_idx = atom_at_offset(new_u, new_v, new_w, i, ss->atom_arr, ss->zone_arr, se);
 
-        int atom_type = ss->atom_arr[atom_idx]->type;
-        int neighbor_type = ss->atom_arr[neighbor_idx]->type;
-        int env_idx = get_env_index(i, atom_type, neighbor_type, se);
-        energy += se->nn_energy[env_idx];
+        if (neighbor_idx >= 0){
+            int atom_type = ss->atom_arr[atom_idx]->type;
+            int neighbor_type = ss->atom_arr[neighbor_idx]->type;
+            int env_idx = get_env_index(i, atom_type, neighbor_type, se);
+            energy += se->nn_energy[env_idx];
+        }
     }
 
     return energy / 2.;

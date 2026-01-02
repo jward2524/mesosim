@@ -1,12 +1,13 @@
-﻿#include "Mesosim.h"
-#include "ErrorM.h"
+﻿#include "ErrorM.h"
 #include "FileIO.h"
 #include "Initialization.h"
-#include "Simulation.h"
 #include "MC.h"
+#include "Simulation.h"
+#include "State.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 time_t starttime = 0;
 time_t endtime = 0;
@@ -15,7 +16,7 @@ struct SimulationState *sim_state;
 struct SimulationEnv *sim_env;
 struct LoggingState *log_state;
 
-void usage()
+void usage(void)
 {
     printf("Usage: mesosim [FILE]\n"
            "Execute the mesosim KMC simulation program, with FILE as the input file\n"
@@ -101,6 +102,7 @@ int main(int argc, char *argv[])
         break;
     default:
         fprintf(stderr, "Flavor %d not recognized, no simulation performed", sim_env->flavor);
+        sim_error = 1;
         break;
     }
 

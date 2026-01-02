@@ -36,7 +36,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     int selected_transition_idx;
     int transitioning_atom_idx, transition_jump_vector;
     int transitioned_atom_idx; // changed from nan bc keyword
-    int atype;
+    unsigned char atype;
 
     prev_stime = ss->elapsed_stime;
 
@@ -317,7 +317,7 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
 {
 
     int nonzero_rate_cnt = 0;
-    double sum_of_rate_populations = 0.0;
+    // double sum_of_rate_populations = 0.0;
     ss->frequency_sum = 0.0;
 
     double rate_const;
@@ -340,7 +340,7 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
             r->k = rate_const;
             r->frequency = r->k * (double)r->transition_count;
             ss->frequency_sum += r->frequency;
-            sum_of_rate_populations += r->transition_count;
+            // sum_of_rate_populations += r->transition_count;
 
             ss->transition_probability.rate_arr_index[nonzero_rate_cnt] = rate_idx;
             ++nonzero_rate_cnt;
@@ -408,7 +408,7 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss,
     int start_config[MAXIMUM_NUMBER_OF_NEIGHBORS]; // -1 if empty, type if filled
     int end_config[MAXIMUM_NUMBER_OF_NEIGHBORS];
 
-    unsigned char *atom_env = (unsigned char *)calloc(se->num_nn_types, sizeof(unsigned char));
+    unsigned char *atom_env = (unsigned char *)calloc((size_t)se->num_nn_types, sizeof(unsigned char));
     // unsigned char env_hash[se->num_nn_levels * se->num_bond_types];
 
     // update neighbors
@@ -482,7 +482,7 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss,
 
     // create transitions to each unoccupied neighbor
     int final_config_neighbor_cnt;
-    for (int i = 0; i < se->num_transition_vectors; ++i) {
+    for (unsigned char i = 0; i < se->num_transition_vectors; ++i) {
         // if unoccupied, consider transition
         if (ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] == -1) {
             // end_config is only used to identify the transitions that are functionally
@@ -518,7 +518,7 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss,
         }
         // evaporation is considered to be last in se->transition_vectors
         // (not really in array but uses that index number)
-        add_to_transition_list(rate_idx, atom_idx, se->num_transition_vectors, ss, se);
+        add_to_transition_list(rate_idx, atom_idx, (unsigned char)se->num_transition_vectors, ss, se);
     }
 
     free(atom_env);
@@ -538,7 +538,7 @@ int get_rate(unsigned char *atom_env, int final_config_neighbor_cnt, unsigned ch
     int env_cmp, evap_cmp, finalcnt_cmp;
 
     for (int i = 0; i < ss->rate_cnt; ++i) {
-        env_cmp = memcmp(ss->rate_arr[i].atom_env, atom_env, se->num_nn_types);
+        env_cmp = memcmp(ss->rate_arr[i].atom_env, atom_env, (size_t)se->num_nn_types);
         env_cmp = env_cmp == 0;
         evap_cmp = ss->rate_arr[i].is_evaporation == is_evaporation;
         finalcnt_cmp = ss->rate_arr[i].final_config_neighbor_cnt == final_config_neighbor_cnt;
@@ -561,14 +561,14 @@ int create_new_rate(unsigned char *atom_env, int final_config_neighbor_cnt,
     Rate *r = &ss->rate_arr[ss->rate_cnt];
     r->transition_start_idx = ss->transition_cnt;
     r->transition_count = 0;
-    r->atom_env = (unsigned char *)malloc(se->num_nn_types * sizeof(unsigned char));
-    memcpy(r->atom_env, atom_env, se->num_nn_types * sizeof(unsigned char));
+    r->atom_env = (unsigned char *)malloc((size_t)se->num_nn_types * sizeof(unsigned char));
+    memcpy(r->atom_env, atom_env, (size_t)se->num_nn_types * sizeof(unsigned char));
     r->is_evaporation = is_evaporation;
     r->final_config_neighbor_cnt = final_config_neighbor_cnt;
 
     ++ss->rate_cnt;
     if (ss->rate_cnt > se->max_rates) {
-        fprintf(stderr, "Number of rates (%lld) is exceeding set maximum (%lld)", ss->rate_cnt,
+        fprintf(stderr, "Number of rates (%ld) is exceeding set maximum (%ld)", ss->rate_cnt,
                 se->max_rates);
         clean_and_exit(errno);
     }
@@ -582,7 +582,7 @@ int create_new_rate(unsigned char *atom_env, int final_config_neighbor_cnt,
 // add to rate_arr[rate_idx] the atom atom_idx going in direction offset_idx
 // updates transition_arr, rate_arr[rate_idx].transition_count,
 // atom_arr[atom_idx]->transition_indices[offset_idx]
-void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct SimulationState *ss,
+void add_to_transition_list(int rate_idx, int atom_idx, unsigned char offset_idx, struct SimulationState *ss,
                             struct SimulationEnv *se)
 {
     // rate_arr index, atom_arr index, se->transition_vectors index
@@ -597,12 +597,12 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct S
 
     if (ss->transition_arr[ss->transition_cnt] == NULL) {
         // TODO: free mallocs before exiting
-        fprintf(stderr, "Couldn't allocate memory for transition %lld: %s\n", ss->transition_cnt,
+        fprintf(stderr, "Couldn't allocate memory for transition %ld: %s\n", ss->transition_cnt,
                 strerror(errno));
         clean_and_exit(errno);
     }
-    if ((unsigned int)ss->transition_cnt > se->max_transitions) {
-        fprintf(stderr, "More transitions (%lld) than allocated in transition array (%llu)\n",
+    if (ss->transition_cnt > se->max_transitions) {
+        fprintf(stderr, "More transitions (%ld) than allocated in transition array (%lu)\n",
                 ss->transition_cnt, se->max_transitions);
         clean_and_exit(errno);
     }
@@ -647,7 +647,7 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct S
 
     ++ss->transition_cnt;
     if (ss->transition_cnt > se->max_transitions) {
-        fprintf(stderr, "Number of transitions (%lld) is exceeding set maximum (%lld)",
+        fprintf(stderr, "Number of transitions (%ld) is exceeding set maximum (%ld)",
                 ss->transition_cnt, se->max_transitions);
         clean_and_exit(errno);
     }
@@ -661,8 +661,8 @@ void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct S
 // removes atom jumping in the se->transition_vectors[offset_idx] direction
 void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationState *ss)
 {
-    int i;
-    int rate_idx, transition_idx, transition_end_idx;
+    long rate_idx = 0;
+    int transition_idx, transition_end_idx;
 
     // find out what Rate in rate_arr this is
 
@@ -670,7 +670,7 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
         ss->atom_arr[atom_idx]
             ->transition_indices[offset_idx]; // old position on transition list, to be removed
 
-    for (i = 0; i < ss->rate_cnt; ++i)
+    for (long i = 0; i < ss->rate_cnt; ++i)
         if (transition_idx <
             (ss->rate_arr[i].transition_start_idx + ss->rate_arr[i].transition_count)) {
             rate_idx = i;
@@ -683,7 +683,7 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
     // TODO: do these later, after it's been removed and transition_arr has been rearranged
     --ss->transition_cnt;
     if (ss->atom_cnt < 0) {
-        fprintf(stderr, "Number of transitions (%lld) has dropped below zero", ss->transition_cnt);
+        fprintf(stderr, "Number of transitions (%ld) has dropped below zero", ss->transition_cnt);
         clean_and_exit(errno);
     }
 
@@ -694,7 +694,7 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
     // [ ]: wtf is going on here
     if (ss->rate_arr[rate_idx].transition_count == 0) // if list is empty
     {
-        for (i = rate_idx + 1; i < ss->rate_cnt; ++i) {
+        for (long i = rate_idx + 1; i < ss->rate_cnt; ++i) {
             // move rate_arr offsets of larger indicies down one
             --ss->rate_arr[i].transition_start_idx;
 
@@ -723,6 +723,7 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 
         // TODO: use pointers for rate array to eliminate manual copying of attributes
         free(ss->rate_arr[rate_idx].atom_env);
+        long i;
         for (i = rate_idx + 1; i < ss->rate_cnt; ++i) {
             memcpy(&ss->rate_arr[i - 1], &ss->rate_arr[i], sizeof(Rate));
         }
@@ -731,7 +732,7 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 
         --ss->rate_cnt;
         if (ss->rate_cnt < 0) {
-            fprintf(stderr, "Number of rates (%lld) has dropped below zero", ss->rate_cnt);
+            fprintf(stderr, "Number of rates (%ld) has dropped below zero", ss->rate_cnt);
             clean_and_exit(errno);
         }
 
@@ -754,8 +755,8 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 
     // shift all other transition lists
 
-    for (i = rate_idx + 1; i < ss->rate_cnt;
-         ++i) { // ENHANCE: again, looks like the same shit that happens when count==0
+    // ENHANCE: again, looks like the same shit that happens when count==0
+    for (long i = rate_idx + 1; i < ss->rate_cnt; ++i) {
         --ss->rate_arr[i].transition_start_idx;
 
         transition_idx = ss->rate_arr[i].transition_start_idx;
@@ -778,7 +779,7 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
     return;
 }
 
-//
+
 void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 {
     int k, m, n;

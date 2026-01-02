@@ -82,7 +82,7 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
 {
     // holy shit, when not =DISSOLUTION[=1], it breaks some shit heavy
     if (!se->dissolution) {
-        se->is_soluble = (bool *)malloc(se->num_elements * sizeof(bool));
+        se->is_soluble = (bool *)malloc((size_t)se->num_elements * sizeof(bool));
         for (int i = 0; i < se->num_elements; i++) {
             se->is_soluble[i] = false;
         }
@@ -97,16 +97,16 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
     // pow(base, exponent)
     se->max_rates = 0;
     for (int i = 0; i < se->num_nn_levels; i++) {
-        se->max_rates += pow(se->num_bond_types, se->atoms_per_nn_level[i]);
+        se->max_rates += (long int)pow(se->num_bond_types, se->atoms_per_nn_level[i]);
     }
-    se->max_rates = (unsigned long long int) ((1 + se->dissolution) * se->max_rates);
+    se->max_rates = (long int) ((1 + se->dissolution) * se->max_rates);
 
     se->max_atoms = se->lat_range[0] * se->lat_range[1] * se->lat_range[2];
     se->max_transitions = ((se->num_transition_vectors + se->dissolution) * se->max_atoms) + 10;
 
-    ss->atom_arr = (Atom **)malloc(se->max_atoms * sizeof(Atom *));
-    ss->rate_arr = (Rate *)malloc(se->max_rates * sizeof(Rate));
-    ss->transition_arr = (Transition **)malloc(se->max_transitions * sizeof(Transition *));
+    ss->atom_arr = (Atom **)malloc((size_t)se->max_atoms * sizeof(Atom *));
+    ss->rate_arr = (Rate *)malloc((size_t)se->max_rates * sizeof(Rate));
+    ss->transition_arr = (Transition **)malloc((size_t)se->max_transitions * sizeof(Transition *));
 
     // null pointer checks
     if (!ss->atom_arr) {
@@ -122,9 +122,9 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
         clean_and_exit(errno);
     }
 
-    ss->transition_probability.rate_arr_index = (int *)malloc(se->max_rates * sizeof(int));
-    ss->transition_probability.lbound = (double *)malloc(se->max_rates * sizeof(double));
-    ss->transition_probability.ubound = (double *)malloc(se->max_rates * sizeof(double));
+    ss->transition_probability.rate_arr_index = (int *)malloc((size_t)se->max_rates * sizeof(int));
+    ss->transition_probability.lbound = (double *)malloc((size_t)se->max_rates * sizeof(double));
+    ss->transition_probability.ubound = (double *)malloc((size_t)se->max_rates * sizeof(double));
 
     if (!ss->transition_probability.rate_arr_index) {
         perror("Couldn't allocate memory for transition probability rate_arr_index");
@@ -263,8 +263,8 @@ void get_shifts(struct SimulationEnv *se)
 }
 
 // updates rmat
-void set_default_orientation(Atom **atom_arr, int atom_cnt, int lattice_type, double rmat[3][3],
-                             double basis[3][3]) // supposedly for viewing
+// supposedly for viewing
+void set_default_orientation(int lattice_type, double rmat[3][3]) 
 {
     double axis[3], pnormal[3], axis_mag;
     double zero_point[3] = {0., 0., 0.}, a_a[3];
@@ -411,7 +411,7 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
     }
 
     int transition_length;
-    se->atoms_per_nn_level = (int *)malloc(se->num_nn_levels * sizeof(int));
+    se->atoms_per_nn_level = (int *)malloc((size_t)se->num_nn_levels * sizeof(int));
     se->atoms_per_nn_level[0] = se->num_transition_vectors;
     if (se->num_nn_levels == 1) {
         se->num_energy_contributors = se->num_transition_vectors;
@@ -421,7 +421,7 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
     }
     transition_length = se->num_energy_contributors;
 
-    se->transition_vectors = (LatticeVector *)malloc(transition_length * sizeof(LatticeVector));
+    se->transition_vectors = (LatticeVector *)malloc((size_t)transition_length * sizeof(LatticeVector));
     if (!se->transition_vectors) {
         perror("Couldn't allocate memory for jump offset array");
         clean_and_exit(errno);
@@ -429,7 +429,7 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
 
     // opposite_tvectors always only 1st nn
     se->opposite_tvectors =
-        (int *)malloc(se->num_transition_vectors * sizeof(*se->opposite_tvectors));
+        (int *)malloc((size_t)se->num_transition_vectors * sizeof(*se->opposite_tvectors));
     if (!se->opposite_tvectors) {
         perror("Couldn't allocate memory for jump offset array");
         clean_and_exit(errno);
@@ -530,7 +530,7 @@ void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se)
                     type++;
                     bar += se->substrate_composition[type];
                 } while (bar < rand);
-                add_atom(i, j, k, type, NORMAL, ss, se);
+                add_atom(i, j, k, (unsigned char)type, NORMAL, ss, se);
             }
         }
     }
@@ -623,8 +623,6 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
 
     // iterates through the bounding box of the sphere to identify positions in cluster 
     // ENHANCE: only 52% of loops will be successful - make it more efficient
-    int type;
-    double bar;
     for (int u = bblimits_lattice[0][0]; u <= bblimits_lattice[0][1]; u++) {
         for (int v = bblimits_lattice[1][0]; v <= bblimits_lattice[1][1]; v++) {
             for (int w = bblimits_lattice[2][0]; w <= bblimits_lattice[2][1]; w++) {
@@ -644,13 +642,13 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
                     // particle is in bounds
                     random_num = drand();
                     // determining composition of atom to be placed
-                    bar = 0;
-                    type = -1;
+                    double bar = 0;
+                    int type = -1;
                     do {
                         type++;
                         bar += se->substrate_composition[type];
                     } while (bar < random_num);
-                    add_atom(u, v, w, type, NORMAL, ss, se);
+                    add_atom(u, v, w, (unsigned char)type, NORMAL, ss, se);
                 }
             }
         }
@@ -780,11 +778,11 @@ void initialize_simulation_box(struct SimulationEnv *se)
 }
 
 // TODO:
-void smallest_translation(double normal_cart[3], double inv_basis[3][3])
+void smallest_translation(double normal_cart_t[3], double inv_basis[3][3])
 {
     // first, get base conversion
     double normal_lat[3];
-    vecmul(normal_cart, inv_basis, normal_lat);
+    vecmul(normal_cart_t, inv_basis, normal_lat);
 
     // if conversion has decimals, invert them and try to convert to integers
     // if conversion fails, remove whole number from inversion and try to invert again

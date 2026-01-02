@@ -8,7 +8,7 @@
 extern double normal_cart[6][3];
 // extern double normal_lat[6][3];
 
-double drand();
+double drand(void);
 
 int get_env_index(int neighbor_idx, int atom_type, int neighbor_type, struct SimulationEnv *se);
 int get_num_bond_types(int num_elements);

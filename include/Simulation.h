@@ -13,7 +13,7 @@ int get_rate(unsigned char *atom_env, int final_config_neighbor_cnt, unsigned ch
 int create_new_rate(unsigned char *atom_env, int final_config_neighbor_cnt,
                     unsigned char is_evaporation, struct SimulationState *ss,
                     struct SimulationEnv *se);
-void add_to_transition_list(int rate_idx, int atom_idx, int offset_idx, struct SimulationState *ss,
+void add_to_transition_list(int rate_idx, int atom_idx, unsigned char offset_idx, struct SimulationState *ss,
                             struct SimulationEnv *se);
 void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationState *ss);
 void check_system(struct SimulationState *ss, struct SimulationEnv *se);

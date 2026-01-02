@@ -32,7 +32,7 @@ static int int_check(double fvalue, int ireference, double epsilon)
  *
  * @return double random value
  */
-double drand() { return (double)rand() / RAND_MAX; }
+double drand(void) { return (double)rand() / RAND_MAX; }
 
 /**
  * @brief Get the corresponding index in atom_env
@@ -46,7 +46,7 @@ double drand() { return (double)rand() / RAND_MAX; }
 int get_env_index(int offset_idx, int atom_type, int neighbor_type, struct SimulationEnv *se)
 {
     // find nearest-neighbor shell
-    int nn_level;
+    int nn_level = 0;
     int diff = offset_idx;
     for (int j = 0; j < se->num_nn_levels; j++) {
         diff = diff - se->atoms_per_nn_level[j];
@@ -124,7 +124,7 @@ void lattice2int(double fcoords[3], int coords[3], double epsilon)
 {
     for (int dim_idx = 0; dim_idx < 3; dim_idx++) {
         double u = fcoords[dim_idx];
-        int comp = round(u);
+        int comp = (int)round(u);
         int res = int_check(u, comp, epsilon);
         assert(res == 1);
         coords[dim_idx] = comp;
@@ -284,7 +284,7 @@ void check_pbc(int *u, int *v, int *w, double basis[3][3])
     for (int side = 0; side < 6; side++) {
         // rhs contains the point being tested (xyz)
         // negative normal gives negative rhs
-        rhs = fdot(normal_cart[side], coords_cart);
+        rhs = (int)fdot(normal_cart[side], coords_cart);
 
         // example conditions to be in region
         // positive normal: 0 (plane) < 2 (coord)
@@ -306,9 +306,9 @@ void check_pbc(int *u, int *v, int *w, double basis[3][3])
 }
 
 // translate a point according to boundary conditions
-void pbc_translate(int coords_lat[3], int translation_vector[3])
+void pbc_translate(int coords_lat[3], int translation_vector_l[3])
 {
-    ivecsum(coords_lat, translation_vector, coords_lat);
+    ivecsum(coords_lat, translation_vector_l, coords_lat);
 }
 
 /**

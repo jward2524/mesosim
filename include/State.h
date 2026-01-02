@@ -20,9 +20,9 @@ struct SimulationEnv {
     unsigned flavor;
     unsigned rand_seed;
 
-    long long int max_atoms;
-    long long int max_transitions;
-    long long int max_rates;
+    long int max_atoms;
+    long int max_transitions;
+    long int max_rates;
 
     int geometry;
     bool evaporation_flag;
@@ -47,6 +47,7 @@ struct SimulationEnv {
     double max_overpotential;
 
     double *substrate_composition;
+    // TODO: change most of these to size_t, if they are used in mallocs
     int num_nn_levels;
     int num_elements;
     int num_bond_types; // Cr(num_elements,2), combination with replacement [two atoms per bond]
@@ -78,7 +79,7 @@ struct SimulationEnv {
 
     // relevant vectors to neighbors
     LatticeVector *transition_vectors;
-    int num_transition_vectors;
+    int num_transition_vectors; // TODO: change to unsigned char to match offset
     int num_energy_contributors; // based on num_nn_levels, directions must be hard-coded
 
     // index in transition_vectors that has the jump in the opposite direction in simulation;
@@ -105,19 +106,19 @@ struct SimulationState {
     // array of Atom structs, initialized in ____
     // contains all atoms in the simulation, in the first atom_cnt indices
     Atom **atom_arr;
-    long long int atom_cnt;
+    long int atom_cnt;
 
     // array of Rate structs, initialized in ____
     // contains all the unique rate constants and number of transitions with that rate const
     Rate *rate_arr;
-    long long int rate_cnt;
+    long int rate_cnt;
 
     // array of Transition structs, initialized in ____
     // the list of possible transitions with atom and transition direction
     // all transitions of same Rate are next to each other
     // they live between rate.transition_start_idx and
     Transition **transition_arr;
-    long long int transition_cnt;
+    long int transition_cnt;
 
     // array of zones, to help find atoms based on position
     Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z]; // TODO: change to malloc

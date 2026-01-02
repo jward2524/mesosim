@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-const int BUFFER_SIZE = 256;
-const int ARR_BUFFER_SIZE = 32;
+const size_t BUFFER_SIZE = 256;
+const size_t ARR_BUFFER_SIZE = 32;
 char outFile[260] = ""; // MAX_PATH variable Windows related, default 260
 
 static void calloc_nnE(struct SimulationEnv *se);
@@ -115,7 +115,7 @@ bool process_in_file(FILE *temp_log, FILE *input_file, struct SimulationState *s
     char parameter_line[BUFFER_SIZE];
     int errnum;
 
-    while (fgets(parameter_line, BUFFER_SIZE, input_file) != NULL) {
+    while (fgets(parameter_line, (int)BUFFER_SIZE, input_file) != NULL) {
         if (strncmp(parameter_line, "restart", 7) == 0) {
             // TODO: restart the simulation from a log file and don't do the rest of the loop
             //  restart also needs an atom position file
@@ -147,12 +147,12 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
     int ret; // fxn return value
     char cmd[BUFFER_SIZE];
     char params[BUFFER_SIZE];
-    
+
     // skip leading whitespace
     char *ptr = line;
     while (isspace(*ptr))
-    ptr++;
-    
+        ptr++;
+
     // line start with command word and is followed by parameters
     // split command word from parameters
     // find end of command (first whitespace or end of string)
@@ -161,7 +161,8 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         ptr++;
 
     // copy command safely
-    size_t cmd_len = ptr - cmd_start;
+    // ptrdiff_t
+    size_t cmd_len = (size_t)(ptr - cmd_start);
     if (cmd_len >= BUFFER_SIZE)
         cmd_len = BUFFER_SIZE - 1;
     memcpy(cmd, line, cmd_len);
@@ -263,8 +264,9 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         }
 
         if (nn_level > se->num_nn_levels) {
-            fprintf(temp_log, "ERROR! NN energy provided for higher level than stated: \
-				%d stated nn levels, energies for %d level provided\n",
+            fprintf(temp_log,
+                    "ERROR! NN energy provided for higher level than stated: %d stated nn levels, "
+                    "energies for %d level provided\n",
                     se->num_nn_levels, nn_level);
             exit(FILE_COMMAND_IGNORED);
         }
@@ -275,7 +277,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         int bond_index = nn_bondidx_2_envidx(nn_level - 1, 0, se->num_bond_types);
         int count = 0;
 
-        int len = strlen(params); // BUFFER_SIZE?
+        size_t len = strlen(params); // BUFFER_SIZE?
         char tok_params[len];
         snprintf(tok_params, len, "%s", params);
 
@@ -385,11 +387,11 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
     } else if (strncmp(cmd, "atomtype", 8) == 0) {
         // this determines which elements are which types of atoms
         char *types[ARR_BUFFER_SIZE];
-        int len = strlen(params); // BUFFER_SIZE?
+        size_t len = strlen(params); // BUFFER_SIZE?
         char tok_params[len];
         snprintf(tok_params, len, "%s", params);
         char *token = strtok(tok_params, " \t");
-        int count = 0;
+        size_t count = 0;
         while (token) {
             types[count] = (char *)malloc(BUFFER_SIZE * sizeof(char));
             sscanf(token, "%s", types[count]);
@@ -402,11 +404,11 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
             exit(FILE_COMMAND_IGNORED);
         }
 
-        se->num_elements = count;
+        se->num_elements = (int)count;
         se->num_bond_types = get_num_bond_types(se->num_elements);
 
         se->atom_names = (char **)calloc(count, sizeof(char *));
-        se->atom_names_cnt = count;
+        se->atom_names_cnt = (int)count;
         if (se->atom_names == NULL) {
             fprintf(stderr, "Couldn't allocate memory for atom names: %s", strerror(errno));
             fprintf(temp_log, "Couldn't allocate memory for atom names: %s", strerror(errno));
@@ -419,11 +421,11 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
     } else if (strncmp(cmd, "dissolution", 11) == 0) {
         // this determines which atoms dissolve
         bool is_soluble[ARR_BUFFER_SIZE];
-        int len = strlen(params); // BUFFER_SIZE?
+        size_t len = strlen(params); // BUFFER_SIZE?
         char tok_params[len];
         snprintf(tok_params, len, "%s", params);
         char *token = strtok(tok_params, " \t");
-        int count = 0;
+        size_t count = 0;
         int soluble_count = 0;
         while (token) {
             char buf[BUFFER_SIZE];
@@ -447,15 +449,15 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
             exit(FILE_COMMAND_IGNORED);
         }
 
-        if ((se->num_elements == 0) || (se->num_elements != count)) {
+        if ((se->num_elements == 0) || (se->num_elements != (int)count)) {
             fprintf(
                 stderr,
-                "Input parsing failed - Values provided (%d) differ from number of elements %d\n",
+                "Input parsing failed - Values provided (%zu) differ from number of elements %d\n",
                 count, se->num_elements);
             exit(FILE_COMMAND_IGNORED);
         }
 
-        int size = count * sizeof(bool);
+        size_t size = count * sizeof(bool);
         se->is_soluble = (bool *)malloc(size);
         if (se->is_soluble == NULL) {
             fprintf(stderr, "Couldn't allocate memory for solubilities: %s", strerror(errno));
@@ -466,11 +468,11 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         se->dissolution = (soluble_count > 0);
     } else if (strncmp(cmd, "composition", 11) == 0) {
         double comp[ARR_BUFFER_SIZE];
-        int len = strlen(params); // BUFFER_SIZE?
+        size_t len = strlen(params); // BUFFER_SIZE?
         char tok_params[len];
         snprintf(tok_params, len, "%s", params);
         char *token = strtok(tok_params, " \t");
-        int count = 0;
+        size_t count = 0;
         double tot = 0;
         double c;
         while (token) {
@@ -487,9 +489,9 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
             exit(FILE_COMMAND_IGNORED);
         }
 
-        if (count != se->num_elements) {
+        if ((int)count != se->num_elements) {
             fprintf(stderr,
-                    "Input parsing failed - More values provided (%d) than number of elements %d\n",
+                    "Input parsing failed - More values provided (%zu) than number of elements %d\n",
                     count, se->num_elements);
             exit(FILE_COMMAND_IGNORED);
         }
@@ -500,14 +502,14 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
             exit(FILE_COMMAND_IGNORED);
         }
 
-        int size = count * sizeof(double);
+        size_t size = count * sizeof(double);
         se->substrate_composition = (double *)malloc(size);
         if (se->substrate_composition == NULL) {
             fprintf(stderr, "Couldn't allocate memory for compositions: %s", strerror(errno));
             fprintf(temp_log, "Couldn't allocate memory for compositions: %s", strerror(errno));
             clean_and_exit(errno);
         }
-        for (int i = 0; i < count; i++)
+        for (size_t i = 0; i < count; i++)
             se->substrate_composition[i] = comp[i];
     } else if (strncmp(cmd, "run", 3) == 0) {
         int cursor;
@@ -526,7 +528,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         if (ss->sim_end_type == SIM_END_BY_STIME) {
             ss->run_stime = strtod(&params[cursor], NULL);
         } else if (ss->sim_end_type == SIM_END_BY_ITERATIONS) {
-            ss->final_iteration = strtol(&params[cursor], NULL, 10);
+            ss->final_iteration = (unsigned long)strtol(&params[cursor], NULL, 10);
         }
     } else if (strncmp(cmd, "flavor", 6) == 0) {
         if (strncmp(params, "KMC", 3) == 0) {
@@ -599,7 +601,7 @@ static int parse_datalog_params(char *params, int cursor, struct LoggingState *l
 static void calloc_nnE(struct SimulationEnv *se)
 {
     se->num_nn_types = se->num_nn_levels * se->num_bond_types;
-    se->nn_energy = (double *)calloc(se->num_nn_types, sizeof(double));
+    se->nn_energy = (double *)calloc((size_t)se->num_nn_types, sizeof(double));
 }
 
 bool process_kmc_file(FILE *temp_log, FILE *input_file, struct SimulationState *ss,
@@ -661,12 +663,12 @@ bool process_kmc_file(FILE *temp_log, FILE *input_file, struct SimulationState *
                &temp_atom.lattice[2], &temp_atom.bsradius);
 
         for (j = 0; j < MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION; ++j) // when do we pick lattice?
-            fscanf(input_file, "%d\t", &temp_atom.transition_indices[j]);
+            fscanf(input_file, "%ld\t", &temp_atom.transition_indices[j]);
 
         for (j = 0; j < MAXIMUM_NUMBER_OF_NEIGHBORS; ++j)
-            fscanf(input_file, "%d\t", &temp_atom.neighbor_atom_idxs[j]);
+            fscanf(input_file, "%ld\t", &temp_atom.neighbor_atom_idxs[j]);
 
-        fscanf(input_file, "%d\t%d\t", &temp_atom.next_atom, &temp_atom.previous_atom);
+        fscanf(input_file, "%ld\t%ld\t", &temp_atom.next_atom, &temp_atom.previous_atom);
 
         for (j = 0; j < MAXIMUM_NUMBER_OF_COSMETIC_BONDS; ++j)
             fscanf(input_file, "%d\t", &tempint);
@@ -705,18 +707,13 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
 {
     // processes file with .xyz format (number of atoms / comment / type x y z)
 
-    char *typenames[8]; // can have up to 7 atom types
-    int ntypes = 0;
-    double xyz_pos[3] = {0.0, 0.0, 0.0};
-    double radius;
-    int atype;
     char command_string[BUFFER_SIZE];
     char *ptr; // for fgets return values
 
     // set_primitive_basis(SC); //is this always true? this should be set somewhere else (beforehand
     // or after?)
 
-    ptr = fgets(command_string, BUFFER_SIZE, input_file);
+    ptr = fgets(command_string, (int)BUFFER_SIZE, input_file);
 
     if (!ptr) {
         fprintf(stderr, "Empty file or read error\n");
@@ -733,9 +730,9 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
     int nremain = (int)natoms_long;
 
     // read comment line
-    int comment_buffer_multiplier = 3;
+    unsigned int comment_buffer_multiplier = 3;
     char comment_string[comment_buffer_multiplier * BUFFER_SIZE];
-    ptr = fgets(comment_string, comment_buffer_multiplier * BUFFER_SIZE, input_file);
+    ptr = fgets(comment_string, (int)(comment_buffer_multiplier * BUFFER_SIZE), input_file);
 
     if (!ptr) {
         fprintf(stderr, "Error on reading the comment/header line\n");
@@ -783,7 +780,7 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
 
     char *tokens[64]; // array of char arrays (array of char pointers)
     for (int i = 0; i < nremain; i++) {
-        ptr = fgets(command_string, BUFFER_SIZE, input_file);
+        ptr = fgets(command_string, (int)BUFFER_SIZE, input_file);
 
         // if EOF or failure
         if (!ptr) {
@@ -812,13 +809,13 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
                  NORMAL, ss, se);
     }
 
-    ptr = fgets(command_string, BUFFER_SIZE, input_file);
+    ptr = fgets(command_string, (int)BUFFER_SIZE, input_file);
     // end of file is not reached
     // or a final blank line is not last line
     if (!feof(input_file)) {
         int nonspace = 0;
         int clean = 0;
-        for (int i = 0; i < strlen(command_string); i++) {
+        for (size_t i = 0; i < strlen(command_string); i++) {
             if (!isspace(command_string[i])) {
                 nonspace++;
             }
@@ -826,7 +823,7 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
         if (nonspace) {
             clean = 1;
         } else {
-            ptr = fgets(command_string, BUFFER_SIZE, input_file);
+            ptr = fgets(command_string, (int)BUFFER_SIZE, input_file);
             if (!feof(input_file)) {
                 clean = 1;
             }
@@ -843,15 +840,12 @@ bool process_xyz_file(FILE *temp_log, FILE *input_file, struct SimulationState *
 
     clean_xyz_structs(kvpairs, kvpairs_cnt, properties);
 
-    fprintf(temp_log, "Successfully read %lld atoms from .xyz file\n", ss->atom_cnt);
+    fprintf(temp_log, "Successfully read %ld atoms from .xyz file\n", ss->atom_cnt);
     // organize(atom, atom_cnt); //???
     return true;
 }
 
-/*******************************************************************************
-*******************************************************************************/
-
-int match_atom_type(char *type, char *types[], int *num_types, FILE *temp_log)
+int match_atom_type(char *type, char *types[], int *num_types)
 {
     for (int i = 0; i < *num_types; ++i) {
         if (strcmp(type, types[i]) == 0)
@@ -915,12 +909,12 @@ bool process_kmx_file(FILE *temp_log, FILE *input_file, struct SimulationState *
 
         // when do we pick lattice?
         for (int j = 0; j < se->num_transition_vectors + se->dissolution; ++j)
-            fscanf(input_file, "%d\t", &temp_atom.transition_indices[j]);
+            fscanf(input_file, "%ld\t", &temp_atom.transition_indices[j]);
 
         for (int j = 0; j < se->num_transition_vectors; ++j)
-            fscanf(input_file, "%d\t", &temp_atom.neighbor_atom_idxs[j]);
+            fscanf(input_file, "%ld\t", &temp_atom.neighbor_atom_idxs[j]);
 
-        fscanf(input_file, "%d\t%d\t", &temp_atom.next_atom, &temp_atom.previous_atom);
+        fscanf(input_file, "%ld\t%ld\t", &temp_atom.next_atom, &temp_atom.previous_atom);
 
         x = temp_atom.lattice[0];
         y = temp_atom.lattice[1];
@@ -1023,20 +1017,20 @@ void input_logging(struct SimulationState *sim_state, struct SimulationEnv *sim_
         break;
     }
 
-    fprintf(log_state->sim_log_file, "Atoms created, %lld total\n", sim_state->atom_cnt);
+    fprintf(log_state->sim_log_file, "Atoms created, %ld total\n", sim_state->atom_cnt);
 }
 
 /*******************************************************************************
 *******************************************************************************/
 bool output_log_file(FILE *sim_log_file, int frame_num, unsigned long int iter,
-                     double elapsed_stime, double temperature, double overpotential, int atom_cnt,
+                     double elapsed_stime, double temperature, double overpotential, long int atom_cnt,
                      double total_internal_energy)
 {
     fprintf(sim_log_file, "![%d]\t", frame_num);
     fprintf(sim_log_file, "iteration = %lu\t", iter);
     fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t",
             elapsed_stime, temperature, overpotential);
-    fprintf(sim_log_file, "atoms = %d\tinternal energy = %lf [eV]\n", atom_cnt,
+    fprintf(sim_log_file, "atoms = %ld\tinternal energy = %lf [eV]\n", atom_cnt,
             total_internal_energy);
     fflush(sim_log_file);
     return true;
@@ -1093,7 +1087,7 @@ bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct Simu
     */
 
     // start with number of atoms
-    fprintf(file, "%lld\n", ss->atom_cnt);
+    fprintf(file, "%ld\n", ss->atom_cnt);
 
     if (is_extended) {
         // using extended XYZ format

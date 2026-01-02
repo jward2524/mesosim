@@ -8,18 +8,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-// [ ]: atoms, zones, orientation
-// Atom_Color atom_color[10];
-
 // updates atom_arr // [ ]: but doesn't update atom_cnt?
-void create_default_atom(int atom_idx, Atom **atom_arr, struct SimulationEnv *se)
+void create_default_atom(long int atom_idx, Atom **atom_arr, struct SimulationEnv *se)
 {
     atom_arr[atom_idx] = (Atom *)malloc(sizeof(Atom));
 
     if (atom_arr[atom_idx] == NULL) {
         // TODO: free mallocs before exiting
-        fprintf(stderr, "ERROR! Not enough memory to allocate atom %d\n", atom_idx);
-        fprintf(stderr, "Couldn't allocate memory for atom %d: %s", atom_idx, strerror(errno));
+        fprintf(stderr, "ERROR! Not enough memory to allocate atom %ld\n", atom_idx);
+        fprintf(stderr, "Couldn't allocate memory for atom %ld: %s", atom_idx, strerror(errno));
         clean_and_exit(errno);
     }
 
@@ -52,7 +49,7 @@ void create_default_atom(int atom_idx, Atom **atom_arr, struct SimulationEnv *se
 // zone_arr[xzone][yzone][zzone].offset, atom_arr[pos]->next_atom/prev_atom,
 // atom_arr[pos]->transition_indices; returns index in atom_arr
 // energy is updated in refresh_transitions
-int add_atom(int u, int v, int w, int type, int special, struct SimulationState *ss,
+long int add_atom(int u, int v, int w, unsigned char type, int special, struct SimulationState *ss,
              struct SimulationEnv *se)
 {
     // XXX: special isn't really used
@@ -62,7 +59,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
 
     int zone_u, zone_v, zone_w;
 
-    long long int pos;
+    long int pos;
 
     // [ ]: this is a sanity check? iterating over atom list instead of zone (like atom_at)
     if (atom_at(u, v, w, ss->atom_arr, ss->zone_arr, se) >= 0) {
@@ -73,7 +70,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
                 ++num_overlapping;
         }
 
-        fprintf(stderr, "ERROR! Unable to add atom %lld; %d other atoms found at (%d, %d, %d)\n",
+        fprintf(stderr, "ERROR! Unable to add atom %ld; %d other atoms found at (%d, %d, %d)\n",
                 ss->atom_cnt, num_overlapping, u, v, w);
         // ss->simulation_should_kill_itself = true;
         clean_and_exit(1);
@@ -83,7 +80,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
     // allocate memory pointed to by the last element of the atom list
     pos = ss->atom_cnt; // position in atom array, presumably
     if (pos > se->max_atoms) {
-        fprintf(stderr, "More atoms (%lld) than allocated in atom array (%lld)\n", pos,
+        fprintf(stderr, "More atoms (%ld) than allocated in atom array (%ld)\n", pos,
                 se->max_atoms);
         clean_and_exit(1);
     }
@@ -91,7 +88,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
     ++ss->atom_cnt;
 
     if (ss->atom_cnt > se->max_atoms) {
-        fprintf(stderr, "Number of atoms (%lld) is exceeding set maximum (%lld)\n", ss->atom_cnt,
+        fprintf(stderr, "Number of atoms (%ld) is exceeding set maximum (%ld)\n", ss->atom_cnt,
                 se->max_atoms);
         clean_and_exit(errno);
     }
@@ -157,10 +154,10 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
         // so update occupied neighbor site according to atom_at(query_u, query_v, query_w);
 
         switch (special) {
-        case NORMAL: // normal bonding considerations
-                     // case NORMAL_NOGO:
-                     // //remainder of cases become irrelevant when removing
-            // burial
+        case NORMAL:
+            // normal bonding considerations
+            // case NORMAL_NOGO:
+            // //remainder of cases become irrelevant when removing burial
             //  set occupied_neighbor_site[i] to the atom at that site.
             //  If there really is an atom there, cross-link it to our new atom.
             ss->atom_arr[pos]->neighbor_atom_idxs[i] =
@@ -174,121 +171,7 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
             }
 
             break;
-        // XXX: commented code
-        /*case RANDOM_SURROUND:								// normal
-        bonding considerations
-                // set occupied_neighbor_site[i] to the atom at that site.
-                // If there really is an atom there, cross-link it to our new atom.
-                atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
 
-                if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-                        atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]]
-        = pos; else atom[pos]->neighbor_atom_idxs[i] = -3; break;
-
-        case BONDED_BELOW:						// bond to bulk - all bonds
-        downward are to buried atoms. atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky,
-        checkz);
-
-                if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-                        atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]]
-        = pos; else if (se->transition_vectors[i].dz < 0) atom[pos]->neighbor_atom_idxs[i] = -2;
-                break;
-
-        case BURIED:
-                atom[pos]->neighbor_atom_idxs[i] = -2;
-                break;
-
-        case RANDOM_BELOW:						// bond to bulk - all bonds
-        downward are to buried atoms. atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky,
-        checkz);
-
-                if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-                        atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]]
-        = pos; else if (se->transition_vectors[i].dz < 0) atom[pos]->neighbor_atom_idxs[i] = -3;
-                break;
-
-        case RANDOM_ALL_AROUND:						// bond to bulk - all bonds
-        downward are to buried atoms. if (i == se->opposite_tvectors[niod])
-                {
-                        atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
-
-                        if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-                                atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]]
-        = pos; else atom[pos]->neighbor_atom_idxs[i] = -1;
-                }
-                else
-                {
-                        atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
-
-                        if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-                                atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]]
-        = pos; else atom[pos]->neighbor_atom_idxs[i] = -3;
-                }
-
-                break;
-
-        case NOT_IN_ONE_DIRECTION:	  	// bond normally to what's actually nearby, -2
-        otherwise, except -1 in the no_bond_direction atom[pos]->neighbor_atom_idxs[i] =
-        atom_at(checkx, checky, checkz);
-
-                if (atom[pos]->neighbor_atom_idxs[i] >= 0)
-                        atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]]
-        = pos; else if (i != no_bond_direction) atom[pos]->neighbor_atom_idxs[i] = -3; break;
-
-        case RANDOM_INWARD:
-                sp[0] = se->transition_vectors[i].dx;
-                sp[1] = se->transition_vectors[i].dy;
-                sp[2] = se->transition_vectors[i].dz;
-
-                vecmul(sp, primitive_basis, spo);
-                unit(spo, spo);
-
-                if (fdot(spo, a_pn) > 0.5)
-                {
-                        // normal points inward, make buried
-
-                        if ((atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz)) >=
-        0) atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] =
-        pos; else atom[pos]->neighbor_atom_idxs[i] = -3; break;
-                }
-                else
-                {
-                        // normal points outward; make NORMAL
-
-                        atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
-
-                        if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-                                atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]]
-        = pos; break;
-                }
-
-        case BURIED_INWARD:
-                sp[0] = se->transition_vectors[i].dx;
-                sp[1] = se->transition_vectors[i].dy;
-                sp[2] = se->transition_vectors[i].dz;
-
-                vecmul(sp, primitive_basis, spo);
-                unit(spo, spo);
-
-                if (fdot(spo, a_pn) > 0.5)
-                {
-                        // normal points inward, make buried
-
-                        if ((atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz)) >=
-        0) atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]] =
-        pos; else atom[pos]->neighbor_atom_idxs[i] = -2; break;
-                }
-                else
-                {
-                        // normal points outward; make NORMAL
-
-                        atom[pos]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
-
-                        if (atom[pos]->neighbor_atom_idxs[i] >= 0 )
-                                atom[atom[pos]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]]
-        = pos; break;
-                }
-        */
         case SPECIFIED: // only used when reading kmc files?
             printf("I'm in specified\n");
             // ss->atom_arr[pos]->neighbor_atom_idxs[i] = temp_atom.neighbor_atom_idxs[i];
@@ -299,44 +182,15 @@ int add_atom(int u, int v, int w, int type, int special, struct SimulationState 
         }
     }
 
-    // printf("bond saturated\n");
-    //  can't evaporate either
-    //  bc bonds saturated, except they aren't? so don't let it evaporate
-    //  ss->atom_arr[pos]->transition_indices[se->num_transition_vectors] = -1;
-
-    // printf("did you cause a problem\n");
-    //  set the hopping rates for this atom
-
     if (special != NORMAL) // rates will be refreshed soon
         return pos;
 
-    // now set the transition rates
-    // ENHANCE: remove this call from function - instead, do it manually when needed (don't need to
-    // call after initializing every atom for the first time) refresh_transitions(pos, ss, se); // [
-    // ]: why doing this now, after every atom, when neighbors haven't been created yet?
-
-    // printf("my transition refreshed\n");
-    //  cycle through the nearest neighbors, refresh their transitions [or bury as necessary]
-
-    // XXX
-    for (int i = 0; i < se->num_transition_vectors; ++i) {
-        // printf("trying to refresh neighbor %d\n", i);
-        atom_idx = ss->atom_arr[pos]->neighbor_atom_idxs[i];
-
-        // if (j >= 0)
-        // {
-        // 	k = refresh_transitions(j, ss, se);	// refresh transitions of neighbor
-        // 	//we don't want to bury our atoms: this is removed from this point
-        // }
-    }
-
-    // printf("neighbor transition refreshed\n");
     return pos;
 }
 
 // copies one element ia of atom list to another point fa
 // used only within the simulation routines, things like bonds, etc. are not copied.
-void move_atom(int initial_idx, int final_idx, Atom **atom_arr,
+void move_atom(long int initial_idx, long int final_idx, Atom **atom_arr,
                Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition **transition_arr,
                struct SimulationEnv *se)
 {
@@ -407,16 +261,13 @@ void move_atom(int initial_idx, int final_idx, Atom **atom_arr,
 /******************************************************************************/
 /******************************************************************************/
 
-void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
+void remove_atom(long int atom_idx, struct SimulationState *ss, struct SimulationEnv *se)
 {
 
     int i, neighbor_idx;
-    int type;
     int xzone, yzone, zzone;
 
     int number_of_new_atoms, number_of_new_random_atoms;
-    int u, v, w;
-    int vc;
 
     double subv;
 
@@ -440,11 +291,11 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
     number_of_new_random_atoms = 0;
 
     // destroy cross-references to neighboring atoms.  Mark this spot as empty
-    // [ ]: isn't this done in refresh_transitions too?
-    type = ss->atom_arr[at]->type;
+    // [ ]: isn't this done in refresh_transitions too
+    // A: yes, but can't call refresh transitions on an atom without an index
 
     for (i = 0; i < se->num_transition_vectors; ++i) {
-        neighbor_idx = ss->atom_arr[at]->neighbor_atom_idxs[i];
+        neighbor_idx = ss->atom_arr[atom_idx]->neighbor_atom_idxs[i];
 
         switch (neighbor_idx) // might be irrelevant if burial removed // [ ]: burried
         {
@@ -455,11 +306,11 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
             // only after we remove the existence of the current atom
 
             new_atom[number_of_new_atoms].u =
-                ss->atom_arr[at]->lattice[0] + se->transition_vectors[i].dx;
+                ss->atom_arr[atom_idx]->lattice[0] + se->transition_vectors[i].dx;
             new_atom[number_of_new_atoms].v =
-                ss->atom_arr[at]->lattice[1] + se->transition_vectors[i].dy;
+                ss->atom_arr[atom_idx]->lattice[1] + se->transition_vectors[i].dy;
             new_atom[number_of_new_atoms].w =
-                ss->atom_arr[at]->lattice[2] + se->transition_vectors[i].dz;
+                ss->atom_arr[atom_idx]->lattice[2] + se->transition_vectors[i].dz;
 
             new_atom[number_of_new_atoms].vc = se->opposite_tvectors[i]; // only allowed direction
 
@@ -473,14 +324,14 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
             // incarnate a random atom
 
             new_random_atom[number_of_new_random_atoms].u =
-                ss->atom_arr[at]->lattice[0] + se->transition_vectors[i].dx;
+                ss->atom_arr[atom_idx]->lattice[0] + se->transition_vectors[i].dx;
             new_random_atom[number_of_new_random_atoms].v =
-                ss->atom_arr[at]->lattice[1] + se->transition_vectors[i].dy;
+                ss->atom_arr[atom_idx]->lattice[1] + se->transition_vectors[i].dy;
             new_random_atom[number_of_new_random_atoms].w =
-                ss->atom_arr[at]->lattice[2] + se->transition_vectors[i].dz;
+                ss->atom_arr[atom_idx]->lattice[2] + se->transition_vectors[i].dz;
 
-            new_random_atom[number_of_new_random_atoms].vc =
-                se->opposite_tvectors[i]; // only allowed direction
+            // only allowed direction
+            new_random_atom[number_of_new_random_atoms].vc = se->opposite_tvectors[i];
 
             adjust_pbc(&new_random_atom[number_of_new_random_atoms].u,
                        &new_random_atom[number_of_new_random_atoms].v,
@@ -490,9 +341,9 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
             break;
 
         case -1:
-            if (ss->atom_arr[at]->transition_indices[i] != -1)
+            if (ss->atom_arr[atom_idx]->transition_indices[i] != -1)
                 // an open site to jump to
-                take_off_transition_list(at, i, ss);
+                take_off_transition_list(atom_idx, i, ss);
             break;
 
         default: // make other atom see this spot as empty
@@ -504,20 +355,20 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
     }
 
     // dissolution - if not soluble, won't have dissolution transition
-    if (se->is_soluble[ss->atom_arr[at]->type]) {
-        if (ss->atom_arr[at]->transition_indices[se->num_transition_vectors] != -1)
-            take_off_transition_list(at, se->num_transition_vectors, ss);
+    if (se->is_soluble[ss->atom_arr[atom_idx]->type]) {
+        if (ss->atom_arr[atom_idx]->transition_indices[se->num_transition_vectors] != -1)
+            take_off_transition_list(atom_idx, se->num_transition_vectors, ss);
     }
 
-    ss->total_internal_energy -= ss->atom_arr[at]->energy;
+    ss->total_internal_energy -= ss->atom_arr[atom_idx]->energy;
 
     // now get rid of the atom.  This is almost equivalent to burying it.
     // find out what zone we're in
 
     // remove the atom from the atom list
 
-    i = ss->atom_arr[at]->next_atom;
-    neighbor_idx = ss->atom_arr[at]->previous_atom;
+    i = ss->atom_arr[atom_idx]->next_atom;
+    neighbor_idx = ss->atom_arr[atom_idx]->previous_atom;
 
     if (neighbor_idx == -1) {
         // this is the first atom on this list, so make the zone point to
@@ -525,8 +376,8 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
         // one element, i should be -1, which will alert the offset that
         // the zone is empty
 
-        findzone(&xzone, &yzone, &zzone, ss->atom_arr[at]->lattice[0], ss->atom_arr[at]->lattice[1],
-                 ss->atom_arr[at]->lattice[2], se);
+        findzone(&xzone, &yzone, &zzone, ss->atom_arr[atom_idx]->lattice[0], ss->atom_arr[atom_idx]->lattice[1],
+                 ss->atom_arr[atom_idx]->lattice[2], se);
         ss->zone_arr[xzone][yzone][zzone].offset = i;
 
         if (i != -1)
@@ -543,13 +394,13 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
     }
 
     // now move atom from the end of the atom list to this spot
-    if (at != (ss->atom_cnt - 1)) {
+    if (atom_idx != (ss->atom_cnt - 1)) {
         // copy_atom(nat-1, at);
-        move_atom((ss->atom_cnt - 1), at, ss->atom_arr, ss->zone_arr, ss->transition_arr, se);
+        move_atom((ss->atom_cnt - 1), atom_idx, ss->atom_arr, ss->zone_arr, ss->transition_arr, se);
 
         for (i = 0; i < occupied_neighbors_cnt; ++i)
             if (occupied_neighbors[i] == (ss->atom_cnt - 1))
-                occupied_neighbors[i] = at;
+                occupied_neighbors[i] = atom_idx;
     }
 
     free(ss->atom_arr[ss->atom_cnt - 1]);
@@ -558,29 +409,15 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
 
     // re-incarnate the buried atoms of the same type
 
-    buried_neighbors_cnt = 0;
+    // buried_neighbors_cnt = 0;
 
     for (i = 0; i < number_of_new_atoms; ++i) {
-        u = new_atom[i].u;
-        v = new_atom[i].v;
-        w = new_atom[i].w;
-
-        vc = new_atom[i].vc;
-
-        buried_neighbors[buried_neighbors_cnt] = reincarnate_atom(u, v, w, type, vc);
-        ++buried_neighbors_cnt;
+        // ++buried_neighbors_cnt;
     }
 
-    reincar_neighbors_cnt = 0;
+    // reincar_neighbors_cnt = 0;
 
     for (i = 0; i < number_of_new_random_atoms; ++i) {
-
-        u = new_random_atom[i].u;
-        v = new_random_atom[i].v;
-        w = new_random_atom[i].w;
-
-        vc = new_random_atom[i].vc;
-
         subv = drand();
 
         double bar = 0;
@@ -589,9 +426,7 @@ void remove_atom(int at, struct SimulationState *ss, struct SimulationEnv *se)
             type++;
             bar += se->substrate_composition[type];
         } while (bar < subv);
-        reincar_neighbors[reincar_neighbors_cnt] = random_reincarnate_atom(u, v, w, type, vc);
-
-        ++reincar_neighbors_cnt;
+        // ++reincar_neighbors_cnt;
     }
 
     return;
@@ -642,109 +477,7 @@ int atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
     return atom_idx;
 }
 
-int reincarnate(int u, int v, int w, int type, int vc, int buried)
-{
-    // int i,j;
-
-    // int xzone, yzone, zzone;
-    // int checkx, checky, checkz;
-
-    // create_default_atom(atom_cnt);
-
-    // // first, find out what zone we're in
-
-    // findzone(&xzone, &yzone, &zzone, u,v,w);
-
-    // if (zone_arr[xzone][yzone][zzone].offset == -1)		// first atom in linked list
-    // {
-    //     zone_arr[xzone][yzone][zzone].offset = atom_cnt;
-    //     atom_arr[atom_cnt]->next_atom = -1;							//
-    //     no valid link
-    // 	atom_arr[atom_cnt]->previous_atom = -1;
-    // }
-    // else		// link this atom to the others in the zone linked list
-    // {
-
-    // 	j = zone_arr[xzone][yzone][zzone].offset;				// first element of
-    // list
-
-    // 	while (atom_arr[j]->next_atom != -1)
-    //   		j = atom_arr[j]->next_atom;
-
-    // 	// j points to the previous last atom in the zone linked list
-    // 	// and points to nothing
-
-    // 	atom_arr[j]->next_atom = atom_cnt;
-    // 	atom_arr[atom_cnt]->previous_atom = j;
-    // 	atom_arr[atom_cnt]->next_atom = -1;
-    // }
-
-    // atom_arr[atom_cnt]->lattice[0] = u;
-    // atom_arr[atom_cnt]->lattice[1] = v;
-    // atom_arr[atom_cnt]->lattice[2] = w;
-
-    // atom_arr[atom_cnt]->type = type;
-
-    // /*atom[atom_cnt]->color[0] = atom_color[type].r; //TODO: might not need this part
-    // atom[atom_cnt]->color[1] = atom_color[type].g;
-    // atom[atom_cnt]->color[2] = atom_color[type].b;*/
-
-    // // find (or set) the occupied neighbor sites
-    // // except for the vc direction, all other spots should be occupied
-
-    // for (i=0;i < num_transition_vectors; ++i)
-    // {
-    // 	checkx = u + se->transition_vectors[i].dx;
-    // 	checky = v + se->transition_vectors[i].dy;
-    // 	checkz = w + se->transition_vectors[i].dz;
-
-    // 	adjust_pbc(&checkx, &checky, &checkz, se);
-
-    // 	atom_arr[atom_cnt]->neighbor_atom_idxs[i] = atom_at(checkx, checky, checkz);
-
-    // 	if ((atom_arr[atom_cnt]->neighbor_atom_idxs[i] == -1)&&(i != vc))
-    // 		atom_arr[atom_cnt]->neighbor_atom_idxs[i] = buried; //-2 for non-random, -3 for
-    // random
-    // }
-
-    // // we'll have to add this atom to the transition lists, and also
-    // // update the configuration of the atoms contained in n[i]
-
-    // for (i=0; i < num_transition_vectors; ++i)
-    // {
-    // 	if (atom_arr[atom_cnt]->neighbor_atom_idxs[i] >= 0)
-    // 		atom_arr[atom_arr[atom_cnt]->neighbor_atom_idxs[i]]->neighbor_atom_idxs[se->opposite_tvectors[i]]
-    // = atom_cnt;
-
-    // 	atom_arr[atom_cnt]->transition_indices[i] = -1;		// initialization
-    // }
-
-    // atom_arr[atom_cnt]->transition_indices[num_transition_vectors] = -1;
-
-    // refresh_transitions(atom_cnt, ss, se);
-
-    // return atom_cnt++; //or do in 2 lines if this doesn't work
-    printf("reincarnated something");
-    clean_and_exit(1);
-    return 1;
-}
-
-/* Maybe want to combine the following 2 methods to just the 1 reincarnate */
-int reincarnate_atom(int u, int v, int w, int type, int vc)
-{
-    return reincarnate(u, v, w, type, vc, -2);
-}
-
-int random_reincarnate_atom(int u, int v, int w, int type, int vc)
-{
-    return reincarnate(u, v, w, type, vc, -3);
-}
-
-/******************************************************************************/
-/******************************************************************************/
-
 // Remove the given atom from the list of atoms
-
 void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv *se)
 {
     int i = 0, j;
@@ -819,7 +552,7 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
     ss->atom_arr[ss->atom_cnt - 1] = NULL;
     --ss->atom_cnt;
     if (ss->atom_cnt < 0) {
-        fprintf(stderr, "Number of atoms (%lld) has dropped below zero", ss->atom_cnt);
+        fprintf(stderr, "Number of atoms (%ld) has dropped below zero", ss->atom_cnt);
         clean_and_exit(errno);
     }
 
@@ -831,7 +564,7 @@ void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv
 
 // Copy all aspects of atom j into atom i
 
-void copy_atom(int i, int j, Atom **atom_arr)
+void copy_atom(long int i, long int j, Atom **atom_arr)
 {
     int m;
 
@@ -909,7 +642,7 @@ void orthomol(Atom **atom_arr, int atom_cnt, double basis[3][3])
 
 void centerg(Atom **atom_arr, int atom_cnt, double centroid[3])
 {
-    static double dax, day, daz;
+    // static double dax, day, daz;
     int i, j;
 
     for (i = 0; i < 3; ++i)
@@ -928,10 +661,6 @@ void centerg(Atom **atom_arr, int atom_cnt, double centroid[3])
     for (j = 0; j < atom_cnt; ++j)
         for (i = 0; i < 3; ++i)
             atom_arr[j]->cartesian[i] = atom_arr[j]->cartesian[i] - centroid[i];
-
-    dax -= centroid[0];
-    day -= centroid[1];
-    daz -= centroid[2];
 
     return;
 }

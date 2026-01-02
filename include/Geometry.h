@@ -41,7 +41,7 @@ typedef struct {
     // list equals the number of directions it may diffuse, plus one more special transition such as
     // dissolution or transformation into another kind of atom
 
-    int transition_indices[MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION]; // add 1 for evaporation
+    long int transition_indices[MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION]; // add 1 for evaporation
 
     // If neighbor_atom_idxs[i] >= 0, the site at vector offset i is occupied by an atom indexed by
     // the value of neighbor_atom_idxs[i].  There are three special cases
@@ -49,14 +49,14 @@ typedef struct {
     //		-2: buried
     //		-3: random
     // position on this list relates to jump vector in se->transition_vectors list
-    int neighbor_atom_idxs[MAXIMUM_NUMBER_OF_NEIGHBORS];
+    long int neighbor_atom_idxs[MAXIMUM_NUMBER_OF_NEIGHBORS];
     // int int_or_ext[MAXIMUM_NUMBER_OF_NEIGHBORS];
 
     // linked list to nearby atoms within the same "zone" (macroscopic region of space)
     // by including this information, finding nearby atoms is greatly speeded up.
 
-    int next_atom;
-    int previous_atom;
+    long int next_atom;
+    long int previous_atom;
     // XXX: commented code - related to visualization
     // information about drawing bonds to nearby atoms.  this is purely visual, or "cosmetic" and
     // does not affect the simulation.  In fact, the first thing the simulation will do is kill any
@@ -121,7 +121,7 @@ typedef struct {
 } TransProb;
 
 typedef struct {
-    int offset; // atom array index of first element in this linked list
+    long int offset; // atom array index of first element in this linked list
 } Zone;
 
 typedef struct {

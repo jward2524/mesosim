@@ -1,7 +1,6 @@
 #ifndef MESOSIM_H
 #define MESOSIM_H
 
-#include "State.h"
-#include <time.h>
+// only here to make makefile easier
 
 #endif // MESOSIM_H
