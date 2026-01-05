@@ -248,7 +248,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         int uvw1[] = {old_x, old_y, old_z};
         // lastxyzt will have old values if it wasn't diffusion
         int uvw2[] = {lastxt, lastyt, lastzt};
-        log_kmc(ls->sim_csv_file, ss->iter, ss->elapsed_stime, ss->total_internal_energy, uvw1, uvw2, is_evaporation);
+        log_kmc(ls->sim_csv_file, ss->iter, ss->elapsed_stime, ss->total_internal_energy, uvw1,
+                uvw2, is_evaporation);
 
         if (checkpoint_reached) {
             // organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); //replaced but do i really
@@ -385,10 +386,14 @@ void update_outdated_transitions(int old_x, int old_y, int old_z, int transition
 
         // refresh neighbors of moved-to site
         for (int i = 0; i < se->num_energy_contributors; i++) {
-            int neighbor_idx = ss->atom_arr[transitioned_atom_idx]->neighbor_atom_idxs[i];
+            int x = ss->atom_arr[transitioned_atom_idx]->lattice[0];
+            int y = ss->atom_arr[transitioned_atom_idx]->lattice[1];
+            int z = ss->atom_arr[transitioned_atom_idx]->lattice[2];
+            int neighbor_idx = atom_at_offset(x, y, z, i, ss->atom_arr, ss->zone_arr, se);
 
-            if (neighbor_idx >= 0)
+            if (neighbor_idx >= 0) {
                 refresh_transitions(neighbor_idx, ss, se);
+            }
         }
     }
 }
@@ -408,7 +413,8 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss,
     int start_config[MAXIMUM_NUMBER_OF_NEIGHBORS]; // -1 if empty, type if filled
     int end_config[MAXIMUM_NUMBER_OF_NEIGHBORS];
 
-    unsigned char *atom_env = (unsigned char *)calloc((size_t)se->num_nn_types, sizeof(unsigned char));
+    unsigned char *atom_env =
+        (unsigned char *)calloc((size_t)se->num_nn_types, sizeof(unsigned char));
     // unsigned char env_hash[se->num_nn_levels * se->num_bond_types];
 
     // update neighbors
@@ -475,50 +481,49 @@ int refresh_transitions(int atom_idx, struct SimulationState *ss,
         get_initial_configuration(atom_idx, se->num_transition_vectors, ss->atom_arr, start_config);
 
     // skip calculating a rate of a fully coordinated atom
-    if (intial_config_neighbor_cnt == se->num_transition_vectors) {
-        free(atom_env);
-        return atom_rates_cnt;
-    }
+    if (intial_config_neighbor_cnt != se->num_transition_vectors) {
+        // create transitions to each unoccupied neighbor
+        int final_config_neighbor_cnt;
+        for (unsigned char i = 0; i < se->num_transition_vectors; ++i) {
+            // if unoccupied, consider transition
+            if (ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] == -1) {
+                // end_config is only used to identify the transitions that are functionally
+                // evaporations (no neighbors in end configuration)
+                final_config_neighbor_cnt =
+                    get_final_configuration(atom_idx, i, ss, se, end_config);
 
-    // create transitions to each unoccupied neighbor
-    int final_config_neighbor_cnt;
-    for (unsigned char i = 0; i < se->num_transition_vectors; ++i) {
-        // if unoccupied, consider transition
-        if (ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] == -1) {
-            // end_config is only used to identify the transitions that are functionally
-            // evaporations (no neighbors in end configuration)
-            final_config_neighbor_cnt = get_final_configuration(atom_idx, i, ss, se, end_config);
+                if (final_config_neighbor_cnt <= 1) {
+                    // transition in this direction leaves stray atom
+                    // or leads to pair climbs
+                    // these types are handled by evaporation
+                    continue;
+                }
 
-            if (final_config_neighbor_cnt <= 1) {
-                // transition in this direction leaves stray atom
-                // or leads to pair climbs
-                // these types are handled by evaporation
-                continue;
+                ++atom_rates_cnt;
+
+                rate_idx = get_rate(atom_env, final_config_neighbor_cnt, 0, ss, se);
+                if (rate_idx == -1) {
+                    // if rate doesn't already exist, make new one
+                    rate_idx = create_new_rate(atom_env, final_config_neighbor_cnt, 0, ss, se);
+                }
+                add_to_transition_list(rate_idx, atom_idx, i, ss, se);
             }
+        }
 
-            ++atom_rates_cnt;
-
-            rate_idx = get_rate(atom_env, final_config_neighbor_cnt, 0, ss, se);
+        // if atom type is soluble, add dissolution transition
+        if (atom_soluble) {
+            // dissolution / evaporation transition
+            final_config_neighbor_cnt = -1;
+            rate_idx = get_rate(atom_env, final_config_neighbor_cnt, 1, ss, se);
             if (rate_idx == -1) {
                 // if rate doesn't already exist, make new one
-                rate_idx = create_new_rate(atom_env, final_config_neighbor_cnt, 0, ss, se);
+                rate_idx = create_new_rate(atom_env, final_config_neighbor_cnt, 1, ss, se);
             }
-            add_to_transition_list(rate_idx, atom_idx, i, ss, se);
+            // evaporation is considered to be last in se->transition_vectors
+            // (not really in array but uses that index number)
+            add_to_transition_list(rate_idx, atom_idx, (unsigned char)se->num_transition_vectors,
+                                   ss, se);
         }
-    }
-
-    // if atom type is soluble, add dissolution transition
-    if (atom_soluble) {
-        // dissolution / evaporation transition
-        final_config_neighbor_cnt = -1;
-        rate_idx = get_rate(atom_env, final_config_neighbor_cnt, 1, ss, se);
-        if (rate_idx == -1) {
-            // if rate doesn't already exist, make new one
-            rate_idx = create_new_rate(atom_env, final_config_neighbor_cnt, 1, ss, se);
-        }
-        // evaporation is considered to be last in se->transition_vectors
-        // (not really in array but uses that index number)
-        add_to_transition_list(rate_idx, atom_idx, (unsigned char)se->num_transition_vectors, ss, se);
     }
 
     free(atom_env);
@@ -582,8 +587,8 @@ int create_new_rate(unsigned char *atom_env, int final_config_neighbor_cnt,
 // add to rate_arr[rate_idx] the atom atom_idx going in direction offset_idx
 // updates transition_arr, rate_arr[rate_idx].transition_count,
 // atom_arr[atom_idx]->transition_indices[offset_idx]
-void add_to_transition_list(int rate_idx, int atom_idx, unsigned char offset_idx, struct SimulationState *ss,
-                            struct SimulationEnv *se)
+void add_to_transition_list(int rate_idx, int atom_idx, unsigned char offset_idx,
+                            struct SimulationState *ss, struct SimulationEnv *se)
 {
     // rate_arr index, atom_arr index, se->transition_vectors index
     // 0 2920 11
@@ -778,7 +783,6 @@ void take_off_transition_list(int atom_idx, int offset_idx, struct SimulationSta
 
     return;
 }
-
 
 void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 {
