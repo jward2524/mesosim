@@ -25,7 +25,8 @@ debug := 1
 # ?= means 'if not yet defined'
 # variables used in definitions with '=' are expanded on use
 BASE_CFLAGS = -std=c11
-DEBUG_CFLAGS = -ggdb -O0 -Wall -Wextra -Wpedantic -DTEST -DUNITY_INCLUDE_CONFIG_H -I$(TEST_PATH)
+DEBUG_CFLAGS = -ggdb -O0 -Wall -Wextra -Wpedantic -Wshadow -Wconversion\
+-DTEST -DUNITY_INCLUDE_CONFIG_H -I$(TEST_PATH)
 OPT_CFLAGS = -O2
 ALL_CFLAGS += $(CFLAGS) $(BASE_CFLAGS)
 
