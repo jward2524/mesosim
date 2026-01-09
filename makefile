@@ -124,7 +124,7 @@ test: $(BUILD_PATHS) $(RESULTS)
 $(RESULTS_PATH)/%.txt: $(BUILD_PATH)/%.$(TARGET_EXTENSION)
 	./$< > $@ 2>&1
 
-$(BUILD_PATH)/Test%.$(TARGET_EXTENSION): $(OBJS_MMAIN) $(OBJ_PATH)/Test%.o $(OBJ_PATH)/%.o $(OBJ_PATH)/unity.o #$(DEPEND_PATH)Test%.d
+$(BUILD_PATH)/Test%.$(TARGET_EXTENSION): $(OBJS_MMAIN) $(OBJ_PATH)/Test%.o $(OBJ_PATH)/%.o $(OBJ_PATH)/unity.o $(OBJ_PATH)/TUtils.o #$(DEPEND_PATH)Test%.d
 	$(LINK) -o $@ $^ $(ALL_LDFLAGS)
 
 # :: (double-colon) rules are independent from each other

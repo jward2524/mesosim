@@ -3,12 +3,13 @@
 #include "FileIO.h"
 #include "Initialization.h"
 #include "State.h"
+#include "TUtils.h"
 #include "Utils.h"
 #include "unity.h"
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 struct SimulationState *ss;
 struct SimulationEnv *se;
@@ -17,15 +18,6 @@ FILE *temp_log;
 FILE *atom_file;
 FILE *input_file;
 const char temp_name[] = "temp.log";
-
-static void fopen_error(const char *filename, FILE *file)
-{
-    if (file == NULL) {
-        printf("ERROR! Couldn't open output file %s\n", filename);
-        fprintf(stderr, "Couldn't open file %s: %s\n", filename, strerror(errno));
-        TEST_ASSERT_NOT_NULL_MESSAGE(file, "File not opened - check result file");
-    }
-}
 
 // before and after each test (each RUN_TEST)
 void setUp(void)

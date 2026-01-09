@@ -1,25 +1,18 @@
-#include "MC.h"
+#include "ErrorM.h"
 #include "FileIO.h"
+#include "Initialization.h"
+#include "MC.h"
 #include "State.h"
 #include "unity.h"
-#include "ErrorM.h"
-#include "Initialization.h"
-#include <string.h>
+#include "TUtils.h"
 #include <stdlib.h>
+#include <string.h>
 
 struct SimulationState *ss;
 struct SimulationEnv *se;
 struct LoggingState *ls;
 FILE *temp_log;
 const char temp_name[] = "temp.log";
-
-static void fopen_error(const char *filename, FILE *file)
-{
-    if (file == NULL) {
-        fprintf(stderr, "Couldn't open file %s: %s\n", filename, strerror(errno));
-        TEST_ASSERT_NOT_NULL_MESSAGE(file, "File not opened - check result file");
-    }
-}
 
 void setUp(void)
 {

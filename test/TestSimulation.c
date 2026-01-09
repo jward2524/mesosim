@@ -3,25 +3,17 @@
 #include "Initialization.h"
 #include "Simulation.h"
 #include "State.h"
+#include "TUtils.h"
 #include "unity.h"
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 struct SimulationState *ss;
 struct SimulationEnv *se;
 struct LoggingState *ls;
 FILE *temp_log;
 const char temp_name[] = "temp.log";
-
-static void fopen_error(const char *filename, FILE *file)
-{
-    if (file == NULL) {
-        printf("ERROR! Couldn't open output file %s\n", filename);
-        fprintf(stderr, "Couldn't open file %s: %s\n", filename, strerror(errno));
-        TEST_ASSERT_NOT_NULL_MESSAGE(file, "File not opened - check result file");
-    }
-}
 
 void setUp(void)
 {
