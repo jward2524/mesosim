@@ -92,7 +92,9 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     int old_x, old_y, old_z;
     // int neighbor_x, neighbor_y, neighbor_z, neighbor_idx;
 
-    printf("Setup complete, iteration start\n");
+    if (ls->verbose)
+        printf("Setup complete, iteration start\n");
+    
     while (!simulation_end) {
         ss->iter++;
 
@@ -228,8 +230,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         // end of updating rates
 
         // after iteration, log if necessary
-        if (ss->iter % 100 == 0)
-            printf("iteration %ld, time %le\n", ss->iter, ss->elapsed_stime);
+        if (ls->verbose && (ss->iter % 200 == 0))
+            printf("Iteration %ld, time %le\n", ss->iter, ss->elapsed_stime);
 
         // TODO: implement the checkpoint lists
         if ((ls->analysis_type == REGULAR_TIME_INTERVALS) ||
@@ -274,7 +276,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
             }
 
             // record the elapsed time in a file here
-            printf("writing file %d: elapsed_stime = %le\n", ls->framenum, ss->elapsed_stime);
+            printf("Writing file %d: iteration = %lu, elapsed_stime = %le\n", ls->framenum,
+                   ss->iter, ss->elapsed_stime);
             output_log_file(ls->sim_log_file, ls->framenum, ss->iter, ss->elapsed_stime,
                             ss->temperature, ss->overpotential, ss->atom_cnt,
                             ss->total_internal_energy);

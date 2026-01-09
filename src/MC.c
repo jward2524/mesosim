@@ -124,8 +124,8 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         int uvw2[] = {new_u, new_v, new_w};
         log_mc(ls->sim_csv_file, ss->iter, ss->total_internal_energy, uvw1, uvw2);
 
-        if (ss->iter % (unsigned long)ss->atom_cnt == 0) {
-            printf("iteration %ld, time %le\n", ss->iter, ss->elapsed_stime);
+        if (ls->verbose && (ss->iter % (unsigned long)ss->atom_cnt == 0)) {
+            printf("iteration %ld, energy %le\n", ss->iter, ss->total_internal_energy);
             mmc_steps++;
         }
 

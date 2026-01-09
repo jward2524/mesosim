@@ -161,6 +161,8 @@ struct LoggingState {
     double *log_list; // list of log checkpoints
     int log_list_len; // length of log_list
     int framenum;     // counter/id for number of outputs / output files
+
+    int verbose;
 };
 
 #endif // COMMON_H
