@@ -5,9 +5,9 @@ composition 0.75 0.25
 struct FCC
 nnlevels 1
 1nne 0.15 0.15 0.15
-datalog iteration interval 200
+datalog iteration interval 1
 temp 293
 seed 12345
 flavor MC
-run iteration 2000
+run iteration 2
 output test/output/mc.out

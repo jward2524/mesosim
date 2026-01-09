@@ -122,7 +122,7 @@ void test_process_in_file_cluster(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ss->run_stime, "simulation max runtime");
     TEST_ASSERT_EQUAL_INT_MESSAGE(2000, ss->final_iteration, "simulation max iteration");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->log_interval, "log interval");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_log_checkpoint, "log interval");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_log_checkpoint, "log checkpoint");
 }
 
 void test_process_in_file_mc(void) {
@@ -166,7 +166,9 @@ void test_process_in_file_mc(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.25, se->substrate_composition[1], "Au composition");
     TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, ss->sim_end_type, "simulation end type");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ss->run_stime, "simulation max runtime");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(2000, ss->final_iteration, "simulation max iteration");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, ss->final_iteration, "simulation max iteration");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->log_interval, "log interval");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->next_log_checkpoint, "log checkpoint");
 }
 
 void test_process_xyz_file(void)
