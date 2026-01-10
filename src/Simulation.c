@@ -218,7 +218,13 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 
         if (se->overpotential_ramp_rate != 0.0) {
             cur_stime = ss->elapsed_stime;
-            ss->overpotential += (cur_stime - prev_stime) * se->overpotential_ramp_rate;
+            if (ss->overpotential < se->max_overpotential) {
+                ss->overpotential += (cur_stime - prev_stime) * se->overpotential_ramp_rate;
+                if (ss->overpotential > se->max_overpotential)
+                    ss->overpotential = se->max_overpotential;
+            } else if (ss->overpotential > se->max_overpotential) {
+                fprintf(stderr, "Overpotential exceeded maximum\n");
+            }
             prev_stime = ss->elapsed_stime;
         }
 
@@ -982,11 +988,8 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
 /******************************************************************************/
 /******************************************************************************/
 // calculates surface diffusion rate using atom environment
-double calculate_surf_diffusion_rate(
-    unsigned char *atom_env, int final_config_neighbor_cnt,
-    double temperature, // system temperature
-    // double overpotential,					// system overpotential
-    struct SimulationEnv *se)
+double calculate_surf_diffusion_rate(unsigned char *atom_env, int final_config_neighbor_cnt,
+                                     double temperature, struct SimulationEnv *se)
 {
     // ENHANCE: pass the number of nearest neighbors? (best practice)
     double energy = 0.0;
@@ -1027,9 +1030,7 @@ double calculate_surf_diffusion_rate(
 /******************************************************************************/
 /******************************************************************************/
 // calculates evaporation rate using atom environment
-double calculate_evaporation_rate(unsigned char *atom_env,
-                                  double temperature,   // system temperature
-                                  double overpotential, // system overpotential
+double calculate_evaporation_rate(unsigned char *atom_env, double temperature, double overpotential,
                                   struct SimulationEnv *se)
 {
     double energy = 0.0;
@@ -1045,6 +1046,4 @@ double calculate_evaporation_rate(unsigned char *atom_env,
 
     // dissolution/evaporation equation
     return 1e4 * exp(-(energy - overpotential) / (kBoltz * temperature));
-
-    return 0;
 }
