@@ -3,8 +3,8 @@
 #include "Initialization.h"
 #include "MC.h"
 #include "State.h"
-#include "unity.h"
 #include "TUtils.h"
+#include "unity.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,13 +19,14 @@ void setUp(void)
     ss = calloc(1, sizeof(struct SimulationState));
     se = calloc(1, sizeof(struct SimulationEnv));
     ls = calloc(1, sizeof(struct LoggingState));
-    
+
     set_state(ss, se, ls);
     temp_log = fopen(temp_name, "w");
     fopen_error(temp_name, temp_log);
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
     free(ss);
     free(se);
     free(ls);
@@ -40,10 +41,11 @@ void test_simulation(void)
     time_t starttime = 0;
     time(&starttime);
     simulation_parameters_from_file(filename, ss, se, ls, temp_log, starttime);
-    
+
     initialize_simulation(ss, se, ls);
 
     perform_metropolis_mc(ss, se, ls);
+    TEST_PASS();
 }
 
 int main(void)

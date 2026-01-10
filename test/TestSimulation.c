@@ -44,6 +44,7 @@ void test_simulation(void)
     initialize_simulation(ss, se, ls);
 
     perform_simulation(ss, se, ls);
+    TEST_PASS();
 }
 
 int main(void)
