@@ -115,7 +115,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         }
 
         // pick the type of transition to occur
-        transition_type_probability = drand();
+        double rand1 = drand();
+        transition_type_probability = rand1;
         rate_skip = ss->rate_cnt / 2;
         j = rate_skip;
 
@@ -133,8 +134,9 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 // [ ]: third random number?
                 // picks a type of transition and then which atom that has that transition will it
                 // act on?
+                double rand2 = drand();
                 selected_transition_idx = ss->rate_arr[k].transition_start_idx +
-                                          (int)(drand() * (double)ss->rate_arr[k].transition_count);
+                                          (int)(rand2 * (double)ss->rate_arr[k].transition_count);
 
                 // selected_transition_idx gives the location of the transition_arr, which gives
                 // the info about the specific atom
@@ -214,9 +216,17 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         // time passed, then transition occurred
         // whether this is the 1st, 2nd, or 3rd random number in the loop affects the time (diff
         // random numbers)
-        ss->elapsed_stime -= log(drand()) / ss->frequency_sum;
 
-        if (se->overpotential_ramp_rate != 0.0) {
+        // random number can't be zero, else increment=inf
+        double rand3 = ((double)rand() + 1) / (RAND_MAX + 1);
+        double stime_increment = -log(rand3) / ss->frequency_sum;
+        ss->elapsed_stime += stime_increment;
+        if (isinf(ss->elapsed_stime)) {
+            fprintf(stderr, "Simulation time went infinite\n");
+            clean_and_exit(1);
+        }
+
+        if (se->overpotential_ramp_rate > 0.0) {
             cur_stime = ss->elapsed_stime;
             if (ss->overpotential < se->max_overpotential) {
                 ss->overpotential += (cur_stime - prev_stime) * se->overpotential_ramp_rate;
