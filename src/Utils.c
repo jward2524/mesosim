@@ -32,7 +32,10 @@ static int int_check(double fvalue, int ireference, double epsilon)
  *
  * @return double random value
  */
-double drand(void) { return (double)rand() / RAND_MAX; }
+double drand(void)
+{
+    return (double)rand() / RAND_MAX;
+}
 
 /**
  * @brief Get the corresponding index in atom_env

@@ -8,6 +8,8 @@ UseTab: Never
 BreakBeforeBraces: Linux
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
+# AllowShortBlocksOnASingleLine: Empty
 IndentCaseLabels: false
 
 ColumnLimit: 100
