@@ -50,6 +50,9 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
     int new_u, new_v, new_w;
     while (mmc_steps <= ss->final_iteration) {
         ss->iter++;
+        if (ss->iter % (unsigned long)ss->atom_cnt == 0) {
+            mmc_steps++;
+        }
 
         // select transition
         // use multiple calls to rand() to allow selection from all possible transitions, not
@@ -119,15 +122,20 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             update_outdated_transitions(old_u, old_v, old_w, transitioned_atom_idx, ss, se);
         }
 
+        if (ls->verbose) {
+            if (ss->iter % 200 == 0) {
+                printf("Iteration %ld, energy %le", ss->iter, ss->total_internal_energy);
+            }
+            if (ss->iter % (unsigned long)ss->atom_cnt == 0) {
+                printf("MMC %lu, iteration %ld, energy %le\n", mmc_steps, ss->iter,
+                       ss->total_internal_energy);
+            }
+        }
+
         // csv log
         int uvw1[] = {old_u, old_v, old_w};
         int uvw2[] = {new_u, new_v, new_w};
         log_mc(ls->sim_csv_file, ss->iter, ss->total_internal_energy, uvw1, uvw2);
-
-        if (ls->verbose && (ss->iter % (unsigned long)ss->atom_cnt == 0)) {
-            printf("iteration %ld, energy %le\n", ss->iter, ss->total_internal_energy);
-            mmc_steps++;
-        }
 
         if (ls->analysis_type == ITERATION_INTERVALS) {
             checkpoint_reached = fabs(ls->next_log_checkpoint - (double)mmc_steps) < FABS_TOL;
@@ -145,7 +153,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             }
 
             // record iteration in a file here
-            printf("writing file %d: MC steps = %lu\n", ls->framenum, mmc_steps);
+            printf("Writing file %d: MC steps = %lu\n", ls->framenum, mmc_steps);
             output_log_file(ls->sim_log_file, ls->framenum, mmc_steps, ss->elapsed_stime,
                             ss->temperature, ss->overpotential, ss->atom_cnt,
                             ss->total_internal_energy);
