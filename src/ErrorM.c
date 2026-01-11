@@ -37,8 +37,9 @@ void clean_and_exit(int error)
     // errors during: reading input, m/calloc'ing, usage(), making temp file
 
     if (error != 0) {
-        fprintf(log_state->sim_log_file, "Error encountered - check stderr\n");
-        fprintf(log_state->sim_log_file, "%s", strerror(errno));
+        FILE *fp = log_state->sim_log_file ? log_state->sim_log_file : stderr;
+        fprintf(fp, "Error encountered - check stderr\n");
+        fprintf(fp, "%s", strerror(errno));
     }
 
     // SimulationState
