@@ -218,7 +218,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         // random numbers)
 
         // random number can't be zero, else increment=inf
-        double rand3 = ((double)rand() + 1) / (RAND_MAX + 1);
+        double rand3 = ((double)rand() + 1) / ((double)RAND_MAX + 1);
         double stime_increment = -log(rand3) / ss->frequency_sum;
         ss->elapsed_stime += stime_increment;
         if (isinf(ss->elapsed_stime)) {
