@@ -48,11 +48,14 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
     int checkpoint_reached = 0;
     int old_u, old_v, old_w;
     int new_u, new_v, new_w;
-    while (mmc_steps <= ss->final_iteration) {
+    int simulation_run = 1;
+    while (simulation_run) {
         ss->iter++;
         if (ss->iter % (unsigned long)ss->atom_cnt == 0) {
             mmc_steps++;
         }
+        // flag if this iteration is the last iteration
+        simulation_run = ss->iter < (ss->final_iteration * (unsigned long)ss->atom_cnt);
 
         // select transition
         // use multiple calls to rand() to allow selection from all possible transitions, not
@@ -65,7 +68,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             for (int i = 0; i < div; i++) {
                 extended_rand += rand();
             }
-            extended_rand += (long long)nearbyint(rem * ((double)rand() / RAND_MAX));
+            extended_rand += (long long)nearbyint(rem * drand());
         } else {
             extended_rand = (long long)(drand() * ss->transition_cnt);
         }
@@ -161,7 +164,6 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
 
             ++ls->framenum;
         }
-
     }
 
     // write elapsed_stime to mark finish
