@@ -114,7 +114,7 @@ typedef struct {
 } LatticeVector;
 
 typedef struct {
-    int *rate_arr_index; // contains the index in rate_arr that gives the upper bound after adding
+    long *rate_arr_index; // contains the index in rate_arr that gives the upper bound after adding
                          // frequency/frequency_sum
     double *lbound;      // ENHANCE: lbound and ubound are duplicating info
     double *ubound;      // lbound[i] = ubound[i+1] ?
@@ -127,8 +127,8 @@ typedef struct {
 typedef struct {
     double k;         // rate constant
     double frequency; // rate constant * transition_count, for calculating probability of transition
-    int transition_count;     // number (count?) of this type of transition in transition_arr
-    int transition_start_idx; // index to first item in transition_arr with this rate constant
+    long int transition_count;     // number (count?) of this type of transition in transition_arr
+    long int transition_start_idx; // index to first item in transition_arr with this rate constant
     unsigned char *atom_env;  // can't do variable length arrays, so pointer instead
     // pointer to start of 2D array num_bond_types*idx1 + idx2
 
@@ -143,7 +143,7 @@ typedef struct {
 
 typedef struct {
     // index in atom_arr of atom that the transition belongs to / is acting on
-    int atom_idx;
+    long atom_idx;
 
     // this represents the translation vector, as the index in se->transition_vectors
     unsigned char offset_idx;

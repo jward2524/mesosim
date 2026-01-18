@@ -122,7 +122,7 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
         clean_and_exit(errno);
     }
 
-    ss->transition_probability.rate_arr_index = (int *)malloc((size_t)se->max_rates * sizeof(int));
+    ss->transition_probability.rate_arr_index = (long *)malloc((size_t)se->max_rates * sizeof(long));
     ss->transition_probability.lbound = (double *)malloc((size_t)se->max_rates * sizeof(double));
     ss->transition_probability.ubound = (double *)malloc((size_t)se->max_rates * sizeof(double));
 

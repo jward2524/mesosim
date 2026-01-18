@@ -5,9 +5,9 @@
 
 long int add_atom(int u, int v, int w, unsigned char type, int special, struct SimulationState *ss,
              struct SimulationEnv *se);
-int atom_at(int u, int v, int w, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z],
+long atom_at(int u, int v, int w, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z],
             struct SimulationEnv *se);
-int atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
+long atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
                    Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
 void remove_atom(long int at, struct SimulationState *ss, struct SimulationEnv *se);
 void move_atom(long int ia, long int fa, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z],
@@ -29,11 +29,11 @@ void copy_atom(long int i, long int j, Atom **atom_arr);
 void create_default_atom(long int atom_idx, Atom **atom_arr,
                          struct SimulationEnv *se); // can modify this to remove things like color?
 
-void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv *se);
+void kill_atom(long atom_number, struct SimulationState *ss, struct SimulationEnv *se);
 
-int get_initial_configuration(int atom_index, int num_transition_vectors, Atom **atom_arr,
+int get_initial_configuration(long atom_index, int num_transition_vectors, Atom **atom_arr,
                               int initial_config[]);
-int get_final_configuration(int at, int offset_idx, struct SimulationState *ss,
+int get_final_configuration(long at, int offset_idx, struct SimulationState *ss,
                             struct SimulationEnv *se, int final_config[]);
 
 #endif // ATOMS_H

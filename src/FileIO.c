@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -88,7 +89,7 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
 
     if (strcmp(outFile, "") == 0) {
         // an out file name was not defined in input file, use starttime as filename
-        sprintf(outFile, "%lld.out", starttime);
+        sprintf(outFile, "%jd.out", (intmax_t)starttime);
         fprintf(temp_log, "Log file name not defined, using \"%s\"", outFile);
     }
 
@@ -609,7 +610,7 @@ bool process_kmc_file(FILE *temp_log, FILE *input_file, struct SimulationState *
 {
     int newnat;
 
-    int i, j, k;
+    long i, j, k;
     int x, y, z;
 
     // system and zone size

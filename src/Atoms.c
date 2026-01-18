@@ -50,12 +50,12 @@ void create_default_atom(long int atom_idx, Atom **atom_arr, struct SimulationEn
 // atom_arr[pos]->transition_indices; returns index in atom_arr
 // energy is updated in refresh_transitions
 long int add_atom(int u, int v, int w, unsigned char type, int special, struct SimulationState *ss,
-             struct SimulationEnv *se)
+                  struct SimulationEnv *se)
 {
     // XXX: special isn't really used
     // lattice coordinates xyz, atom type, special atom conditions (unused)
 
-    int atom_idx;
+    long int atom_idx;
 
     int zone_u, zone_v, zone_w;
 
@@ -231,7 +231,7 @@ void move_atom(long int initial_idx, long int final_idx, Atom **atom_arr,
         zone_arr[zone_u][zone_v][zone_w].offset = final_idx;
     }
 
-    int n2;
+    long n2;
     for (int n = 0; n < se->num_transition_vectors; ++n) {
         atom_arr[final_idx]->neighbor_atom_idxs[n] = atom_arr[initial_idx]->neighbor_atom_idxs[n];
 
@@ -264,7 +264,7 @@ void move_atom(long int initial_idx, long int final_idx, Atom **atom_arr,
 void remove_atom(long int atom_idx, struct SimulationState *ss, struct SimulationEnv *se)
 {
 
-    int i, neighbor_idx;
+    long neighbor_idx;
     int xzone, yzone, zzone;
 
     int number_of_new_atoms, number_of_new_random_atoms;
@@ -278,7 +278,7 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
         int vc;
     } new_atom[MAXIMUM_NUMBER_OF_NEIGHBORS], new_random_atom[MAXIMUM_NUMBER_OF_NEIGHBORS];
 
-    int occupied_neighbors[MAXIMUM_NUMBER_OF_NEIGHBORS];
+    long occupied_neighbors[MAXIMUM_NUMBER_OF_NEIGHBORS];
     int occupied_neighbors_cnt = 0;
 
     int buried_neighbors[MAXIMUM_NUMBER_OF_NEIGHBORS];
@@ -294,7 +294,7 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
     // [ ]: isn't this done in refresh_transitions too
     // A: yes, but can't call refresh transitions on an atom without an index
 
-    for (i = 0; i < se->num_transition_vectors; ++i) {
+    for (int i = 0; i < se->num_transition_vectors; ++i) {
         neighbor_idx = ss->atom_arr[atom_idx]->neighbor_atom_idxs[i];
 
         switch (neighbor_idx) // might be irrelevant if burial removed // [ ]: burried
@@ -367,7 +367,7 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
 
     // remove the atom from the atom list
 
-    i = ss->atom_arr[atom_idx]->next_atom;
+    long next_atom_idx = ss->atom_arr[atom_idx]->next_atom;
     neighbor_idx = ss->atom_arr[atom_idx]->previous_atom;
 
     if (neighbor_idx == -1) {
@@ -378,18 +378,18 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
 
         findzone(&xzone, &yzone, &zzone, ss->atom_arr[atom_idx]->lattice[0], ss->atom_arr[atom_idx]->lattice[1],
                  ss->atom_arr[atom_idx]->lattice[2], se);
-        ss->zone_arr[xzone][yzone][zzone].offset = i;
+        ss->zone_arr[xzone][yzone][zzone].offset = next_atom_idx;
 
-        if (i != -1)
-            ss->atom_arr[i]->previous_atom = -1;
+        if (next_atom_idx != -1)
+            ss->atom_arr[next_atom_idx]->previous_atom = -1;
     } else {
-        if (i == -1) {
+        if (next_atom_idx == -1) {
             // this is the last element on this list,
             ss->atom_arr[neighbor_idx]->next_atom = -1;
         } else {
             // atom is embedded in the list, nothing special needs be done
-            ss->atom_arr[i]->previous_atom = neighbor_idx;
-            ss->atom_arr[neighbor_idx]->next_atom = i;
+            ss->atom_arr[next_atom_idx]->previous_atom = neighbor_idx;
+            ss->atom_arr[neighbor_idx]->next_atom = next_atom_idx;
         }
     }
 
@@ -398,7 +398,7 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
         // copy_atom(nat-1, at);
         move_atom((ss->atom_cnt - 1), atom_idx, ss->atom_arr, ss->zone_arr, ss->transition_arr, se);
 
-        for (i = 0; i < occupied_neighbors_cnt; ++i)
+        for (int i = 0; i < occupied_neighbors_cnt; ++i)
             if (occupied_neighbors[i] == (ss->atom_cnt - 1))
                 occupied_neighbors[i] = atom_idx;
     }
@@ -411,13 +411,13 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
 
     // buried_neighbors_cnt = 0;
 
-    for (i = 0; i < number_of_new_atoms; ++i) {
+    for (int i = 0; i < number_of_new_atoms; ++i) {
         // ++buried_neighbors_cnt;
     }
 
     // reincar_neighbors_cnt = 0;
 
-    for (i = 0; i < number_of_new_random_atoms; ++i) {
+    for (int i = 0; i < number_of_new_random_atoms; ++i) {
         subv = drand();
 
         double bar = 0;
@@ -437,11 +437,11 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
 
 // checks if there is an atom at point (u, v, w) in lattice coordinates.
 // If so, it returns the index to that atom.  If not, return -1.
-int atom_at(int u, int v, int w, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z],
+long atom_at(int u, int v, int w, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z],
             struct SimulationEnv *se)
 {
     // lattice coordinates uvw
-    int i;
+    long i;
     int zone_u, zone_v, zone_w;
 
     adjust_pbc(&u, &v, &w, se);
@@ -462,7 +462,7 @@ int atom_at(int u, int v, int w, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONE
     return -1; // no atom
 }
 
-int atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
+long atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
                    Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se)
 {
     int neighbor_x, neighbor_y, neighbor_z;
@@ -473,14 +473,14 @@ int atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
 
     adjust_pbc(&neighbor_x, &neighbor_y, &neighbor_z, se);
 
-    int atom_idx = atom_at(neighbor_x, neighbor_y, neighbor_z, atom_arr, zone_arr, se);
+    long atom_idx = atom_at(neighbor_x, neighbor_y, neighbor_z, atom_arr, zone_arr, se);
     return atom_idx;
 }
 
 // Remove the given atom from the list of atoms
-void kill_atom(int atom_number, struct SimulationState *ss, struct SimulationEnv *se)
+void kill_atom(long atom_number, struct SimulationState *ss, struct SimulationEnv *se)
 {
-    int i = 0, j;
+    long i = 0, j;
     int xzone, yzone, zzone;
 
     // section about cosmetic bonds removed
@@ -666,11 +666,12 @@ void centerg(Atom **atom_arr, int atom_cnt, double centroid[3])
 }
 
 // fills initial_config with type of neighbors to atom[at], before jump offset_idx
-int get_initial_configuration(int atom_idx, int num_transition_vectors, Atom **atom_arr,
+int get_initial_configuration(long atom_idx, int num_transition_vectors, Atom **atom_arr,
                               int initial_config[]) // atom_idx is position in atom list, offset_idx
                                                     // is index in se->transition_vectors
 {
-    int offset_idx, neighbor_idx;
+    int offset_idx;
+    long neighbor_idx;
     int nn_count = 0; // nearest-neighbors
 
     for (offset_idx = 0; offset_idx < num_transition_vectors; ++offset_idx) {
@@ -690,11 +691,11 @@ int get_initial_configuration(int atom_idx, int num_transition_vectors, Atom **a
 
 // fills initial_config with type of neighbors to atom[at], after jump in direction
 // se->transition_vectors[offset_idx]
-int get_final_configuration(int at, int offset_idx, struct SimulationState *ss,
+int get_final_configuration(long at, int offset_idx, struct SimulationState *ss,
                             struct SimulationEnv *se,
                             int final_config[]) // offset_idx is position in offset list
 {
-    int atom_idx;
+    long atom_idx;
     int new_x, new_y, new_z;
 
     int nn_cnt = 0; // nearest-neighbors

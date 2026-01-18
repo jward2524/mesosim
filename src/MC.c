@@ -11,7 +11,7 @@
 
 static const double FABS_TOL = 1e-6;
 
-static double calculate_new_energy(const int atom_idx, const int offset_idx,
+static double calculate_new_energy(const long atom_idx, const int offset_idx,
                                    struct SimulationState *ss, struct SimulationEnv *se);
 
 /**
@@ -62,22 +62,22 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         // only limited to RAND_MAX
         long long int extended_rand = 0;
         if (ss->transition_cnt > RAND_MAX) {
-            int div = (int) floor(ss->transition_cnt / RAND_MAX);
-            int rem = ss->transition_cnt % RAND_MAX;
+            int div = (int) floor((double)ss->transition_cnt / RAND_MAX);
+            int rem = (int) (ss->transition_cnt % RAND_MAX);
             
             for (int i = 0; i < div; i++) {
                 extended_rand += rand();
             }
             extended_rand += (long long)nearbyint(rem * drand());
         } else {
-            extended_rand = (long long)(drand() * ss->transition_cnt);
+            extended_rand = (long long)nearbyint(drand() * (double)ss->transition_cnt);
         }
 
         long long int selected_idx = extended_rand;
         Transition *selected_transition = ss->transition_arr[selected_idx];
 
         // calculate change in energy of system if transition were performed
-        int transitioning_atom_idx = selected_transition->atom_idx;
+        long transitioning_atom_idx = selected_transition->atom_idx;
         int offset_idx = selected_transition->offset_idx;
 
         double possible_energy = calculate_new_energy(transitioning_atom_idx, offset_idx, ss, se);
@@ -119,7 +119,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
 
             // moves atom?
             remove_atom(transitioning_atom_idx, ss, se);
-            int transitioned_atom_idx = add_atom(new_u, new_v, new_w, atype, NORMAL, ss, se);
+            long transitioned_atom_idx = add_atom(new_u, new_v, new_w, atype, NORMAL, ss, se);
 
             // update system
             update_outdated_transitions(old_u, old_v, old_w, transitioned_atom_idx, ss, se);
@@ -191,7 +191,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
  * @param se SimulationEnv
  * @return double energy contribution of the atom after the move
  */
-static double calculate_new_energy(const int atom_idx, const int offset_idx,
+static double calculate_new_energy(const long atom_idx, const int offset_idx,
                                    struct SimulationState *ss, struct SimulationEnv *se)
 {
     // a mix of get_final_configuration and refresh_transitions
@@ -212,7 +212,7 @@ static double calculate_new_energy(const int atom_idx, const int offset_idx,
         }
 
         // location of neighbor
-        int neighbor_idx = atom_at_offset(new_u, new_v, new_w, i, ss->atom_arr, ss->zone_arr, se);
+        long neighbor_idx = atom_at_offset(new_u, new_v, new_w, i, ss->atom_arr, ss->zone_arr, se);
 
         if (neighbor_idx >= 0){
             int atom_type = ss->atom_arr[atom_idx]->type;
