@@ -1058,10 +1058,11 @@ void log_kmc(FILE *csv_log_file, const unsigned long int iter, const double sim_
 // output to csv:
 // MCSS, system energy (per atom?), uvw1, uvw2
 void log_mc(FILE *csv_log_file, const unsigned long int iter, const double sys_energy,
-            const int performed, const int uvw1[3], const int uvw2[3])
+            const double deltaE, const int performed, const int uvw1[3], const int uvw2[3])
 {
     fprintf(csv_log_file, "%lu,", iter);
     fprintf(csv_log_file, "%lf,", sys_energy);
+    fprintf(csv_log_file, "%lf,", deltaE);
     fprintf(csv_log_file, "%d,", performed);
     fprintf(csv_log_file, "%d,%d,%d,", uvw1[0], uvw1[1], uvw1[2]);
     fprintf(csv_log_file, "%d,%d,%d", uvw2[0], uvw2[1], uvw2[2]);

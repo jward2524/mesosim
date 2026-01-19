@@ -150,7 +150,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         // csv log
         int uvw1[] = {old_u, old_v, old_w};
         int uvw2[] = {new_u, new_v, new_w};
-        log_mc(ls->sim_csv_file, ss->iter, ss->total_internal_energy, perform_flag, uvw1, uvw2);
+        log_mc(ls->sim_csv_file, ss->iter, ss->total_internal_energy, deltaE, perform_flag, uvw1, uvw2);
 
         if (ls->analysis_type == ITERATION_INTERVALS) {
             checkpoint_reached = fabs(ls->next_log_checkpoint - (double)mmc_steps) < FABS_TOL;
