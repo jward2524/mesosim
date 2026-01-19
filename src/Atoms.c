@@ -188,7 +188,8 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
     return pos;
 }
 
-// copies one element ia of atom list to another point fa
+// copies atom from initial_idx of atom_arr to final_idx
+// atom does not change position within simulation, only position in atom_arr
 // used only within the simulation routines, things like bonds, etc. are not copied.
 void move_atom(long int initial_idx, long int final_idx, Atom **atom_arr,
                Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition **transition_arr,
@@ -231,6 +232,7 @@ void move_atom(long int initial_idx, long int final_idx, Atom **atom_arr,
         zone_arr[zone_u][zone_v][zone_w].offset = final_idx;
     }
 
+    // copy diffusion transitions
     long n2;
     for (int n = 0; n < se->num_transition_vectors; ++n) {
         atom_arr[final_idx]->neighbor_atom_idxs[n] = atom_arr[initial_idx]->neighbor_atom_idxs[n];
@@ -247,12 +249,15 @@ void move_atom(long int initial_idx, long int final_idx, Atom **atom_arr,
         }
     }
 
-    atom_arr[final_idx]->transition_indices[se->num_transition_vectors] =
-        atom_arr[initial_idx]->transition_indices[se->num_transition_vectors];
-
-    if (atom_arr[final_idx]->transition_indices[se->num_transition_vectors] >= 0) {
-        transition_arr[atom_arr[final_idx]->transition_indices[se->num_transition_vectors]]
-            ->atom_idx = final_idx;
+    // copy evaportation transition
+    if (se->is_soluble[atom_arr[initial_idx]->type]) {
+        atom_arr[final_idx]->transition_indices[se->num_transition_vectors] =
+            atom_arr[initial_idx]->transition_indices[se->num_transition_vectors];
+    
+        if (atom_arr[final_idx]->transition_indices[se->num_transition_vectors] >= 0) {
+            long transition_idx = atom_arr[final_idx]->transition_indices[se->num_transition_vectors];
+            transition_arr[transition_idx]->atom_idx = final_idx;
+        }
     }
 
     return;
