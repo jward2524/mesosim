@@ -61,16 +61,24 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         // use multiple calls to rand() to allow selection from all possible transitions, not
         // only limited to RAND_MAX
         long long int extended_rand = 0;
+        double drand0 = -1;
+        int rand0 = -1;
         if (ss->transition_cnt > RAND_MAX) {
             int div = (int) floor((double)ss->transition_cnt / RAND_MAX);
             int rem = (int) (ss->transition_cnt % RAND_MAX);
             
             for (int i = 0; i < div; i++) {
-                extended_rand += rand();
+                rand0 = rand();
+                extended_rand += rand0;
             }
-            extended_rand += (long long)nearbyint(rem * drand());
+            drand0 = drand();
+            extended_rand += (long long)nearbyint(rem * drand0);
         } else {
-            extended_rand = (long long)nearbyint(drand() * (double)ss->transition_cnt);
+            drand0 = drand();
+            extended_rand = (long long)nearbyint(drand0 * (double)ss->transition_cnt);
+            if (extended_rand == ss->transition_cnt) {
+                extended_rand -= 1;
+            }
         }
 
         long long int selected_idx = extended_rand;
