@@ -17,18 +17,12 @@ struct LoggingState *ls;
 FILE *temp_log;
 FILE *atom_file;
 FILE *input_file;
-const char temp_name[] = "temp.log";
 
 // before and after each test (each RUN_TEST)
 void setUp(void)
 {
-    ss = calloc(1, sizeof(struct SimulationState));
-    se = calloc(1, sizeof(struct SimulationEnv));
-    ls = calloc(1, sizeof(struct LoggingState));
-
-    set_state(ss, se, ls);
-    temp_log = fopen(temp_name, "w");
-    fopen_error(temp_name, temp_log);
+    initialize_states(&ss, &se, &ls);
+    init_temp(&temp_log);
 }
 
 void tearDown(void)
@@ -37,14 +31,8 @@ void tearDown(void)
 
     // fclose needs to be here in case a test fails
     fclose(temp_log);
-    if (atom_file) {
-        fclose(atom_file);
-        atom_file = NULL;
-    }
-    if (input_file) {
-        fclose(input_file);
-        input_file = NULL;
-    }
+    close_if_exists(&atom_file);
+    close_if_exists(&input_file);
 }
 
 void test_parse_input_systemsize(void)
@@ -68,7 +56,8 @@ void test_parse_input_geometry_file(void)
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/sheet.xyz", se->atoms_filename, "atoms filename");
 }
 
-void test_process_in_file_cluster(void) {
+void test_process_in_file_cluster(void)
+{
     char filename[] = "test/cluster_nns.in";
     input_file = fopen(filename, "r");
     fopen_error(filename, input_file);
@@ -95,7 +84,8 @@ void test_process_in_file_cluster(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(ITERATION_INTERVALS, ls->analysis_type, "logging analysis type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->framenum, "frame number");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, se->lattice_type, "lattice type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors, "number of transition vectors");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors,
+                                  "number of transition vectors");
     TEST_ASSERT_EQUAL_INT_MESSAGE(GEOMETRY_CLUSTER, se->geometry, "geometry type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->sheet_thickness, "sheet thickness");
     TEST_ASSERT_EQUAL_INT_MESSAGE(32, se->cluster_radius, "cluster radius");
@@ -117,7 +107,8 @@ void test_process_in_file_cluster(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_log_checkpoint, "log checkpoint");
 }
 
-void test_process_in_file_mc(void) {
+void test_process_in_file_mc(void)
+{
     char filename[] = "test/mc.in";
     input_file = fopen(filename, "r");
     fopen_error(filename, input_file);
@@ -141,7 +132,8 @@ void test_process_in_file_mc(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(ITERATION_INTERVALS, ls->analysis_type, "logging analysis type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->framenum, "frame number");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, se->lattice_type, "lattice type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors, "number of transition vectors");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors,
+                                  "number of transition vectors");
     TEST_ASSERT_EQUAL_INT_MESSAGE(GEOMETRY_CLUSTER, se->geometry, "geometry type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->sheet_thickness, "sheet thickness");
     TEST_ASSERT_EQUAL_INT_MESSAGE(32, se->cluster_radius, "cluster radius");
@@ -230,11 +222,7 @@ int main(void)
 
     UNITY_END();
 
-    if (temp_log) {
-        int rc = remove(temp_name);
-        if (rc)
-            perror("Remove of test log file failed");
-    }
+    clean_temp(&temp_log);
 
     // return 0 else makefile throws error
     return 0;

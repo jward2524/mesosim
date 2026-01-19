@@ -12,24 +12,16 @@ struct SimulationState *ss;
 struct SimulationEnv *se;
 struct LoggingState *ls;
 FILE *temp_log;
-const char temp_name[] = "temp.log";
 
 void setUp(void)
 {
-    ss = calloc(1, sizeof(struct SimulationState));
-    se = calloc(1, sizeof(struct SimulationEnv));
-    ls = calloc(1, sizeof(struct LoggingState));
-
-    set_state(ss, se, ls);
-    temp_log = fopen(temp_name, "w");
-    fopen_error(temp_name, temp_log);
+    initialize_states(&ss, &se, &ls);
+    init_temp(&temp_log);
 }
 
 void tearDown(void)
 {
-    free(ss);
-    free(se);
-    free(ls);
+    clean_and_exit(0);
 
     // fclose needs to be here in case a test fails
     fclose(temp_log);
@@ -53,6 +45,8 @@ int main(void)
     UNITY_BEGIN();
     RUN_TEST(test_simulation);
     UNITY_END();
+
+    clean_temp(&temp_log);
 
     // return 0 else makefile throws error
     return 0;

@@ -58,9 +58,10 @@ static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbo
         } else {
             // if no tack, assume it is the filename
             if (*pfilename) {
-                fprintf(stderr, "Only one input file is supported: %s is the second unsupported argument\n", arg);
-            }
-            else {
+                fprintf(stderr,
+                        "Only one input file is supported: %s is the second unsupported argument\n",
+                        arg);
+            } else {
                 *pfilename = arg;
             }
         }
@@ -80,11 +81,7 @@ int main(int argc, char *argv[])
     // start the time
     time(&starttime);
 
-    sim_state = calloc(1, sizeof(struct SimulationState));
-    sim_env = calloc(1, sizeof(struct SimulationEnv));
-    log_state = calloc(1, sizeof(struct LoggingState));
-
-    set_state(sim_state, sim_env, log_state);
+    initialize_states(sim_state, sim_env, log_state);
 
     // initialize_lattice_geometry(); //this gets overwritten by info from the input file
     sim_env->geometry = -1; // TODO: need to define in globals!!
@@ -138,7 +135,7 @@ int main(int argc, char *argv[])
 
     if (log_state->verbose)
         printf("Beginning simulation\n");
-    
+
     // perform simulations
     unsigned long sim_error;
     switch (sim_env->flavor) {

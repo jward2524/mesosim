@@ -11,12 +11,33 @@ static struct LoggingState *log_state = NULL;
 
 static void free_if_exists(void **pointer);
 
-// TODO: make setter functions for state variables
 void set_state(struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls)
 {
     sim_state = ss;
     sim_env = se;
     log_state = ls;
+}
+
+void initialize_states(struct SimulationState **ss, struct SimulationEnv **se,
+                        struct LoggingState **ls)
+{
+    *ss = calloc(1, sizeof(struct SimulationState));
+    *se = calloc(1, sizeof(struct SimulationEnv));
+    *ls = calloc(1, sizeof(struct LoggingState));
+    set_state(*ss, *se, *ls);
+
+    if (*ss == NULL) {
+        perror("Couldn't allocate memory for simulation state");
+        clean_and_exit(errno);
+    }
+    if (*se == NULL) {
+        perror("Couldn't allocate memory for simulation environment");
+        clean_and_exit(errno);
+    }
+    if (*ls == NULL) {
+        perror("Couldn't allocate memory for logging state");
+        clean_and_exit(errno);
+    }
 }
 
 // frees pointer only if it isn't NULL and sets pointer to NULL after free
