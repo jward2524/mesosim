@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     // start the time
     time(&starttime);
 
-    initialize_states(sim_state, sim_env, log_state);
+    initialize_states(&sim_state, &sim_env, &log_state);
 
     // initialize_lattice_geometry(); //this gets overwritten by info from the input file
     sim_env->geometry = -1; // TODO: need to define in globals!!
