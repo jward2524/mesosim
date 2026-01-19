@@ -89,13 +89,16 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         double deltaE = 2 * (possible_energy - current_energy);
 
         int perform_flag = 0;
-        // accept transition if deltaE < 0
-        if (deltaE <= 0) {
+        // accept transition if deltaE > 0
+        // > 0 because a bond is positive energy, and more bonds is more stable
+        // sign is opposite of convention; total bond energy is being maximized
+        // ENHANCE: fix sign of energy to follow conventions
+        if (deltaE >= 0) {
             perform_flag = 1;
         }
         // otherwise, accept based on Boltzmann probability
         else {
-            double boltzmann_prob = exp(-1 * deltaE / (kBoltz * ss->temperature));
+            double boltzmann_prob = exp(deltaE / (kBoltz * ss->temperature));
             double random = drand();
             if (random <= boltzmann_prob) {
                 perform_flag = 1;
