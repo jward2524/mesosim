@@ -113,16 +113,17 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             }
         }
 
+        old_u = ss->atom_arr[transitioning_atom_idx]->lattice[0];
+        old_v = ss->atom_arr[transitioning_atom_idx]->lattice[1];
+        old_w = ss->atom_arr[transitioning_atom_idx]->lattice[2];
+
+        new_u = old_u + se->transition_vectors[offset_idx].dx;
+        new_v = old_v + se->transition_vectors[offset_idx].dy;
+        new_w = old_w + se->transition_vectors[offset_idx].dz;
+
         if (perform_flag) {
             // perform transition
             // duplicating what is in perform_simulation
-            old_u = ss->atom_arr[transitioning_atom_idx]->lattice[0];
-            old_v = ss->atom_arr[transitioning_atom_idx]->lattice[1];
-            old_w = ss->atom_arr[transitioning_atom_idx]->lattice[2];
-
-            new_u = old_u + se->transition_vectors[offset_idx].dx;
-            new_v = old_v + se->transition_vectors[offset_idx].dy;
-            new_w = old_w + se->transition_vectors[offset_idx].dz;
 
             adjust_pbc(&new_u, &new_v, &new_w, se);
 
@@ -149,7 +150,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         // csv log
         int uvw1[] = {old_u, old_v, old_w};
         int uvw2[] = {new_u, new_v, new_w};
-        log_mc(ls->sim_csv_file, ss->iter, ss->total_internal_energy, uvw1, uvw2);
+        log_mc(ls->sim_csv_file, ss->iter, ss->total_internal_energy, perform_flag, uvw1, uvw2);
 
         if (ls->analysis_type == ITERATION_INTERVALS) {
             checkpoint_reached = fabs(ls->next_log_checkpoint - (double)mmc_steps) < FABS_TOL;
