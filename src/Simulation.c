@@ -175,7 +175,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                     // if not soluble, then there was an issue somewhere
                     if (!(se->is_soluble[ss->atom_arr[transitioning_atom_idx]->type])) {
                         fprintf(stderr, "Attempting to dissolve an insoluble atom - Terminatin\n");
-                        clean_and_exit(errno);
+                        clean_and_error(errno);
                     }
                     ++ss->total_atoms_dissolved;
                     remove_atom(transitioning_atom_idx, ss, se); // evaporate the atom
@@ -198,14 +198,14 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                     break;
             } else {
                 fprintf(stderr, "Transition decision failed\n");
-                clean_and_exit(1);
+                clean_and_error(1);
             }
         }
 
         // ? only happens iff jump_vector == se->num_transition_vectors? (dissolution?)
         if (!transition_found) {
             fprintf(stderr, "for some reason I didn't transition\n");
-            clean_and_exit(1);
+            clean_and_error(1);
         }
 
         // increment the elapsed time (how much passed before last transition)
@@ -219,7 +219,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         ss->elapsed_stime += stime_increment;
         if (isinf(ss->elapsed_stime)) {
             fprintf(stderr, "Simulation time went infinite\n");
-            clean_and_exit(1);
+            clean_and_error(1);
         }
 
         if (se->overpotential_ramp_rate > 0.0) {
@@ -255,7 +255,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
             if (!checkpoint_reached && (ss->iter > ls->next_log_checkpoint)) {
                 fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing",
                         ss->iter, ls->next_log_checkpoint);
-                clean_and_exit(1);
+                clean_and_error(1);
             }
         }
 
@@ -351,7 +351,7 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
             }
             if (isnan(rate_const)) {
                 fprintf(stderr, "Rate constant is nan\n");
-                clean_and_exit(1);
+                clean_and_error(1);
             }
             r->k = rate_const;
             r->frequency = r->k * (double)r->transition_count;
@@ -374,7 +374,7 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
         current_probability += ss->rate_arr[rate_idx].frequency / ss->frequency_sum;
         if (isnan(current_probability)) {
             fprintf(stderr, "Probability is nan\n");
-            clean_and_exit(1);
+            clean_and_error(1);
         }
         ss->transition_probability.ubound[i] = current_probability;
     }
@@ -590,7 +590,7 @@ long create_new_rate(unsigned char *atom_env, int final_config_neighbor_cnt,
     if (ss->rate_cnt > se->max_rates) {
         fprintf(stderr, "Number of rates (%ld) is exceeding set maximum (%ld)", ss->rate_cnt,
                 se->max_rates);
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     return (ss->rate_cnt - 1);
@@ -616,12 +616,12 @@ void add_to_transition_list(long rate_idx, long atom_idx, unsigned char offset_i
         // TODO: free mallocs before exiting
         fprintf(stderr, "Couldn't allocate memory for transition %ld: %s\n", ss->transition_cnt,
                 strerror(errno));
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     if (ss->transition_cnt > se->max_transitions) {
         fprintf(stderr, "More transitions (%ld) than allocated in transition array (%lu)\n",
                 ss->transition_cnt, se->max_transitions);
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     // what is this
@@ -666,7 +666,7 @@ void add_to_transition_list(long rate_idx, long atom_idx, unsigned char offset_i
     if (ss->transition_cnt > se->max_transitions) {
         fprintf(stderr, "Number of transitions (%ld) is exceeding set maximum (%ld)",
                 ss->transition_cnt, se->max_transitions);
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     return;
@@ -701,7 +701,7 @@ void take_off_transition_list(long atom_idx, int offset_idx, struct SimulationSt
     --ss->transition_cnt;
     if (ss->atom_cnt < 0) {
         fprintf(stderr, "Number of transitions (%ld) has dropped below zero", ss->transition_cnt);
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     // rate_idx points to the current rate list it's on.  decrement the number of atoms in that list
@@ -750,7 +750,7 @@ void take_off_transition_list(long atom_idx, int offset_idx, struct SimulationSt
         --ss->rate_cnt;
         if (ss->rate_cnt < 0) {
             fprintf(stderr, "Number of rates (%ld) has dropped below zero", ss->rate_cnt);
-            clean_and_exit(errno);
+            clean_and_error(errno);
         }
 
         return;

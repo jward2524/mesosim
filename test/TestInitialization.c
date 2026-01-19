@@ -20,7 +20,7 @@ void setUp(void)
 void tearDown(void)
 {
     fclose(temp_log);
-    clean_and_exit(0);
+    clean_and_error(0);
 }
 
 void test_initialize_simulation(void)
@@ -38,7 +38,7 @@ void test_initialize_simulation(void)
     se->nn_energy = (double *)malloc(6 * sizeof(double));
     if (se->nn_energy == NULL) {
         perror("Couldn't allocate memory for nn_energy array");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     se->nn_energy[0] = 0.15;
     se->nn_energy[1] = 0.15;
@@ -60,19 +60,19 @@ void test_initialize_simulation(void)
     se->atom_names = (char **)malloc(2 * sizeof(char *));
     if (se->atom_names == NULL) {
         perror("Couldn't allocate memory for atom_names array");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     se->atom_names[0] = malloc(3);
     if (se->atom_names[0] == NULL) {
         perror("Couldn't allocate memory for atom_names array");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     se->atom_names[1] = malloc(3);
     if (se->atom_names[1] == NULL) {
         perror("Couldn't allocate memory for atom_names array");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     strcpy(se->atom_names[0], "Ag");
@@ -83,7 +83,7 @@ void test_initialize_simulation(void)
     se->is_soluble = (bool *)malloc(2 * sizeof(bool));
     if (se->is_soluble == NULL) {
         perror("Couldn't allocate memory for is_soluble array");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     se->is_soluble[0] = 1;
     se->is_soluble[1] = 0;
@@ -91,7 +91,7 @@ void test_initialize_simulation(void)
     se->substrate_composition = (double *)malloc(2 * sizeof(double));
     if (se->substrate_composition == NULL) {
         perror("Couldn't allocate memory for substrate_composition array");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     se->substrate_composition[0] = 0.75;
     se->substrate_composition[1] = 0.25;

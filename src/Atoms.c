@@ -17,7 +17,7 @@ void create_default_atom(long int atom_idx, Atom **atom_arr, struct SimulationEn
         // TODO: free mallocs before exiting
         fprintf(stderr, "ERROR! Not enough memory to allocate atom %ld\n", atom_idx);
         fprintf(stderr, "Couldn't allocate memory for atom %ld: %s", atom_idx, strerror(errno));
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     atom_arr[atom_idx]->type = 1;
@@ -73,7 +73,7 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
         fprintf(stderr, "ERROR! Unable to add atom %ld; %d other atoms found at (%d, %d, %d)\n",
                 ss->atom_cnt, num_overlapping, u, v, w);
         // ss->simulation_should_kill_itself = true;
-        clean_and_exit(1);
+        clean_and_error(1);
         return ss->atom_cnt;
     }
 
@@ -82,7 +82,7 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
     if (pos > se->max_atoms) {
         fprintf(stderr, "More atoms (%ld) than allocated in atom array (%ld)\n", pos,
                 se->max_atoms);
-        clean_and_exit(1);
+        clean_and_error(1);
     }
     create_default_atom(ss->atom_cnt, ss->atom_arr, se);
     ++ss->atom_cnt;
@@ -90,7 +90,7 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
     if (ss->atom_cnt > se->max_atoms) {
         fprintf(stderr, "Number of atoms (%ld) is exceeding set maximum (%ld)\n", ss->atom_cnt,
                 se->max_atoms);
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     // TODO: this is already done in atom_at - why repeat it
@@ -558,7 +558,7 @@ void kill_atom(long atom_number, struct SimulationState *ss, struct SimulationEn
     --ss->atom_cnt;
     if (ss->atom_cnt < 0) {
         fprintf(stderr, "Number of atoms (%ld) has dropped below zero", ss->atom_cnt);
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     return;

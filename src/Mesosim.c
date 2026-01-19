@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     FILE *temp_log = tmpfile();
     if (temp_log == NULL) {
         perror("Failed to make temp file");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     if (log_state->verbose)
         printf("Temporary log created\n");
@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
     fprintf(log_state->sim_log_file, "Finished! Total time taken: %d seconds\n",
             (int)(endtime - starttime));
 
-    clean_and_exit(0);
+    clean_and_error(0);
 
     return 0;
 }

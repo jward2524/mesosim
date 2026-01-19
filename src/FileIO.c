@@ -33,7 +33,7 @@ static bool fopen_error(char *filename, FILE *file, char *base_msg)
 {
     if (file == NULL) {
         fprintf(stderr, "%s%s: %s\n", base_msg, filename, strerror(errno));
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     return true;
 }
@@ -413,7 +413,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         if (se->atom_names == NULL) {
             fprintf(stderr, "Couldn't allocate memory for atom names: %s", strerror(errno));
             fprintf(temp_log, "Couldn't allocate memory for atom names: %s", strerror(errno));
-            clean_and_exit(errno);
+            clean_and_error(errno);
         }
         memcpy(se->atom_names, types, count * sizeof(char *));
         // if (se->num_nn_levels != 0)
@@ -463,7 +463,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         if (se->is_soluble == NULL) {
             fprintf(stderr, "Couldn't allocate memory for solubilities: %s", strerror(errno));
             fprintf(temp_log, "Couldn't allocate memory for solubilities: %s", strerror(errno));
-            clean_and_exit(errno);
+            clean_and_error(errno);
         }
         memcpy(se->is_soluble, is_soluble, size);
         se->dissolution = (soluble_count > 0);
@@ -508,7 +508,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         if (se->substrate_composition == NULL) {
             fprintf(stderr, "Couldn't allocate memory for compositions: %s", strerror(errno));
             fprintf(temp_log, "Couldn't allocate memory for compositions: %s", strerror(errno));
-            clean_and_exit(errno);
+            clean_and_error(errno);
         }
         for (size_t i = 0; i < count; i++)
             se->substrate_composition[i] = comp[i];
@@ -587,7 +587,7 @@ static int parse_datalog_params(char *params, int cursor, struct LoggingState *l
         if (ls->log_list == NULL) {
             fprintf(stderr, "Couldn't allocate memory for log list: %s", strerror(errno));
             fprintf(temp_log, "Couldn't allocate memory for log list: %s", strerror(errno));
-            clean_and_exit(errno);
+            clean_and_error(errno);
         }
         parse_log_list(params + cursor + 5, ls->log_list, &ls->log_list_len);
         return -1;
@@ -1080,7 +1080,7 @@ bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct Simu
     if (file == NULL) {
         printf("ERROR! Couldn't open output file %s\n", filename_full);
         fprintf(stderr, "Couldn't open file %s: %s\n", filename_full, strerror(errno));
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     /* format:

@@ -111,15 +111,15 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
     // null pointer checks
     if (!ss->atom_arr) {
         perror("Couldn't allocate memory for atom array");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     if (!ss->rate_arr) {
         perror("Couldn't allocate memory for rate array");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     if (!ss->transition_arr) {
         perror("Couldn't allocate memory for transition array");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     ss->transition_probability.rate_arr_index = (long *)malloc((size_t)se->max_rates * sizeof(long));
@@ -128,15 +128,15 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
 
     if (!ss->transition_probability.rate_arr_index) {
         perror("Couldn't allocate memory for transition probability rate_arr_index");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     if (!ss->transition_probability.lbound) {
         perror("Couldn't allocate memory for transition probability lbound");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     if (!ss->transition_probability.ubound) {
         perror("Couldn't allocate memory for transition probability ubound");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     ss->rate_cnt = 0; // initialize global transition variables
@@ -424,7 +424,7 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
     se->transition_vectors = (LatticeVector *)malloc((size_t)transition_length * sizeof(LatticeVector));
     if (!se->transition_vectors) {
         perror("Couldn't allocate memory for jump offset array");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     // opposite_tvectors always only 1st nn
@@ -432,7 +432,7 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
         (int *)malloc((size_t)se->num_transition_vectors * sizeof(*se->opposite_tvectors));
     if (!se->opposite_tvectors) {
         perror("Couldn't allocate memory for jump offset array");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     for (i = 0; i < se->num_transition_vectors; ++i) {
@@ -613,11 +613,11 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
     for (int dim_idx = 0; dim_idx < 3; dim_idx++) {
         if (bblimits_cart[dim_idx][0] < 0) {
             printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
-            clean_and_exit(1);
+            clean_and_error(1);
         }
         if (bblimits_cart[dim_idx][1] > (int)(2 * center_cart[dim_idx])) {
             printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
-            clean_and_exit(1);
+            clean_and_error(1);
         }
     }
 
@@ -668,7 +668,7 @@ void initialize_from_file(struct SimulationState *ss, struct SimulationEnv *se,
     if (!atom_file) {
         printf("ERROR! Couldn't open output file %s\n", se->atoms_filename);
         fprintf(stderr, "Couldn't open file %s: %s\n", se->atoms_filename, strerror(errno));
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 
     process_xyz_file(ls->sim_log_file, atom_file, ss, se, ls);

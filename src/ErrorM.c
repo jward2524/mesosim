@@ -19,7 +19,7 @@ void set_state(struct SimulationState *ss, struct SimulationEnv *se, struct Logg
 }
 
 void initialize_states(struct SimulationState **ss, struct SimulationEnv **se,
-                        struct LoggingState **ls)
+                       struct LoggingState **ls)
 {
     *ss = calloc(1, sizeof(struct SimulationState));
     *se = calloc(1, sizeof(struct SimulationEnv));
@@ -28,15 +28,15 @@ void initialize_states(struct SimulationState **ss, struct SimulationEnv **se,
 
     if (*ss == NULL) {
         perror("Couldn't allocate memory for simulation state");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     if (*se == NULL) {
         perror("Couldn't allocate memory for simulation environment");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
     if (*ls == NULL) {
         perror("Couldn't allocate memory for logging state");
-        clean_and_exit(errno);
+        clean_and_error(errno);
     }
 }
 
@@ -53,11 +53,11 @@ static void free_if_exists(void **pointer)
 }
 
 // emits generic error message to log file, frees allocated memory, and exits
-void clean_and_exit(int error)
+void clean_and_error(int exit_error)
 {
     // errors during: reading input, m/calloc'ing, usage(), making temp file
 
-    if (error != 0) {
+    if (exit_error != 0) {
         FILE *fp = log_state->sim_log_file ? log_state->sim_log_file : stderr;
         fprintf(fp, "Error encountered - check stderr\n");
         fprintf(fp, "%s", strerror(errno));
@@ -113,7 +113,7 @@ void clean_and_exit(int error)
         free_if_exists((void **)&log_state);
     }
 
-    if (error != 0) {
-        exit(error);
+    if (exit_error != 0) {
+        exit(exit_error);
     }
 }

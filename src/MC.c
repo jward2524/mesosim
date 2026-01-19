@@ -157,7 +157,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             if (!checkpoint_reached && (mmc_steps > ls->next_log_checkpoint)) {
                 fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing",
                         mmc_steps, ls->next_log_checkpoint);
-                clean_and_exit(1);
+                clean_and_error(1);
             }
         }
 

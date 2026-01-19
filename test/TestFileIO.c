@@ -27,7 +27,7 @@ void setUp(void)
 
 void tearDown(void)
 {
-    clean_and_exit(0);
+    clean_and_error(0);
 
     // fclose needs to be here in case a test fails
     fclose(temp_log);
