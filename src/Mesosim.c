@@ -152,8 +152,8 @@ int main(int argc, char *argv[])
     }
 
     if (sim_error != 0) {
-        printf("ERROR! Something went wrong in the simulation\n");
-        return 1;
+        fprintf(stderr, "ERROR! Something went wrong in the simulation\n");
+        clean_and_error(1);
     }
 
     // finalize everything

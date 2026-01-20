@@ -1,13 +1,13 @@
 #include "Atoms.h"
+#include "ErrorM.h"
+#include "FileIO.h"
 #include "Simulation.h"
 #include "State.h"
 #include "Utils.h"
-#include "FileIO.h"
-#include "ErrorM.h"
+#include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include <limits.h>
 
 static const double FABS_TOL = 1e-6;
 
@@ -40,11 +40,15 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
     snprintf(suffix, BUFFER_SIZE, "i0");
 
     // initial state
-    output_mc_csv_header(ls->sim_csv);
-    log_mc_state_csv(ls->sim_csv, ls->framenum, mmc_steps, ss->iter, ss->total_internal_energy);
     output_log_file(ls->sim_log, ls->framenum, mmc_steps, ss->elapsed_stime, ss->temperature,
                     ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-    write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+    if (ls->output_state_csv) {
+        log_mc_state_csv(ls->state_csv, ls->framenum, mmc_steps, ss->iter,
+                         ss->total_internal_energy);
+    }
+    if (ls->output_xyz) {
+        write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+    }
     ls->framenum++;
 
     int checkpoint_reached = 0;
@@ -66,9 +70,9 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         double drand0 = -1;
         int rand0 = -1;
         if (ss->transition_cnt > RAND_MAX) {
-            int div = (int) floor((double)ss->transition_cnt / RAND_MAX);
-            int rem = (int) (ss->transition_cnt % RAND_MAX);
-            
+            int div = (int)floor((double)ss->transition_cnt / RAND_MAX);
+            int rem = (int)(ss->transition_cnt % RAND_MAX);
+
             for (int i = 0; i < div; i++) {
                 rand0 = rand();
                 extended_rand += rand0;
@@ -150,10 +154,11 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         }
 
         // csv log
-        if (ls->log_iter_csv) {
+        if (ls->output_iter_csv) {
             int uvw1[] = {old_u, old_v, old_w};
             int uvw2[] = {new_u, new_v, new_w};
-            log_mc_iter(ls->iter_csv, ss->iter, ss->total_internal_energy, deltaE, perform_flag, uvw1, uvw2);
+            log_mc_iter(ls->iter_csv, ss->iter, ss->total_internal_energy, deltaE, perform_flag,
+                        uvw1, uvw2);
         }
 
         if (ls->analysis_type == ITERATION_INTERVALS) {
@@ -176,8 +181,13 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             output_log_file(ls->sim_log, ls->framenum, mmc_steps, ss->elapsed_stime,
                             ss->temperature, ss->overpotential, ss->atom_cnt,
                             ss->total_internal_energy);
-            write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
-            log_mc_state_csv(ls->sim_csv, ls->framenum, mmc_steps, ss->iter, ss->total_internal_energy);
+            if (ls->output_state_csv) {
+                log_mc_state_csv(ls->state_csv, ls->framenum, mmc_steps, ss->iter,
+                                 ss->total_internal_energy);
+            }
+            if (ls->output_xyz) {
+                write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+            }
 
             ++ls->framenum;
         }
@@ -186,10 +196,14 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
     // write elapsed_stime to mark finish
     output_log_file(ls->sim_log, ls->framenum, mmc_steps, ss->elapsed_stime, ss->temperature,
                     ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-    log_mc_state_csv(ls->sim_csv, ls->framenum, mmc_steps, ss->iter, ss->total_internal_energy);
-
-    snprintf(suffix + strlen(suffix), BUFFER_SIZE - strlen(suffix), "_final");
-    write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+    if (ls->output_state_csv) {
+        log_mc_state_csv(ls->state_csv, ls->framenum, mmc_steps, ss->iter,
+                         ss->total_internal_energy);
+    }
+    if (ls->output_xyz) {
+        snprintf(suffix + strlen(suffix), BUFFER_SIZE - strlen(suffix), "_final");
+        write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+    }
 
     if ((ss->final_iteration > 0) && (mmc_steps >= ss->final_iteration)) {
         fprintf(ls->sim_log, "Reached final iteration and terminated\n");
@@ -232,7 +246,7 @@ static double calculate_new_energy(const long atom_idx, const int offset_idx,
         // location of neighbor
         long neighbor_idx = atom_at_offset(new_u, new_v, new_w, i, ss->atom_arr, ss->zone_arr, se);
 
-        if (neighbor_idx >= 0){
+        if (neighbor_idx >= 0) {
             int atom_type = ss->atom_arr[atom_idx]->type;
             int neighbor_type = ss->atom_arr[neighbor_idx]->type;
             int env_idx = get_env_index(i, atom_type, neighbor_type, se);

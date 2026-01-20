@@ -154,9 +154,12 @@ struct LoggingState {
     FILE *sim_log;
     char position_log_prefix[256];
 
-    FILE *sim_csv;
+    bool output_xyz;
 
-    int log_iter_csv;
+    bool output_state_csv;
+    FILE *state_csv;
+
+    bool output_iter_csv;
     FILE *iter_csv;
 
     int analysis_type;

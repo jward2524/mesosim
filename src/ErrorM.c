@@ -109,6 +109,8 @@ void clean_and_error(int exit_error)
             fclose(log_state->sim_log);
         if (log_state->iter_csv)
             fclose(log_state->iter_csv);
+        if (log_state->state_csv)
+            fclose(log_state->state_csv);
         free_if_exists((void **)&log_state->log_list);
         free_if_exists((void **)&log_state);
     }

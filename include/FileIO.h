@@ -27,11 +27,11 @@ void input_logging(struct SimulationState *sim_state, struct SimulationEnv *sim_
 bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, double elapsed_stime,
                      double temperature, double overpotential, long int atom_cnt,
                      double total_internal_energy);
-void output_kmc_csv_header(FILE *sim_csv);
-void log_kmc_state_csv(FILE *sim_csv, int frame_num, unsigned long int iter, double elapsed_stime,
+void output_kmc_csv_header(FILE *csv_file);
+void log_kmc_state_csv(FILE *csv_file, int frame_num, unsigned long int iter, double elapsed_stime,
                    double temperature, double overpotential, long int atom_cnt,
                    double total_internal_energy);
-void output_mc_csv_header(FILE *sim_csv);
+void output_mc_csv_header(FILE *csv_file);
 void log_mc_state_csv(FILE *csv_log_file, const int frame_num, const unsigned long int mmc_steps,
                       const unsigned long int iter, const double sys_energy);
 bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct SimulationState *ss,

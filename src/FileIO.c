@@ -101,18 +101,22 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
     char *lastdot = strrchr(ls->position_log_prefix, '.');
     *lastdot = '\0';
 
-    char csv_filename[256];
-    snprintf(csv_filename, strlen(ls->position_log_prefix) + 5, "%s.csv", ls->position_log_prefix);
-    ls->sim_csv = fopen(csv_filename, "w+");
-    ret = ret && fopen_error(csv_filename, ls->sim_csv, "Failed to open csv file, ");
-
-    if (se->flavor == FLAVOR_KMC) {
-        output_kmc_csv_header(ls->sim_csv);
-    } else if (se->flavor == FLAVOR_MC) {
-        output_mc_csv_header(ls->sim_csv);
+    if (ls->output_state_csv) {
+        char csv_filename[256];
+        snprintf(csv_filename, strlen(ls->position_log_prefix) + 5, "%s.csv", ls->position_log_prefix);
+        ls->state_csv = fopen(csv_filename, "w+");
+        ret = ret && fopen_error(csv_filename, ls->state_csv, "Failed to open csv file, ");
+    
+        if (se->flavor == FLAVOR_KMC) {
+            output_kmc_csv_header(ls->state_csv);
+        } else if (se->flavor == FLAVOR_MC) {
+            output_mc_csv_header(ls->state_csv);
+        }
+    } else {
+        ls->state_csv = NULL;
     }
 
-    if (ls->log_iter_csv) {
+    if (ls->output_iter_csv) {
         char steps_filename[256];
         snprintf(steps_filename, strlen(ls->position_log_prefix) + 11, "%s_steps.csv",
                  ls->position_log_prefix);
@@ -560,12 +564,15 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         } else if (strncmp(params, "MC", 2) == 0) {
             se->flavor = FLAVOR_MC;
         }
-    } else if (strncmp(cmd, "steplog", 7) == 0) {
-        if (strncmp(params, "on", 2) == 0) {
-            ls->log_iter_csv = 1;
+    } else if (strncmp(cmd, "logtype", 7) == 0) {
+        if (strstr(params, "iter") != NULL) {
+            ls->output_iter_csv = 1;
         }
-        else {
-            ls->log_iter_csv = 0;
+        if (strstr(params, "csv") != NULL) {
+            ls->output_state_csv = 1;
+        }
+        if (strstr(params, "xyz") != NULL) {
+            ls->output_xyz = 1;
         }
     } else {
         fprintf(stderr, "Input parsing failed - keyword %s not recognized\n", cmd);
@@ -1069,27 +1076,27 @@ bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter,
     return true;
 }
 
-void output_kmc_csv_header(FILE *sim_csv)
+void output_kmc_csv_header(FILE *csv_file)
 {
-    fprintf(sim_csv, "frame,iter,elapsed_stime,energy,temperature,overpotential,atoms\n");
+    fprintf(csv_file, "frame,iter,elapsed_stime,energy,temperature,overpotential,atoms\n");
 }
 
-void log_kmc_state_csv(FILE *sim_csv, int frame_num, unsigned long int iter, double elapsed_stime,
+void log_kmc_state_csv(FILE *csv_file, int frame_num, unsigned long int iter, double elapsed_stime,
                        double temperature, double overpotential, long int atom_cnt,
                        double total_internal_energy)
 {
-    fprintf(sim_csv, "%d,", frame_num);
-    fprintf(sim_csv, "%lu,", iter);
-    fprintf(sim_csv, "%le,", elapsed_stime);
-    fprintf(sim_csv, "%lf,", total_internal_energy);
-    fprintf(sim_csv, "%lf,", temperature);
-    fprintf(sim_csv, "%lf,", overpotential);
-    fprintf(sim_csv, "%ld\n", atom_cnt);
+    fprintf(csv_file, "%d,", frame_num);
+    fprintf(csv_file, "%lu,", iter);
+    fprintf(csv_file, "%le,", elapsed_stime);
+    fprintf(csv_file, "%lf,", total_internal_energy);
+    fprintf(csv_file, "%lf,", temperature);
+    fprintf(csv_file, "%lf,", overpotential);
+    fprintf(csv_file, "%ld\n", atom_cnt);
 }
 
-void output_mc_csv_header(FILE *sim_csv)
+void output_mc_csv_header(FILE *csv_file)
 {
-    fprintf(sim_csv, "frame,mmc_step,iter,energy\n");
+    fprintf(csv_file, "frame,mmc_step,iter,energy\n");
 }
 
 void log_mc_state_csv(FILE *csv_file, const int frame_num, const unsigned long int mmc_steps,

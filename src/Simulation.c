@@ -68,11 +68,15 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     }
 
     // initial state
-    log_kmc_state_csv(ls->sim_csv, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
-                      ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
     output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
                     ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-    write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+    if (ls->output_state_csv) {
+        log_kmc_state_csv(ls->state_csv, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
+                          ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+    }
+    if (ls->output_xyz) {
+        write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+    }
     ls->framenum++;
 
     // start with everything current to the current state
@@ -87,26 +91,14 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 
     if (ls->verbose)
         printf("Setup complete, iteration start\n");
-    
+
     while (!simulation_end) {
         ss->iter++;
 
         if (ss->simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
         {
-            output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime,
-                            ss->temperature, ss->overpotential, ss->atom_cnt,
-                            ss->total_internal_energy);
-            write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
-            log_kmc_state_csv(ls->sim_csv, ls->framenum, ss->iter, ss->elapsed_stime,
-                              ss->temperature, ss->overpotential, ss->atom_cnt,
-                              ss->total_internal_energy);
-
             ss->simulation_should_kill_itself = false;
-
-            // TODO: remove from here
-            // organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); // XXX: remove from here
-            printf("killed somehow\n");
-
+            fprintf(stderr, "killed somehow\n");
             return 1; // return 1 b/c error
         }
 
@@ -136,8 +128,9 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 // picks a type of transition and then which atom that has that transition will it
                 // act on?
                 double rand2 = drand();
-                selected_transition_idx = ss->rate_arr[selected_rate].transition_start_idx +
-                                          (int)(rand2 * (double)ss->rate_arr[selected_rate].transition_count);
+                selected_transition_idx =
+                    ss->rate_arr[selected_rate].transition_start_idx +
+                    (int)(rand2 * (double)ss->rate_arr[selected_rate].transition_count);
 
                 // selected_transition_idx gives the location of the transition_arr, which gives
                 // the info about the specific atom
@@ -264,12 +257,12 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
             }
         }
 
-        if (ls->iter_csv) {
+        if (ls->output_iter_csv) {
             int uvw1[] = {old_x, old_y, old_z};
             // lastxyzt will have old values if it wasn't diffusion
             int uvw2[] = {lastxt, lastyt, lastzt};
             log_kmc_iter(ls->iter_csv, ss->iter, ss->elapsed_stime, ss->total_internal_energy, uvw1,
-                    uvw2, is_evaporation);
+                         uvw2, is_evaporation);
         }
 
         if (checkpoint_reached) {
@@ -297,13 +290,16 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
             // record the elapsed time in a file here
             printf("Writing file %d: iteration = %lu, elapsed_stime = %le\n", ls->framenum,
                    ss->iter, ss->elapsed_stime);
-            output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime,
-                            ss->temperature, ss->overpotential, ss->atom_cnt,
-                            ss->total_internal_energy);
-            write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
-            log_kmc_state_csv(ls->sim_csv, ls->framenum, ss->iter, ss->elapsed_stime,
-                              ss->temperature, ss->overpotential, ss->atom_cnt,
-                              ss->total_internal_energy);
+            output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
+                            ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+            if (ls->output_state_csv) {
+                log_kmc_state_csv(ls->state_csv, ls->framenum, ss->iter, ss->elapsed_stime,
+                                  ss->temperature, ss->overpotential, ss->atom_cnt,
+                                  ss->total_internal_energy);
+            }
+            if (ls->output_xyz) {
+                write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+            }
 
             ++ls->framenum;
         }
@@ -319,11 +315,14 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     // write elapsed_stime to mark finish
     output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
                     ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-    log_kmc_state_csv(ls->sim_csv, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
-                      ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-
-    snprintf(suffix + strlen(suffix), BUFFER_SIZE - strlen(suffix), "_final");
-    write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+    if (ls->output_state_csv) {
+        log_kmc_state_csv(ls->state_csv, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
+                          ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+    }
+    if (ls->output_xyz) {
+        snprintf(suffix + strlen(suffix), BUFFER_SIZE - strlen(suffix), "_final");
+        write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+    }
 
     if ((ss->final_iteration > 0) && (ss->iter >= ss->final_iteration)) {
         fprintf(ls->sim_log, "Reached final iteration and terminated\n");
@@ -835,7 +834,7 @@ void check_system(struct SimulationState *ss, struct SimulationEnv *se)
     for (int j = 0; j < ss->atom_cnt; ++j)
         for (int i = 0; i < se->num_transition_vectors; ++i) {
             long k = atom_at_offset(ss->atom_arr[j]->lattice[0], ss->atom_arr[j]->lattice[1],
-                               ss->atom_arr[j]->lattice[2], i, ss->atom_arr, ss->zone_arr, se);
+                                    ss->atom_arr[j]->lattice[2], i, ss->atom_arr, ss->zone_arr, se);
 
             if (k >= 0) {
                 // an atom has been found atom_idx this neighbor site.

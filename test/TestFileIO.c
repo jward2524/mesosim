@@ -105,7 +105,9 @@ void test_process_in_file_cluster(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(2000, ss->final_iteration, "simulation max iteration");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->log_interval, "log interval");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_log_checkpoint, "log checkpoint");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->log_iter_csv, "log steps");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_iter_csv, "output iter csv");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_state_csv, "output state csv");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_xyz, "output xyz");
 }
 
 void test_process_in_file_mc(void)
@@ -154,7 +156,9 @@ void test_process_in_file_mc(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(2, ss->final_iteration, "simulation max iteration");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->log_interval, "log interval");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->next_log_checkpoint, "log checkpoint");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->log_iter_csv, "log steps");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_iter_csv, "output iter csv");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_state_csv, "output state csv");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_xyz, "output xyz");
 }
 
 void test_process_xyz_file(void)

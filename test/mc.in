@@ -5,8 +5,8 @@ composition 0.75 0.25
 struct FCC
 nnlevels 1
 1nne 0.15 0.15 0.15
+logtype csv
 datalog iteration interval 1
-steplog on
 temp 293
 seed 12345
 flavor MC

@@ -8,8 +8,8 @@ nnlevels 2
 1nne 0.15 0.15 0.15
 2nne 0.10 0.10 0.10
 potential 0.9 0.03 1.2
+logtype iter csv xyz
 datalog iteration interval 200
-steplog on
 temp 293
 seed 12345
 flavor KMC
