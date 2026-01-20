@@ -151,9 +151,13 @@ struct LoggingState {
     char console_outstring[512];
     // char outFile[260];
     char default_extension[12];
-    FILE *sim_log_file;
-    FILE *sim_csv_file;
+    FILE *sim_log;
     char position_log_prefix[256];
+
+    FILE *sim_csv;
+
+    int log_iter_csv;
+    FILE *iter_csv;
 
     int analysis_type;
     double log_interval; // interval between log checkpoints, based on analysis_type?

@@ -58,7 +58,7 @@ void clean_and_error(int exit_error)
     // errors during: reading input, m/calloc'ing, usage(), making temp file
 
     if (exit_error != 0) {
-        FILE *fp = log_state->sim_log_file ? log_state->sim_log_file : stderr;
+        FILE *fp = log_state->sim_log ? log_state->sim_log : stderr;
         fprintf(fp, "Error encountered - check stderr\n");
         fprintf(fp, "%s", strerror(errno));
     }
@@ -105,10 +105,10 @@ void clean_and_error(int exit_error)
 
     // LoggingState
     if (log_state != NULL) {
-        if (log_state->sim_log_file)
-            fclose(log_state->sim_log_file);
-        if (log_state->sim_csv_file)
-            fclose(log_state->sim_csv_file);
+        if (log_state->sim_log)
+            fclose(log_state->sim_log);
+        if (log_state->iter_csv)
+            fclose(log_state->iter_csv);
         free_if_exists((void **)&log_state->log_list);
         free_if_exists((void **)&log_state);
     }

@@ -100,10 +100,10 @@ void test_initialize_simulation(void)
     ss->run_stime = 0;
     ss->final_iteration = 2000;
 
-    ls->sim_log_file = temp_log;
+    ls->sim_log = temp_log;
 
     initialize_simulation(ss, se, ls);
-    ls->sim_log_file = NULL;
+    ls->sim_log = NULL;
     TEST_ASSERT_TRUE_MESSAGE(1, "initialize simulation");
 }
 

@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     printf("Read file successfully\n");
 
     // put everything that was in temp_log into outFile
-    write_backlog(temp_log, log_state->sim_log_file);
+    write_backlog(temp_log, log_state->sim_log);
     fclose(temp_log);
 
     // finish_preprocessing();   //only called when deposition matters
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
     // finalize everything
 
     time(&endtime);
-    fprintf(log_state->sim_log_file, "Finished! Total time taken: %d seconds\n",
+    fprintf(log_state->sim_log, "Finished! Total time taken: %d seconds\n",
             (int)(endtime - starttime));
 
     clean_and_error(0);

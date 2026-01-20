@@ -53,11 +53,11 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
     bool ret = false;
     if (file_ender == NULL) // when is this null?
     {
-        // if (sim_log_file == NULL) // when is this not null?
+        // if (sim_log == NULL) // when is this not null?
         fprintf(stderr, "Input parsing failed - extension not found in file: %s\n",
                 filename); // for reading arguments
         // else
-        // fprintf(sim_log_file, "ERROR! extension not found in file: %s\n", filename);
+        // fprintf(sim_log, "ERROR! extension not found in file: %s\n", filename);
         // should only happen when restarting/checkpointing
     } else {
         file_ender++;
@@ -78,11 +78,11 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
         // open and process new kmc input type that removes fluff (does this need to happen)
         ret = process_kmx_file(temp_log, input_file, ss, se, ls);
     } else {
-        // if (sim_log_file == NULL)
+        // if (sim_log == NULL)
         fprintf(stderr, "Input parsing failed - file extension not recognized: .%s\n",
                 extension); // for reading arguments
         // else
-        // fprintf(sim_log_file, "ERROR! file extension not recognized: .%s\n", extension); //should
+        // fprintf(sim_log, "ERROR! file extension not recognized: .%s\n", extension); //should
         // only happen when restarting/checkpointing
         ret = false;
     }
@@ -93,8 +93,8 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
         fprintf(temp_log, "Log file name not defined, using \"%s\"", outFile);
     }
 
-    ls->sim_log_file = fopen(outFile, "w+");
-    ret = ret && fopen_error(outFile, ls->sim_log_file, "Failed to open log file, ");
+    ls->sim_log = fopen(outFile, "w+");
+    ret = ret && fopen_error(outFile, ls->sim_log, "Failed to open log file, ");
 
     // get the file name prefix for xyz outputs (outFile without the [.out] extension)
     strcpy(ls->position_log_prefix, outFile);
@@ -103,10 +103,33 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
 
     char csv_filename[256];
     snprintf(csv_filename, strlen(ls->position_log_prefix) + 5, "%s.csv", ls->position_log_prefix);
-    ls->sim_csv_file = fopen(csv_filename, "w+");
-    ret = ret && fopen_error(csv_filename, ls->sim_csv_file, "Failed to open csv file, ");
-    fclose(input_file);
+    ls->sim_csv = fopen(csv_filename, "w+");
+    ret = ret && fopen_error(csv_filename, ls->sim_csv, "Failed to open csv file, ");
 
+    if (se->flavor == FLAVOR_KMC) {
+        output_kmc_csv_header(ls->sim_csv);
+    } else if (se->flavor == FLAVOR_MC) {
+        output_mc_csv_header(ls->sim_csv);
+    }
+
+    if (ls->log_iter_csv) {
+        char steps_filename[256];
+        snprintf(steps_filename, strlen(ls->position_log_prefix) + 11, "%s_steps.csv",
+                 ls->position_log_prefix);
+        ls->iter_csv = fopen(steps_filename, "w+");
+        ret = ret && fopen_error(steps_filename, ls->iter_csv, "Failed to open steps csv file, ");
+
+        if (se->flavor == FLAVOR_KMC) {
+            output_kmc_iter_header(ls->iter_csv);
+        } else if (se->flavor == FLAVOR_MC) {
+            output_mc_iter_header(ls->iter_csv);
+        }
+
+    } else {
+        ls->iter_csv = NULL;
+    }
+
+    fclose(input_file);
     return ret;
 }
 
@@ -365,7 +388,7 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
                         "Input parsing failed - Could not correctly read sheet thickness\n");
                 exit(FILE_COMMAND_IGNORED);
             }
-        } else if (strncmp(params, "cluster", 6) == 0) {
+        } else if (strncmp(params, "cluster", 7) == 0) {
             se->geometry = GEOMETRY_CLUSTER;
             argsread = sscanf(params, "%*s %d", &se->cluster_radius);
             if (argsread != 1) {
@@ -536,6 +559,13 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
             se->flavor = FLAVOR_KMC;
         } else if (strncmp(params, "MC", 2) == 0) {
             se->flavor = FLAVOR_MC;
+        }
+    } else if (strncmp(cmd, "steplog", 7) == 0) {
+        if (strncmp(params, "on", 2) == 0) {
+            ls->log_iter_csv = 1;
+        }
+        else {
+            ls->log_iter_csv = 0;
         }
     } else {
         fprintf(stderr, "Input parsing failed - keyword %s not recognized\n", cmd);
@@ -938,135 +968,180 @@ bool process_kmx_file(FILE *temp_log, FILE *input_file, struct SimulationState *
 void input_logging(struct SimulationState *sim_state, struct SimulationEnv *sim_env,
                    struct LoggingState *log_state)
 {
-    fprintf(log_state->sim_log_file, "successfully read input file and preprocessed\n");
-    fprintf(log_state->sim_log_file, "system size is %d x %d x %d\n", sim_env->system_size_x,
+    fprintf(log_state->sim_log, "Successfully read input file and preprocessed\n");
+    fprintf(log_state->sim_log, "System size is %d x %d x %d\n", sim_env->system_size_x,
             sim_env->system_size_y, sim_env->system_size_z);
 
+    fprintf(log_state->sim_log, "Crystal structure is ");
     switch (sim_env->lattice_type) {
     case FCC:
-        fprintf(log_state->sim_log_file, "crystal structure is FCC\n");
+        fprintf(log_state->sim_log, "FCC");
         break;
     case BCC:
-        fprintf(log_state->sim_log_file, "crystal structure is BCC\n");
+        fprintf(log_state->sim_log, "BCC");
         break;
     case SC:
-        fprintf(log_state->sim_log_file, "crystal structure is SC\n");
+        fprintf(log_state->sim_log, "SC");
         break;
     }
+    fprintf(log_state->sim_log, "\n");
 
-    fprintf(log_state->sim_log_file, "Initializing atom types: ");
+    fprintf(log_state->sim_log, "Initializing atom types: ");
     for (int i = 0; i < sim_env->num_elements; i++) {
-        fprintf(log_state->sim_log_file, "%s ", sim_env->atom_names[i]);
+        fprintf(log_state->sim_log, "%s ", sim_env->atom_names[i]);
     }
-    fprintf(log_state->sim_log_file, "\nComposition: ");
+    fprintf(log_state->sim_log, "\nComposition: ");
     for (int i = 0; i < sim_env->num_elements; i++) {
-        fprintf(log_state->sim_log_file, "%lf ", sim_env->substrate_composition[i]);
-    }
-
-    fprintf(log_state->sim_log_file, "\nSolubility: ");
-    for (int i = 0; i < sim_env->num_elements; i++) {
-        fprintf(log_state->sim_log_file, "%s ", sim_env->is_soluble[i] ? "true" : "false");
+        fprintf(log_state->sim_log, "%lf ", sim_env->substrate_composition[i]);
     }
 
-    fprintf(log_state->sim_log_file, "\nBond energies\n");
+    fprintf(log_state->sim_log, "\nSolubility: ");
+    for (int i = 0; i < sim_env->num_elements; i++) {
+        fprintf(log_state->sim_log, "%s ", sim_env->is_soluble[i] ? "true" : "false");
+    }
+
+    fprintf(log_state->sim_log, "\nBond energies\n");
     int bond_idx, env_idx;
     for (int nn_level = 0; nn_level < sim_env->num_nn_levels; nn_level++) {
         for (int elem_a = 0; elem_a < sim_env->num_elements; elem_a++) {
             for (int elem_b = elem_a; elem_b < sim_env->num_elements; elem_b++) {
                 bond_idx = get_bond_index(elem_a, elem_b, sim_env->num_elements);
                 env_idx = nn_bondidx_2_envidx(nn_level, bond_idx, sim_env->num_bond_types);
-                fprintf(log_state->sim_log_file, "%s-%s: %lf\n", sim_env->atom_names[elem_a],
+                fprintf(log_state->sim_log, "%s-%s: %lf\n", sim_env->atom_names[elem_a],
                         sim_env->atom_names[elem_b], sim_env->nn_energy[env_idx]);
             }
         }
     }
 
-    fprintf(log_state->sim_log_file, "Temperature is %lf K\n", sim_state->temperature);
+    fprintf(log_state->sim_log, "Temperature is %lf K\n", sim_state->temperature);
 
     if (sim_env->overpotential_ramp_rate > 0.)
-        fprintf(log_state->sim_log_file, "Potential sweep [eV/s] from %lf to %lf at %lf\n",
+        fprintf(log_state->sim_log, "Potential sweep [eV/s] from %lf to %lf at %lf\n",
                 sim_state->overpotential, sim_env->overpotential_ramp_rate,
                 sim_env->max_overpotential);
     else
-        fprintf(log_state->sim_log_file, "Potential constant [eV] at %lf\n",
+        fprintf(log_state->sim_log, "Potential constant [eV] at %lf\n",
                 sim_state->overpotential);
 
     if (log_state->analysis_type == REGULAR_TIME_INTERVALS)
-        fprintf(log_state->sim_log_file,
+        fprintf(log_state->sim_log,
                 "Recording data at linear intervals [s] from %lf to %lf at %lf increments\n",
                 log_state->next_log_checkpoint, sim_state->run_stime, log_state->log_interval);
     else if (log_state->analysis_type == LN_TIME_INTERVALS)
-        fprintf(log_state->sim_log_file,
+        fprintf(log_state->sim_log,
                 "Recording data at log intervals [s] from %lf to %lf at %lf multiples\n",
                 log_state->next_log_checkpoint, sim_state->run_stime, log_state->log_interval);
     // TODO: fill out for other analysis_types
 
-    fprintf(log_state->sim_log_file, "Random seed is %u\n", sim_env->rand_seed);
+    fprintf(log_state->sim_log, "Random seed is %u\n", sim_env->rand_seed);
 
     switch (sim_env->geometry) {
     case GEOMETRY_FLAT_SHEET:
-        fprintf(log_state->sim_log_file, "Initialized flat sheet with monolayer depth %d\n",
+        fprintf(log_state->sim_log, "Initialized flat sheet with monolayer depth %d\n",
                 sim_env->sheet_thickness);
         break;
     case GEOMETRY_CLUSTER:
-        fprintf(log_state->sim_log_file, "Initialized spherical cluster with radius %d\n",
+        fprintf(log_state->sim_log, "Initialized spherical cluster with radius %d\n",
                 sim_env->cluster_radius);
         break;
     case GEOMETRY_FROM_FILE:
-        fprintf(log_state->sim_log_file, "Initialized user-defined structure with filename %s\n",
+        fprintf(log_state->sim_log, "Initialized user-defined structure with filename %s\n",
                 sim_env->atoms_filename);
         break;
     }
 
-    fprintf(log_state->sim_log_file, "Atoms created, %ld total\n", sim_state->atom_cnt);
+    fprintf(log_state->sim_log, "Atoms created, %ld total\n", sim_state->atom_cnt);
 }
 
 /*******************************************************************************
 *******************************************************************************/
-bool output_log_file(FILE *sim_log_file, int frame_num, unsigned long int iter,
+bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter,
                      double elapsed_stime, double temperature, double overpotential, long int atom_cnt,
                      double total_internal_energy)
 {
-    fprintf(sim_log_file, "![%d]\t", frame_num);
-    fprintf(sim_log_file, "iteration = %lu\t", iter);
-    fprintf(sim_log_file, "time = %lf [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t",
+    fprintf(sim_log, "![%d]\t", frame_num);
+    fprintf(sim_log, "iteration = %lu\t", iter);
+    fprintf(sim_log, "time = %le [s]\ttemperature = %lf [K]\tpotential = %lf [eV]\t",
             elapsed_stime, temperature, overpotential);
-    fprintf(sim_log_file, "atoms = %ld\tinternal energy = %lf [eV]\n", atom_cnt,
+    fprintf(sim_log, "atoms = %ld\tinternal energy = %lf [eV]\n", atom_cnt,
             total_internal_energy);
-    fflush(sim_log_file);
+    fflush(sim_log);
     return true;
+}
+
+void output_kmc_csv_header(FILE *sim_csv)
+{
+    fprintf(sim_csv, "frame,iter,elapsed_stime,energy,temperature,overpotential,atoms\n");
+}
+
+void log_kmc_state_csv(FILE *sim_csv, int frame_num, unsigned long int iter, double elapsed_stime,
+                       double temperature, double overpotential, long int atom_cnt,
+                       double total_internal_energy)
+{
+    fprintf(sim_csv, "%d,", frame_num);
+    fprintf(sim_csv, "%lu,", iter);
+    fprintf(sim_csv, "%le,", elapsed_stime);
+    fprintf(sim_csv, "%lf,", total_internal_energy);
+    fprintf(sim_csv, "%lf,", temperature);
+    fprintf(sim_csv, "%lf,", overpotential);
+    fprintf(sim_csv, "%ld\n", atom_cnt);
+}
+
+void output_mc_csv_header(FILE *sim_csv)
+{
+    fprintf(sim_csv, "frame,mmc_step,iter,energy\n");
+}
+
+void log_mc_state_csv(FILE *csv_file, const int frame_num, const unsigned long int mmc_steps,
+                      const unsigned long int iter, const double sys_energy)
+{
+    fprintf(csv_file, "%d,", frame_num);
+    fprintf(csv_file, "%lu,", mmc_steps);
+    fprintf(csv_file, "%lu,", iter);
+    fprintf(csv_file, "%lf", sys_energy);
+    fprintf(csv_file, "\n");
+}
+
+void output_kmc_iter_header(FILE *csv_file)
+{
+    fprintf(csv_file, "iter,sim_time,energy,u1,v1,w1,u2,v2,w2\n");
 }
 
 // output to csv:
 // iteration number, simulation time, system energy (per atom?), x1, y1, z1, x2, y2, z2
 // and atom ids at some point
-void log_kmc(FILE *csv_log_file, const unsigned long int iter, const double sim_time,
+void log_kmc_iter(FILE *csv_file, const unsigned long int iter, const double sim_time,
              const double sys_energy, const int uvw1[3], const int uvw2[3], int is_evap)
 {
-    fprintf(csv_log_file, "%lu,", iter);
-    fprintf(csv_log_file, "%lf,", sim_time);
-    fprintf(csv_log_file, "%lf,", sys_energy);
-    fprintf(csv_log_file, "%d,%d,%d,", uvw1[0], uvw1[1], uvw1[2]);
+    fprintf(csv_file, "%lu,", iter);
+    fprintf(csv_file, "%le,", sim_time);
+    fprintf(csv_file, "%lf,", sys_energy);
+    fprintf(csv_file, "%d,%d,%d,", uvw1[0], uvw1[1], uvw1[2]);
     if (!is_evap) {
-        fprintf(csv_log_file, "%d,%d,%d", uvw2[0], uvw2[1], uvw2[2]);
+        fprintf(csv_file, "%d,%d,%d", uvw2[0], uvw2[1], uvw2[2]);
     } else {
-        fprintf(csv_log_file, ",,");
+        fprintf(csv_file, ",,");
     }
-    fprintf(csv_log_file, "\n");
+    fprintf(csv_file, "\n");
+}
+
+void output_mc_iter_header(FILE *csv_file)
+{
+    fprintf(csv_file, "iter,energy,deltaE,performed,u1,v1,w1,u2,v2,w2\n");
 }
 
 // output to csv:
 // MCSS, system energy (per atom?), uvw1, uvw2
-void log_mc(FILE *csv_log_file, const unsigned long int iter, const double sys_energy,
+void log_mc_iter(FILE *csv_file, const unsigned long int iter, const double sys_energy,
             const double deltaE, const int performed, const int uvw1[3], const int uvw2[3])
 {
-    fprintf(csv_log_file, "%lu,", iter);
-    fprintf(csv_log_file, "%lf,", sys_energy);
-    fprintf(csv_log_file, "%lf,", deltaE);
-    fprintf(csv_log_file, "%d,", performed);
-    fprintf(csv_log_file, "%d,%d,%d,", uvw1[0], uvw1[1], uvw1[2]);
-    fprintf(csv_log_file, "%d,%d,%d", uvw2[0], uvw2[1], uvw2[2]);
-    fprintf(csv_log_file, "\n");
+    fprintf(csv_file, "%lu,", iter);
+    fprintf(csv_file, "%lf,", sys_energy);
+    fprintf(csv_file, "%lf,", deltaE);
+    fprintf(csv_file, "%d,", performed);
+    fprintf(csv_file, "%d,%d,%d,", uvw1[0], uvw1[1], uvw1[2]);
+    fprintf(csv_file, "%d,%d,%d", uvw2[0], uvw2[1], uvw2[2]);
+    fprintf(csv_file, "\n");
 }
 
 bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct SimulationState *ss,
