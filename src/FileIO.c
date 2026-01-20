@@ -1092,6 +1092,7 @@ void log_kmc_state_csv(FILE *csv_file, int frame_num, unsigned long int iter, do
     fprintf(csv_file, "%lf,", temperature);
     fprintf(csv_file, "%lf,", overpotential);
     fprintf(csv_file, "%ld\n", atom_cnt);
+    fflush(csv_file);
 }
 
 void output_mc_csv_header(FILE *csv_file)
@@ -1107,6 +1108,7 @@ void log_mc_state_csv(FILE *csv_file, const int frame_num, const unsigned long i
     fprintf(csv_file, "%lu,", iter);
     fprintf(csv_file, "%lf", sys_energy);
     fprintf(csv_file, "\n");
+    fflush(csv_file);
 }
 
 void output_kmc_iter_header(FILE *csv_file)
@@ -1130,6 +1132,7 @@ void log_kmc_iter(FILE *csv_file, const unsigned long int iter, const double sim
         fprintf(csv_file, ",,");
     }
     fprintf(csv_file, "\n");
+    fflush(csv_file);
 }
 
 void output_mc_iter_header(FILE *csv_file)
@@ -1149,6 +1152,7 @@ void log_mc_iter(FILE *csv_file, const unsigned long int iter, const double sys_
     fprintf(csv_file, "%d,%d,%d,", uvw1[0], uvw1[1], uvw1[2]);
     fprintf(csv_file, "%d,%d,%d", uvw2[0], uvw2[1], uvw2[2]);
     fprintf(csv_file, "\n");
+    fflush(csv_file);
 }
 
 bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct SimulationState *ss,
