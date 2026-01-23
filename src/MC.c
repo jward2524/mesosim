@@ -200,10 +200,8 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         log_mc_state_csv(ls->state_csv, ls->framenum, mmc_steps, ss->iter,
                          ss->total_internal_energy);
     }
-    if (ls->output_xyz) {
-        snprintf(suffix + strlen(suffix), BUFFER_SIZE - strlen(suffix), "_final");
-        write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
-    }
+    snprintf(suffix + strlen(suffix), BUFFER_SIZE - strlen(suffix), "_final");
+    write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
 
     if ((ss->final_iteration > 0) && (mmc_steps >= ss->final_iteration)) {
         fprintf(ls->sim_log, "Reached final iteration and terminated\n");

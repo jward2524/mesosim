@@ -319,10 +319,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         log_kmc_state_csv(ls->state_csv, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
                           ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
     }
-    if (ls->output_xyz) {
-        snprintf(suffix + strlen(suffix), BUFFER_SIZE - strlen(suffix), "_final");
-        write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
-    }
+    snprintf(suffix + strlen(suffix), BUFFER_SIZE - strlen(suffix), "_final");
+    write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
 
     if ((ss->final_iteration > 0) && (ss->iter >= ss->final_iteration)) {
         fprintf(ls->sim_log, "Reached final iteration and terminated\n");
