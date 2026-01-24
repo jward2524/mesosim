@@ -662,8 +662,12 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
 void initialize_from_file(struct SimulationState *ss, struct SimulationEnv *se,
                           struct LoggingState *ls)
 {
-    // does this need more to it?
-    //  TODO: atom positions from file
+    char *file_ext = strrchr(se->atoms_filename, '.') + 1;
+    if (strcmp(file_ext, "xyz") != 0) {
+        fprintf(stderr, "File extension %s not recognized", file_ext);
+        clean_and_error(1);
+    }
+
     FILE *atom_file = fopen(se->atoms_filename, "r");
     if (!atom_file) {
         printf("ERROR! Couldn't open output file %s\n", se->atoms_filename);
