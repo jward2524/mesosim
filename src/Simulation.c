@@ -251,7 +251,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         } else if (ls->analysis_type == ITERATION_INTERVALS) {
             checkpoint_reached = fabs(ls->next_log_checkpoint - (double)ss->iter) < FABS_TOL;
             if (!checkpoint_reached && (ss->iter > ls->next_log_checkpoint)) {
-                fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing",
+                fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing\n",
                         ss->iter, ls->next_log_checkpoint);
                 clean_and_error(1);
             }
@@ -287,9 +287,11 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 ls->next_log_checkpoint += ls->log_interval;
             }
 
-            // record the elapsed time in a file here
-            printf("Writing file %d: iteration = %lu, elapsed_stime = %le\n", ls->framenum,
-                   ss->iter, ss->elapsed_stime);
+            // record the elapsed time in a file here]
+            if (ls->verbose) {
+                printf("Writing file %d: iteration = %lu, elapsed_stime = %le\n", ls->framenum,
+                       ss->iter, ss->elapsed_stime);
+            }
             output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
                             ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
             if (ls->output_state_csv) {

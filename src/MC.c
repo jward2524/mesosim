@@ -164,7 +164,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         if (ls->analysis_type == ITERATION_INTERVALS) {
             checkpoint_reached = fabs(ls->next_log_checkpoint - (double)mmc_steps) < FABS_TOL;
             if (!checkpoint_reached && (mmc_steps > ls->next_log_checkpoint)) {
-                fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing",
+                fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing\n",
                         mmc_steps, ls->next_log_checkpoint);
                 clean_and_error(1);
             }
@@ -177,7 +177,9 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             }
 
             // record iteration in a file here
-            printf("Writing file %d: MC steps = %lu\n", ls->framenum, mmc_steps);
+            if (ls->verbose) {
+                printf("Writing file %d: MC steps = %lu\n", ls->framenum, mmc_steps);
+            }
             output_log_file(ls->sim_log, ls->framenum, mmc_steps, ss->elapsed_stime,
                             ss->temperature, ss->overpotential, ss->atom_cnt,
                             ss->total_internal_energy);
