@@ -24,19 +24,20 @@ debug := 1
 # XS_CFLAGS := -mcmodel=medium
 # ?= means 'if not yet defined'
 # variables used in definitions with '=' are expanded on use
-BASE_CFLAGS = -std=c11
-DEBUG_CFLAGS = -ggdb -O0 -Wall -Wextra -Wpedantic -Wshadow -Wconversion\
--DTEST -DUNITY_INCLUDE_CONFIG_H -I$(TEST_PATH)
-OPT_CFLAGS = -O2
-ALL_CFLAGS += $(CFLAGS) $(BASE_CFLAGS)
 
-ifeq ($(debug), 1)
+BASE_CFLAGS = -std=c11
+DEBUG_CFLAGS = -ggdb -O0 -Wall -Wextra -Wpedantic -Wshadow -Wconversion
+TEST_FLAGS = -DTEST -DUNITY_INCLUDE_CONFIG_H -I$(TEST_PATH) -I$(UNITY_PATH)
 # add TEST_PATH to have access to unity_config.h 
+
+# You can override CFLAGS from the command line, e.g., make CFLAGS="-O3 -g"
+ifeq ($(debug), 1)
 	ALL_CFLAGS += $(DEBUG_CFLAGS)
 else
-	ALL_CFLAGS += $(OPT_CFLAGS)
+	CFLAGS ?= -O2
 endif
-ALL_CFLAGS += -I. -I$(UNITY_PATH) -I$(SRC_PATH) -I$(INCLUDE_PATH)
+ALL_CFLAGS += $(CFLAGS) $(BASE_CFLAGS) $(TEST_FLAGS)
+ALL_CFLAGS += -I. -I$(SRC_PATH) -I$(INCLUDE_PATH)
 
 # -v verbose
 ALL_LDFLAGS += $(LDFLAGS) -lm
@@ -124,7 +125,7 @@ test: $(BUILD_PATHS) $(RESULTS)
 $(RESULTS_PATH)/%.txt: $(BUILD_PATH)/%.$(TARGET_EXTENSION)
 	./$< > $@ 2>&1
 
-$(BUILD_PATH)/Test%.$(TARGET_EXTENSION): $(OBJS_MMAIN) $(OBJ_PATH)/Test%.o $(OBJ_PATH)/%.o $(OBJ_PATH)/unity.o $(OBJ_PATH)/TUtils.o #$(DEPEND_PATH)Test%.d
+$(BUILD_PATH)/Test%.$(TARGET_EXTENSION): $(OBJS_MMAIN) $(OBJ_PATH)/Test%.o $(OBJ_PATH)/%.o $(OBJ_PATH)/unity.o $(OBJ_PATH)/TUtils.o
 	$(LINK) -o $@ $^ $(ALL_LDFLAGS)
 
 # :: (double-colon) rules are independent from each other
