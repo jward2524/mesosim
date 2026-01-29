@@ -664,7 +664,7 @@ void initialize_from_file(struct SimulationState *ss, struct SimulationEnv *se,
 {
     char *file_ext = strrchr(se->atoms_filename, '.') + 1;
     if (strcmp(file_ext, "xyz") != 0) {
-        fprintf(stderr, "File extension %s not recognized", file_ext);
+        fprintf(stderr, "File extension %s not recognized as atom input file", file_ext);
         clean_and_error(1);
     }
 
