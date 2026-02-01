@@ -6,7 +6,7 @@
 
 SHELL = /bin/sh
 # http://redsymbol.net/articles/unofficial-bash-strict-mode/
-.SHELLFLAGS := -eu -o pipefail -c
+.SHELLFLAGS := -eu -c
 .DELETE_ON_ERROR:
 # MAKEFLAGS += --warn-undefined-variables # this file uses a lot of undefined variables
 MAKEFLAGS += --no-builtin-rules
@@ -24,12 +24,18 @@ ifeq ($(OS),Windows_NT)
 		cleanup = rm -f
 		mkdir = mkdir -p
     endif
-		TARGET_EXTENSION = exe
+	TARGET_EXTENSION = exe
 else
 	cleanup = rm -f
 	mkdir = mkdir -p
 	TARGET_EXTENSION = out
 endif
+
+HAS_FORK := $(shell \
+	echo 'int main(){fork();}' | \
+	$(CC) -x c -o a.$(EXECUTABLE) - >/dev/null 2>&1 && rm a.$(EXECUTABLE) && echo yes)
+FORKFLAG := $(if $(HAS_FORK),-DHAVE_FORK)
+# echo 'int main(){fork();}' | gcc -x c -o a.exe - >/dev/null 2>&1 && rm a.exe && echo yes
 
 # --- Toolchain ---
 CC := gcc
@@ -79,6 +85,7 @@ INCLUDE_CFLAGS = -I$(src_path) -I$(include_path)
 # CFLAGS can be overridden from the command line
 ALL_CFLAGS = \
 	$(BASE_CFLAGS) \
+	$(FORKFLAG) \
 	$($(TYPE)_CFLAGS) \
 	$(INCLUDE_CFLAGS) \
 	$(CFLAGS)
@@ -87,7 +94,7 @@ ALL_CFLAGS = \
 ALL_LDFLAGS = -lm $(LDFLAGS)
 
 # --- Paths ---
-# extension changes depending on system (exe for windows, none for linux)
+# extension changes depending on system (exe for windows, .out for linux)
 EXECUTABLE := mesosim
 
 unity_path := unity/src
@@ -140,7 +147,7 @@ endif
 
 $(TYPES):
 	@echo -e "Building type: $@\n"
-	@$(MAKE) TYPE=$@ do-build
+	@"$(MAKE)" TYPE=$@ do-build
 
 do-build: $(do_build_deps) | $(build_paths)
 # 	$(info TYPE=$(TYPE))
@@ -208,13 +215,13 @@ print:
 	@file=$$(ls -tp print* | grep -v / | head -n 1); \
 	type=$${file##print-}; \
 	echo "Most recent type: $$type"; \
-	make -s "$$file"
+	"$(MAKE)" -s "$$file"
 
 # prints the updated files for all build types
 print-all:
 	@for t in $(TYPES); do \
 		echo "=== $$t ==="; \
-		$(MAKE) -s print-$$t; \
+		"$(MAKE)" -s print-$$t; \
 	done
 
 # --- Cleaning ---

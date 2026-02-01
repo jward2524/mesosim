@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 static struct SimulationState *sim_state = NULL;
 static struct SimulationEnv *sim_env = NULL;
@@ -52,16 +53,36 @@ static void free_if_exists(void **pointer)
     return;
 }
 
+#ifdef HAVE_FORK
+void create_coredump(void)
+{
+    // pid = zero in child process, child PID in parent process
+    int pid = fork();
+
+    // abort the child process
+    if(pid == 0) {
+        fprintf(stderr, "Creating core dump in child process\n");
+        abort();
+    }
+}
+#endif
+
 // emits generic error message to log file, frees allocated memory, and exits
 void clean_and_error(int exit_error)
 {
-    // errors during: reading input, m/calloc'ing, usage(), making temp file
-
     if (exit_error != 0) {
         FILE *fp = log_state->sim_log ? log_state->sim_log : stderr;
         fprintf(fp, "Error encountered - check stderr\n");
         fprintf(fp, "%s", strerror(errno));
+
+        // if in debug mode, abort to get a core dump
+        #ifndef NDEBUG
+        fprintf(stderr, "Error - creating core dump\n");
+        abort();
+        #endif
     }
+
+    // if in debug mode, free all allocated memory and exit gracefully for easier Memcheck usage
 
     // SimulationState
     if (sim_state != NULL) {
@@ -115,6 +136,7 @@ void clean_and_error(int exit_error)
         free_if_exists((void **)&log_state);
     }
 
+    // if no error, don't exit (used in tearDown in tests)
     if (exit_error != 0) {
         exit(exit_error);
     }

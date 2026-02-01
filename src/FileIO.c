@@ -1207,5 +1207,11 @@ bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct Simu
     }
     // ball and stick or space filling?
     fclose(file);
+
+    #if (!defined(NDEBUG)) && defined(HAVE_FORK)
+    fprintf(stderr, "Creating core dump for frame %d\n", frame_num);
+    create_coredump();
+    #endif
+
     return true;
 }
