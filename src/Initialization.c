@@ -191,7 +191,7 @@ void initialize_initial_structure(struct SimulationState *ss, struct SimulationE
         break;
 
     case GEOMETRY_FROM_FILE:
-        initialize_from_file(ss, se, ls); // TODO! THIS IS BIG!
+        initialize_from_file(ss, se, ls);
         break;
     }
 

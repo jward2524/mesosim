@@ -624,7 +624,6 @@ void add_to_transition_list(long rate_idx, long atom_idx, unsigned char offset_i
     ss->transition_arr[ss->transition_cnt] = (Transition *)malloc(sizeof(Transition));
 
     if (ss->transition_arr[ss->transition_cnt] == NULL) {
-        // TODO: free mallocs before exiting
         fprintf(stderr, "Couldn't allocate memory for transition %ld: %s\n", ss->transition_cnt,
                 strerror(errno));
         clean_and_error(errno);

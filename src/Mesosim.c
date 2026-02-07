@@ -83,9 +83,6 @@ int main(int argc, char *argv[])
 
     initialize_states(&sim_state, &sim_env, &log_state);
 
-    // initialize_lattice_geometry(); //this gets overwritten by info from the input file
-    sim_env->geometry = -1; // TODO: need to define in globals!!
-
     log_state->verbose = verbose_flag;
 
     // write to a temporary file until a logfile is identified
@@ -101,26 +98,34 @@ int main(int argc, char *argv[])
     fprintf(temp_log, "Start time: %s\n", ctime(&starttime));
     fprintf(temp_log, "Attempting to read in file %s\n", input_filename);
 
-    // TODO: clean up - move error handling into simulation_parameters_from_file; move all
-    // initializers into one function in Sim_Aux simulation_parameters_from_file also initializes
-    // atom list
-
     // pre-process the file information and fill in the gaps with defaults
     bool res = simulation_parameters_from_file(input_filename, sim_state, sim_env, log_state,
                                                temp_log, starttime);
-    if (res == false) {
+
+    int failed_setup = 0;
+    if ((res == false) || sim_state->simulation_should_kill_itself) {
         fprintf(temp_log, "ERROR! Something bad happened when reading the input file\n");
-        return 1;
+        failed_setup = 1;
     }
 
-    if (sim_state->simulation_should_kill_itself) {
-        fprintf(temp_log, "ERROR! Something bad happened when reading the input file\n");
-        return 1;
-    }
-
-    if (sim_env->geometry == -1) {
+    if (sim_env->geometry == 0) {
         fprintf(temp_log, "ERROR! Structure type was not specified in input file\n");
-        return 1;
+        failed_setup = 1;
+    }
+
+    if (failed_setup) {
+        fprintf(temp_log, "Saving log file for debugging\n");
+        char temp_filename[256];
+        snprintf(temp_filename, 256, "mesosim_temp_%d.log", (int)starttime);
+        FILE *debug_file = fopen(temp_filename, "w+");
+        if (debug_file == NULL) {
+            fprintf(stderr, "Failed to save temporary log file: %s\n", strerror(errno));
+            clean_and_error(errno);
+        }
+        write_backlog(temp_log, debug_file);
+        fclose(debug_file);
+        fclose(temp_log);
+        clean_and_error(1);
     }
 
     printf("Read file successfully\n");
