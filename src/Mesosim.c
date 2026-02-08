@@ -95,8 +95,8 @@ int main(int argc, char *argv[])
     if (log_state->verbose)
         printf("Temporary log created\n");
     fputs("MESOSIM 2024\n", temp_log);
-    fprintf(temp_log, "Start time: %s\n", ctime(&starttime));
-    fprintf(temp_log, "Attempting to read in file %s\n", input_filename);
+    safe_log(temp_log, "Start time: %s\n", ctime(&starttime));
+    safe_log(temp_log, "Attempting to read in file %s\n", input_filename);
 
     // pre-process the file information and fill in the gaps with defaults
     bool res = simulation_parameters_from_file(input_filename, sim_state, sim_env, log_state,
@@ -104,17 +104,17 @@ int main(int argc, char *argv[])
 
     int failed_setup = 0;
     if ((res == false) || sim_state->simulation_should_kill_itself) {
-        fprintf(temp_log, "ERROR! Something bad happened when reading the input file\n");
+        safe_log(temp_log, "ERROR! Something bad happened when reading the input file\n");
         failed_setup = 1;
     }
 
     if (sim_env->geometry == 0) {
-        fprintf(temp_log, "ERROR! Structure type was not specified in input file\n");
+        safe_log(temp_log, "ERROR! Structure type was not specified in input file\n");
         failed_setup = 1;
     }
 
     if (failed_setup) {
-        fprintf(temp_log, "Saving log file for debugging\n");
+        safe_log(temp_log, "Saving log file for debugging\n");
         char temp_filename[256];
         snprintf(temp_filename, 256, "mesosim_temp_%d.log", (int)starttime);
         FILE *debug_file = fopen(temp_filename, "w+");
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
     // finalize everything
 
     time(&endtime);
-    fprintf(log_state->sim_log, "Finished! Total time taken: %d seconds\n",
+    safe_log(log_state->sim_log, "Finished! Total time taken: %d seconds\n",
             (int)(endtime - starttime));
 
     clean_and_error(EXIT_SUCCESS);

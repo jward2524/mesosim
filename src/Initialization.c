@@ -339,7 +339,7 @@ void initialize_zones(Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct 
 }
 
 // initializes primitve_basis, ucell_params, ss*
-void initialize_lattice_geometry(struct SimulationEnv *sim_env)
+void initialize_lattice_geometry(struct SimulationEnv *se)
 {
     // Initializes the generic lattice geometry to be simple cubic (i.e., a=1, b=1, c=1, alpha = 90,
     // beta = 90, gamma = 90)
@@ -355,14 +355,14 @@ void initialize_lattice_geometry(struct SimulationEnv *sim_env)
         {0., 1., 0.},
         {0., 0., 1.},
     };
-    memcpy(sim_env->primitive_basis, pb, 3 * 3 * sizeof(double));
+    memcpy(se->primitive_basis, pb, 3 * 3 * sizeof(double));
 
-    inver(sim_env->primitive_basis, sim_env->invert_primitive_basis);
-    primitive_basis2ucell_params(sim_env->primitive_basis, sim_env->ucell_params);
+    inver(se->primitive_basis, se->invert_primitive_basis);
+    primitive_basis2ucell_params(se->primitive_basis, se->ucell_params);
 
-    sim_env->system_size_x = 1;
-    sim_env->system_size_y = 1;
-    sim_env->system_size_z = 1;
+    se->system_size_x = 1;
+    se->system_size_y = 1;
+    se->system_size_z = 1;
 
     return;
 }
@@ -821,23 +821,23 @@ void corners2limits(double corners_cart[8][3], int limits_lat[3][2], double inv_
     }
 }
 
-void initialize_simulation(struct SimulationState *sim_state, struct SimulationEnv *sim_env,
-                           struct LoggingState *log_state)
+void initialize_simulation(struct SimulationState *ss, struct SimulationEnv *se,
+                           struct LoggingState *ls)
 {
 
     // bit shifts for periodic boundary conditions
     // requires: zone_count_uvw, system_size_xyz
     // updates: zixyzshift, ssxyzshift, xyzsh
-    get_shifts(sim_env);
+    get_shifts(se);
 
     // initialize zones - help figure out which atoms are next to which other atoms
     // requires: zone_count_uvw
     // updates: zone_arr
-    initialize_zones(sim_state->zone_arr, sim_env);
+    initialize_zones(ss->zone_arr, se);
 
     // requires: lattice_type
     // updates: primitive_basis, invert_primitive_basis, ucell_params
-    set_primitive_basis(sim_env);
+    set_primitive_basis(se);
 
     // supposedly was only for visualization
     // set_default_orientation(sim_state->atom_arr, sim_state->atom_cnt, sim_env->lattice_type,
@@ -847,7 +847,7 @@ void initialize_simulation(struct SimulationState *sim_state, struct SimulationE
 
     // requires: invert_primitive_basis, system_size_xyz
     // updates: simbox_limits_lat, lat_range, simbox_vectors_cart, simbox_origin_cart
-    initialize_simulation_box(sim_env);
+    initialize_simulation_box(se);
 
     /*
     sets jump offsets for given crystal type
@@ -855,24 +855,24 @@ void initialize_simulation(struct SimulationState *sim_state, struct SimulationE
     updates: num_transition_vectors, atoms_per_nn_level, num_energy_contributors,
     transition_vectors, opposite_tvectors
     */
-    initialize_neighbor_offsets(sim_env);
+    initialize_neighbor_offsets(se);
 
     // mallocs and sets to zero (or something else) simulation variables
     // requires: dissolution, num_elements, num_bond_types, atoms_per_nn_level, max_atoms,
     // initial_overpotential, lat_range
     // updates: a lot
-    initialize_simulation_variables(sim_state, sim_env);
+    initialize_simulation_variables(ss, se);
 
     // requires: geometry, system_size_xyz, primitive_basis, substrate_composition,
     // simbox_limits_lat, sheet_thickness, cluster_radius
     // updates: atom_arr, atom_cnt, ...
-    initialize_initial_structure(sim_state, sim_env, log_state);
+    initialize_initial_structure(ss, se, ls);
 
     // check_system(sim_state, sim_env); // XXX?
 
     // default flavor is KMC, if unset
-    if (sim_env->flavor == 0)
-        sim_env->flavor = FLAVOR_KMC;
+    if (se->flavor == 0)
+        se->flavor = FLAVOR_KMC;
 
-    input_logging(sim_state, sim_env, log_state);
+    input_logging(ss, se, ls);
 }

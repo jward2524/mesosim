@@ -215,7 +215,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         double rand3 = ((double)rand() + 1) / ((double)RAND_MAX + 1);
         double stime_increment = -log(rand3) / ss->frequency_sum;
         ss->elapsed_stime += stime_increment;
-        if (isinf(ss->elapsed_stime)) {
+        if (isinf((float)ss->elapsed_stime)) {
             fprintf(stderr, "Simulation time went infinite\n");
             clean_and_error(EXIT_FAILURE);
         }
@@ -325,10 +325,10 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
 
     if ((ss->final_iteration > 0) && (ss->iter >= ss->final_iteration)) {
-        fprintf(ls->sim_log, "Reached final iteration and terminated\n");
+        safe_log(ls->sim_log, "Reached final iteration and terminated\n");
     }
     if ((ss->run_stime > 0) && (ss->elapsed_stime >= ss->run_stime)) {
-        fprintf(ls->sim_log, "Reached end of simulation time and terminated\n");
+        safe_log(ls->sim_log, "Reached end of simulation time and terminated\n");
     }
 
     printf("Finished simulation\n");

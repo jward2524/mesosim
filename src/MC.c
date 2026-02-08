@@ -206,7 +206,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
     write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
 
     if ((ss->final_iteration > 0) && (mmc_steps >= ss->final_iteration)) {
-        fprintf(ls->sim_log, "Reached final iteration and terminated\n");
+        safe_log(ls->sim_log, "Reached final iteration and terminated\n");
     }
 
     printf("Finished simulation\n");
