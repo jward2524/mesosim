@@ -106,7 +106,10 @@ void test_clean_and_error_cleans_memory_without_exit(void)
 
     sim_env->atom_names_cnt = 1;
     sim_env->atom_names = malloc(sizeof(char *));
-    sim_env->atom_names[0] = strdup("H");
+    sim_env->atom_names[0] = malloc(strlen("H") + 1);  // +1 for the null terminator
+    if (sim_env->atom_names[0] != NULL) {
+	        strcpy(sim_env->atom_names[0], "H");
+    }
 
     clean_and_error(0);
 
