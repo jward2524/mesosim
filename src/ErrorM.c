@@ -6,11 +6,17 @@
 #include <string.h>
 #include <unistd.h>
 
-static struct SimulationState *sim_state = NULL;
-static struct SimulationEnv *sim_env = NULL;
-static struct LoggingState *log_state = NULL;
+#ifdef TEST
+#define INTERNAL
+int exit_flag = 0;
+int exit_errno = 0;
+#else
+#define INTERNAL static
+#endif
 
-static void free_if_exists(void **pointer);
+INTERNAL struct SimulationState *sim_state = NULL;
+INTERNAL struct SimulationEnv *sim_env = NULL;
+INTERNAL struct LoggingState *log_state = NULL;
 
 void set_state(struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls)
 {
@@ -42,7 +48,7 @@ void initialize_states(struct SimulationState **ss, struct SimulationEnv **se,
 }
 
 // frees pointer only if it isn't NULL and sets pointer to NULL after free
-static void free_if_exists(void **pointer)
+INTERNAL void free_if_exists(void **pointer)
 {
     if (*pointer == NULL) {
         return;
@@ -67,6 +73,16 @@ void create_coredump(void)
 }
 #endif
 
+void call_exit(int error_num)
+{
+    #ifdef TEST
+    exit_flag = 1;
+    exit_errno = error_num;
+    #else
+    exit(error_num);
+    #endif
+}
+
 // emits generic error message to log file, frees allocated memory, and exits
 void clean_and_error(int exit_error)
 {
@@ -76,7 +92,7 @@ void clean_and_error(int exit_error)
         fprintf(fp, "%s\n", strerror(errno));
 
         // if in debug mode, abort to get a core dump
-        #ifndef NDEBUG
+        #if !defined(NDEBUG) && !defined(TEST)
         fprintf(stderr, "Creating core dump\n");
         abort();
         #endif
@@ -138,6 +154,6 @@ void clean_and_error(int exit_error)
 
     // if no error, don't exit (used in tearDown in tests)
     if (exit_error != 0) {
-        exit(exit_error);
+        call_exit(exit_error);
     }
 }

@@ -215,16 +215,66 @@ void test_process_xyz_file(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(lat2[2], at.lattice[2], "Atom max, lattice z");
 }
 
+// simple log
+void test_safe_log_writes(void)
+{
+    safe_log(temp_log, "Hello %s %d\n", "World", 42);
+
+    // Rewind to read
+    rewind(temp_log);
+
+    char buffer[128];
+    fgets(buffer, sizeof(buffer), temp_log);
+
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("Hello World 42\n", buffer,
+                                     "Simple log should be written correctly");
+}
+
+// long line within buffer limit
+void test_safe_log_long_line(void)
+{
+    char long_str[512];
+    memset(long_str, 'A', sizeof(long_str) - 2);
+    long_str[sizeof(long_str) - 2] = '\n';
+    long_str[sizeof(long_str) - 1] = '\0';
+
+    safe_log(temp_log, "%s", long_str);
+
+    rewind(temp_log);
+
+    char buffer[1024];
+    fgets(buffer, sizeof(buffer), temp_log);
+
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(long_str, buffer, "Long log line should be written correctly");
+}
+
+// formatting error simulated
+void test_safe_log_buffer_overflow(void)
+{
+    char huge_format[2048];
+    memset(huge_format, 'A', sizeof(huge_format) - 1);
+    huge_format[sizeof(huge_format) - 1] = '\0';
+
+    safe_log(temp_log, huge_format);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, exit_flag,
+                                  "Expected safe_log to trigger exit on buffer overflow");
+}
+
+// fflush failure (needs mocking, optional)
+// Not trivial in standard C; usually requires dependency injection or linking fakes
+
 int main(void)
 {
     UNITY_BEGIN();
 
-    // tests to run
     RUN_TEST(test_parse_input_systemsize);
     RUN_TEST(test_parse_input_geometry_file);
     RUN_TEST(test_process_in_file_mc);
     RUN_TEST(test_process_in_file_cluster);
     RUN_TEST(test_process_xyz_file);
+    RUN_TEST(test_safe_log_writes);
+    RUN_TEST(test_safe_log_long_line);
+    RUN_TEST(test_safe_log_buffer_overflow);
 
     UNITY_END();
 

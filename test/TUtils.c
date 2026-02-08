@@ -18,7 +18,7 @@ void fopen_error(const char *filename, const FILE *file)
 
 void init_temp(FILE **temp_log)
 {
-    *temp_log = fopen(temp_name, "w");
+    *temp_log = fopen(temp_name, "w+");
     fopen_error(temp_name, *temp_log);
 }
 

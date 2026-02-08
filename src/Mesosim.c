@@ -29,7 +29,7 @@ static void usage(void)
            "Options:\n"
            "  -h, --help\tDisplay this message\n"
            "  -v, --verbose\tPrint additional information\n");
-    exit(EXIT_SUCCESS);
+    call_exit(EXIT_SUCCESS);
 }
 
 static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbose_flag)
