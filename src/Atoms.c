@@ -253,9 +253,10 @@ void move_atom(long int initial_idx, long int final_idx, Atom **atom_arr,
     if (se->is_soluble[atom_arr[initial_idx]->type]) {
         atom_arr[final_idx]->transition_indices[se->num_transition_vectors] =
             atom_arr[initial_idx]->transition_indices[se->num_transition_vectors];
-    
+
         if (atom_arr[final_idx]->transition_indices[se->num_transition_vectors] >= 0) {
-            long transition_idx = atom_arr[final_idx]->transition_indices[se->num_transition_vectors];
+            long transition_idx =
+                atom_arr[final_idx]->transition_indices[se->num_transition_vectors];
             transition_arr[transition_idx]->atom_idx = final_idx;
         }
     }
@@ -381,8 +382,8 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
         // one element, i should be -1, which will alert the offset that
         // the zone is empty
 
-        findzone(&xzone, &yzone, &zzone, ss->atom_arr[atom_idx]->lattice[0], ss->atom_arr[atom_idx]->lattice[1],
-                 ss->atom_arr[atom_idx]->lattice[2], se);
+        findzone(&xzone, &yzone, &zzone, ss->atom_arr[atom_idx]->lattice[0],
+                 ss->atom_arr[atom_idx]->lattice[1], ss->atom_arr[atom_idx]->lattice[2], se);
         ss->zone_arr[xzone][yzone][zzone].offset = next_atom_idx;
 
         if (next_atom_idx != -1)
@@ -442,8 +443,8 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
 
 // checks if there is an atom at point (u, v, w) in lattice coordinates.
 // If so, it returns the index to that atom.  If not, return -1.
-long atom_at(int u, int v, int w, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z],
-            struct SimulationEnv *se)
+long atom_at(int u, int v, int w, Atom **atom_arr,
+             Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se)
 {
     // lattice coordinates uvw
     long i;
@@ -468,7 +469,7 @@ long atom_at(int u, int v, int w, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZON
 }
 
 long atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
-                   Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se)
+                    Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se)
 {
     int neighbor_x, neighbor_y, neighbor_z;
 

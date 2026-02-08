@@ -66,7 +66,7 @@ void create_coredump(void)
     int pid = fork();
 
     // abort the child process
-    if(pid == 0) {
+    if (pid == 0) {
         fprintf(stderr, "Creating core dump in child process\n");
         abort();
     }
@@ -75,12 +75,12 @@ void create_coredump(void)
 
 void call_exit(int error_num)
 {
-    #ifdef TEST
+#ifdef TEST
     exit_flag = 1;
     exit_errno = error_num;
-    #else
+#else
     exit(error_num);
-    #endif
+#endif
 }
 
 // emits generic error message to log file, frees allocated memory, and exits
@@ -91,11 +91,11 @@ void clean_and_error(int exit_error)
         fprintf(fp, "Error encountered - check stderr\n");
         safe_log(fp, "%s\n", strerror(errno));
 
+#if !defined(NDEBUG) && !defined(TEST)
         // if in debug mode, abort to get a core dump
-        #if !defined(NDEBUG) && !defined(TEST)
         fprintf(stderr, "Creating core dump\n");
         abort();
-        #endif
+#endif
     }
 
     // if in debug mode, free all allocated memory and exit gracefully for easier Memcheck usage

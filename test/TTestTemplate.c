@@ -13,7 +13,9 @@ void setUp(void)
     ls = calloc(1, sizeof(struct LoggingState));
 }
 
-void tearDown(void) {}
+void tearDown(void)
+{
+}
 
 void test_parse_comment(void)
 {

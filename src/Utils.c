@@ -39,7 +39,7 @@ double drand(void)
 
 /**
  * @brief Get the corresponding index in atom_env
- * 
+ *
  * @param offset_idx index in atom.neighbor_arr and se->transition_vectors
  * @param atom_type type of 'main' atom (interchangable with neighbor_type)
  * @param neighbor_type type of neighbor atom wrt 'main'
@@ -316,20 +316,21 @@ void pbc_translate(int coords_lat[3], int translation_vector_l[3])
 
 /**
  * @brief Get atom type from a name
- * 
- * @param atom_name 
+ *
+ * @param atom_name
  * @param atom_names array of atom names, from input file usually
  * @param atom_names_cnt length of atom_names array
  * @param atom_type output variable pointer
- * @return int 
+ * @return int
  */
-int get_type_from_name(char *atom_name, char **atom_names, int atom_names_cnt, unsigned char *atom_type)
+int get_type_from_name(char *atom_name, char **atom_names, int atom_names_cnt,
+                       unsigned char *atom_type)
 {
     int found = 0;
     for (int i = 0; i < atom_names_cnt; i++) {
         int str_match = strncmp(atom_name, atom_names[i], strlen(atom_names[i])) == 0;
         if (str_match) {
-            *atom_type = (unsigned char) i;
+            *atom_type = (unsigned char)i;
             found = 1;
             return 0;
         }

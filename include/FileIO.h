@@ -31,8 +31,8 @@ bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, doubl
                      double total_internal_energy);
 void output_kmc_csv_header(FILE *csv_file);
 void log_kmc_state_csv(FILE *csv_file, int frame_num, unsigned long int iter, double elapsed_stime,
-                   double temperature, double overpotential, long int atom_cnt,
-                   double total_internal_energy);
+                       double temperature, double overpotential, long int atom_cnt,
+                       double total_internal_energy);
 void output_mc_csv_header(FILE *csv_file);
 void log_mc_state_csv(FILE *csv_log_file, const int frame_num, const unsigned long int mmc_steps,
                       const unsigned long int iter, const double sys_energy);

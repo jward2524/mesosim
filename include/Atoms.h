@@ -4,14 +4,15 @@
 #include "State.h"
 
 long int add_atom(int u, int v, int w, unsigned char type, int special, struct SimulationState *ss,
-             struct SimulationEnv *se);
-long atom_at(int u, int v, int w, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z],
-            struct SimulationEnv *se);
+                  struct SimulationEnv *se);
+long atom_at(int u, int v, int w, Atom **atom_arr,
+             Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
 long atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
-                   Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
+                    Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
 void remove_atom(long int at, struct SimulationState *ss, struct SimulationEnv *se);
-void move_atom(long int ia, long int fa, Atom **atom_arr, Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z],
-               Transition **transition_arr, struct SimulationEnv *se);
+void move_atom(long int ia, long int fa, Atom **atom_arr,
+               Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition **transition_arr,
+               struct SimulationEnv *se);
 
 // void make_buried_atoms_real(void);
 void bury_atom(int at, int *pos); // no longer relevant

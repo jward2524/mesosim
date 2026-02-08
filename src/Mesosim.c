@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 
     time(&endtime);
     safe_log(log_state->sim_log, "Finished! Total time taken: %d seconds\n",
-            (int)(endtime - starttime));
+             (int)(endtime - starttime));
 
     clean_and_error(EXIT_SUCCESS);
 

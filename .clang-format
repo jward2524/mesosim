@@ -15,4 +15,8 @@ IndentCaseLabels: false
 ColumnLimit: 100
 MaxEmptyLinesToKeep: 1
 
-LineEnding: LF
+# requires clang-format 20
+# LineEnding: LF
+DeriveLineEnding: false
+UseCRLF: false
+# IndentPPDirectives: BeforeHash

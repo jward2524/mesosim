@@ -38,7 +38,10 @@ double fdot(double x[3], double y[3])
     return temp;
 }
 
-int idot(int x[3], int y[3]) { return x[0] * y[0] + x[1] * y[1] + x[2] * y[2]; }
+int idot(int x[3], int y[3])
+{
+    return x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
+}
 
 /******************************************************************
 subrot:  helper subroutine for rotmata. (see above).

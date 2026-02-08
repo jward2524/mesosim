@@ -6,11 +6,13 @@ void initialize_neighbor_offsets(struct SimulationEnv *se);
 void initialize_zones(Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
 void set_primitive_basis(struct SimulationEnv *se);
 void initialize_lattice_geometry(struct SimulationEnv *sim_env);
-void initialize_initial_structure(struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls);
+void initialize_initial_structure(struct SimulationState *ss, struct SimulationEnv *se,
+                                  struct LoggingState *ls);
 void initialize_simulation_variables(struct SimulationState *ss, struct SimulationEnv *se);
 void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se);
 void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationEnv *se);
-void initialize_from_file(struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls);
+void initialize_from_file(struct SimulationState *ss, struct SimulationEnv *se,
+                          struct LoggingState *ls);
 void initialize_simulation_box(struct SimulationEnv *se);
 void get_shifts(struct SimulationEnv *se);
 void get_system_normal(double basis[3][3]);

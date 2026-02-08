@@ -115,9 +115,9 @@ typedef struct {
 
 typedef struct {
     long *rate_arr_index; // contains the index in rate_arr that gives the upper bound after adding
-                         // frequency/frequency_sum
-    double *lbound;      // ENHANCE: lbound and ubound are duplicating info
-    double *ubound;      // lbound[i] = ubound[i+1] ?
+                          // frequency/frequency_sum
+    double *lbound;       // ENHANCE: lbound and ubound are duplicating info
+    double *ubound;       // lbound[i] = ubound[i+1] ?
 } TransProb;
 
 typedef struct {
@@ -129,7 +129,7 @@ typedef struct {
     double frequency; // rate constant * transition_count, for calculating probability of transition
     long int transition_count;     // number (count?) of this type of transition in transition_arr
     long int transition_start_idx; // index to first item in transition_arr with this rate constant
-    unsigned char *atom_env;  // can't do variable length arrays, so pointer instead
+    unsigned char *atom_env;       // can't do variable length arrays, so pointer instead
     // pointer to start of 2D array num_bond_types*idx1 + idx2
 
     // ENHANCE: combine final_config_neighbor_cnt and is_evaporation

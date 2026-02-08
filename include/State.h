@@ -79,7 +79,7 @@ struct SimulationEnv {
 
     // relevant vectors to neighbors
     LatticeVector *transition_vectors;
-    int num_transition_vectors; // TODO: change to unsigned char to match offset
+    int num_transition_vectors;  // TODO: change to unsigned char to match offset
     int num_energy_contributors; // based on num_nn_levels, directions must be hard-coded
 
     // index in transition_vectors that has the jump in the opposite direction in simulation;
@@ -93,9 +93,9 @@ struct SimulationEnv {
     // [[u1 v1 w1], [u2 v2 w2], [u3 v3 w3]]
     double primitive_basis[3][3];
     double invert_primitive_basis[3][3];
-    
+
     // TODO: this is never used except for printing?
-    double ucell_params[6]; // unit cell parameters; a b c alpha beta gamma 
+    double ucell_params[6]; // unit cell parameters; a b c alpha beta gamma
 };
 
 // variables that describe the simulation state

@@ -14,7 +14,7 @@ extern struct LoggingState *log_state;
 
 void set_state(struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls);
 void initialize_states(struct SimulationState **ss, struct SimulationEnv **se,
-                        struct LoggingState **ls);
+                       struct LoggingState **ls);
 void clean_and_error(int error);
 void call_exit(int errnum);
 

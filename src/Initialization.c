@@ -99,7 +99,7 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
     for (int i = 0; i < se->num_nn_levels; i++) {
         se->max_rates += (long int)pow(se->num_bond_types, se->atoms_per_nn_level[i]);
     }
-    se->max_rates = (long int) ((1 + se->dissolution) * se->max_rates);
+    se->max_rates = (long int)((1 + se->dissolution) * se->max_rates);
 
     se->max_atoms = se->lat_range[0] * se->lat_range[1] * se->lat_range[2];
     se->max_transitions = ((se->num_transition_vectors + se->dissolution) * se->max_atoms) + 10;
@@ -122,7 +122,8 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
         clean_and_error(errno);
     }
 
-    ss->transition_probability.rate_arr_index = (long *)malloc((size_t)se->max_rates * sizeof(long));
+    ss->transition_probability.rate_arr_index =
+        (long *)malloc((size_t)se->max_rates * sizeof(long));
     ss->transition_probability.lbound = (double *)malloc((size_t)se->max_rates * sizeof(double));
     ss->transition_probability.ubound = (double *)malloc((size_t)se->max_rates * sizeof(double));
 
@@ -143,7 +144,7 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
     ss->transition_cnt = 0;
     ss->atom_cnt = 0; // initialize global atom variables
     // XXX: commented code, never used
-    // current_iteration = 0; //not needed if only running 1 simulation at a time 
+    // current_iteration = 0; //not needed if only running 1 simulation at a time
     ss->frequency_sum = 0.0;
 
     // TODO: allow for reading simulation variables from intermediate xyz file
@@ -264,7 +265,7 @@ void get_shifts(struct SimulationEnv *se)
 
 // updates rmat
 // supposedly for viewing
-void set_default_orientation(int lattice_type, double rmat[3][3]) 
+void set_default_orientation(int lattice_type, double rmat[3][3])
 {
     double axis[3], pnormal[3], axis_mag;
     double zero_point[3] = {0., 0., 0.}, a_a[3];
@@ -421,7 +422,8 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
     }
     transition_length = se->num_energy_contributors;
 
-    se->transition_vectors = (LatticeVector *)malloc((size_t)transition_length * sizeof(LatticeVector));
+    se->transition_vectors =
+        (LatticeVector *)malloc((size_t)transition_length * sizeof(LatticeVector));
     if (!se->transition_vectors) {
         perror("Couldn't allocate memory for jump offset array");
         clean_and_error(errno);
@@ -621,7 +623,7 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
         }
     }
 
-    // iterates through the bounding box of the sphere to identify positions in cluster 
+    // iterates through the bounding box of the sphere to identify positions in cluster
     // ENHANCE: only 52% of loops will be successful - make it more efficient
     for (int u = bblimits_lattice[0][0]; u <= bblimits_lattice[0][1]; u++) {
         for (int v = bblimits_lattice[1][0]; v <= bblimits_lattice[1][1]; v++) {
@@ -756,8 +758,8 @@ void initialize_simulation_box(struct SimulationEnv *se)
     double normal_lat[6][3]; // TODO: when reimplemented, if needs to have larger scope
     for (int side = 0; side < 6; side++) {
         // doesn't contribute; only for sake of seeing normal in lat coordinates
-        vecmul(normal_cart[side], se->invert_primitive_basis, normal_lat[side]); 
-        
+        vecmul(normal_cart[side], se->invert_primitive_basis, normal_lat[side]);
+
         // negative normal gives negative dot product
         lhs[side] = fdot(normal_cart[side], point_cart[side]);
 
