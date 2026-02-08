@@ -196,14 +196,14 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                     break;
             } else {
                 fprintf(stderr, "Transition decision failed\n");
-                clean_and_error(1);
+                clean_and_error(EXIT_FAILURE);
             }
         }
 
         // ? only happens iff jump_vector == se->num_transition_vectors? (dissolution?)
         if (!transition_found) {
             fprintf(stderr, "for some reason I didn't transition\n");
-            clean_and_error(1);
+            clean_and_error(EXIT_FAILURE);
         }
 
         // increment the elapsed time (how much passed before last transition)
@@ -217,7 +217,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         ss->elapsed_stime += stime_increment;
         if (isinf(ss->elapsed_stime)) {
             fprintf(stderr, "Simulation time went infinite\n");
-            clean_and_error(1);
+            clean_and_error(EXIT_FAILURE);
         }
 
         if (se->overpotential_ramp_rate > 0.0) {
@@ -253,7 +253,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
             if (!checkpoint_reached && (ss->iter > ls->next_log_checkpoint)) {
                 fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing\n",
                         ss->iter, ls->next_log_checkpoint);
-                clean_and_error(1);
+                clean_and_error(EXIT_FAILURE);
             }
         }
 
@@ -362,7 +362,7 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
             }
             if (isnan(rate_const)) {
                 fprintf(stderr, "Rate constant is nan\n");
-                clean_and_error(1);
+                clean_and_error(EXIT_FAILURE);
             }
             r->k = rate_const;
             r->frequency = r->k * (double)r->transition_count;
@@ -385,7 +385,7 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
         current_probability += ss->rate_arr[rate_idx].frequency / ss->frequency_sum;
         if (isnan(current_probability)) {
             fprintf(stderr, "Probability is nan\n");
-            clean_and_error(1);
+            clean_and_error(EXIT_FAILURE);
         }
         ss->transition_probability.ubound[i] = current_probability;
     }

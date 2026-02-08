@@ -613,11 +613,11 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
     for (int dim_idx = 0; dim_idx < 3; dim_idx++) {
         if (bblimits_cart[dim_idx][0] < 0) {
             printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
-            clean_and_error(1);
+            clean_and_error(EXIT_FAILURE);
         }
         if (bblimits_cart[dim_idx][1] > (int)(2 * center_cart[dim_idx])) {
             printf("ERROR! Spherical cluster passes through periodic boundary conditions\n");
-            clean_and_error(1);
+            clean_and_error(EXIT_FAILURE);
         }
     }
 
@@ -665,7 +665,7 @@ void initialize_from_file(struct SimulationState *ss, struct SimulationEnv *se,
     char *file_ext = strrchr(se->atoms_filename, '.') + 1;
     if (strcmp(file_ext, "xyz") != 0) {
         fprintf(stderr, "File extension %s not recognized as atom input file", file_ext);
-        clean_and_error(1);
+        clean_and_error(EXIT_FAILURE);
     }
 
     FILE *atom_file = fopen(se->atoms_filename, "r");

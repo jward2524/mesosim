@@ -73,7 +73,7 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
         fprintf(stderr, "ERROR! Unable to add atom %ld; %d other atoms found at (%d, %d, %d)\n",
                 ss->atom_cnt, num_overlapping, u, v, w);
         // ss->simulation_should_kill_itself = true;
-        clean_and_error(1);
+        clean_and_error(EXIT_FAILURE);
         return ss->atom_cnt;
     }
 
@@ -82,7 +82,7 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
     if (pos > se->max_atoms) {
         fprintf(stderr, "More atoms (%ld) than allocated in atom array (%ld)\n", pos,
                 se->max_atoms);
-        clean_and_error(1);
+        clean_and_error(EXIT_FAILURE);
     }
     create_default_atom(ss->atom_cnt, ss->atom_arr, se);
     ++ss->atom_cnt;

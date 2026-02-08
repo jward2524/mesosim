@@ -29,7 +29,7 @@ static void usage(void)
            "Options:\n"
            "  -h, --help\tDisplay this message\n"
            "  -v, --verbose\tPrint additional information\n");
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 
 static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbose_flag)
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
         write_backlog(temp_log, debug_file);
         fclose(debug_file);
         fclose(temp_log);
-        clean_and_error(1);
+        clean_and_error(EXIT_FAILURE);
     }
 
     printf("Read file successfully\n");
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 
     if (sim_error != 0) {
         fprintf(stderr, "ERROR! Something went wrong in the simulation\n");
-        clean_and_error(1);
+        clean_and_error(EXIT_FAILURE);
     }
 
     // finalize everything
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
     fprintf(log_state->sim_log, "Finished! Total time taken: %d seconds\n",
             (int)(endtime - starttime));
 
-    clean_and_error(0);
+    clean_and_error(EXIT_SUCCESS);
 
     return 0;
 }
