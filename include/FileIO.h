@@ -7,6 +7,8 @@
 extern const size_t BUFFER_SIZE;
 extern const size_t ARR_BUFFER_SIZE;
 
+void safe_log(FILE *stream, const char *fmt, ...);
+
 bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
                                      struct SimulationEnv *se, struct LoggingState *ls,
                                      FILE *temp_log, time_t starttime); // need to modify!

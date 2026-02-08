@@ -6,7 +6,9 @@
 #include <ctype.h>
 #include <errno.h>
 #include <math.h>
+#include <stdarg.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,6 +21,59 @@ static int parse_datalog_params(char *params, int cursor, struct LoggingState *l
 static int parse_boolean(char *str);
 static void parse_log_list(char *input_str, double *list, int *len);
 
+static bool fopen_error(char *filename, FILE *file, char *base_msg)
+{
+    if (file == NULL) {
+        fprintf(stderr, "%s%s: %s\n", base_msg, filename, strerror(errno));
+        clean_and_error(errno);
+    }
+    return true;
+}
+
+/**
+ * @brief safely logs a formatted message to the given stream, ensuring that the entire message is
+ * written; exits with an error if formatting or writing fails
+ *
+ * @param stream file stream to write to
+ * @param fmt printf-like format string
+ * @param ... arguments for format string
+ */
+void safe_log(FILE *stream, const char *fmt, ...)
+{
+    // write formatted message to buffer first to ensure atomicity of log lines and minimize chance
+    // of partial writes
+    char buffer[1024];
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+
+    // check for formatting errors before writing
+    if (n < 0) {
+        fprintf(stderr, "Formatting error in safe_log, format %s: %s\n", fmt, strerror(errno));
+        clean_and_error(errno);
+    }
+    if (n >= (int)sizeof(buffer)) {
+        fprintf(stderr, "Log line too long (%d chars), buffer size %zu\n", n, sizeof(buffer));
+        clean_and_error(EXIT_FAILURE);
+    }
+
+    // write buffer to stream and check for write errors
+    size_t written = fwrite(buffer, 1, (size_t)n, stream);
+    if (written != (size_t)n) {
+        // wrote only part of the line
+        // don't error for now
+        fprintf(stderr,
+                "Failed to write complete log line to stream - wrote %zu of %d characters: %s\n",
+                written, n, strerror(errno));
+    }
+
+    if (fflush(stream) == EOF) {
+        perror("Failed to flush log");
+        clean_and_error(errno);
+    }
+}
+
 void write_backlog(FILE *tempFile, FILE *logFile)
 {
     // transfers everything from the temporary log file to a permanent log
@@ -27,15 +82,6 @@ void write_backlog(FILE *tempFile, FILE *logFile)
     while (fgets(buffer, sizeof(buffer), tempFile) != NULL) {
         fputs(buffer, logFile);
     }
-}
-
-static bool fopen_error(char *filename, FILE *file, char *base_msg)
-{
-    if (file == NULL) {
-        fprintf(stderr, "%s%s: %s\n", base_msg, filename, strerror(errno));
-        clean_and_error(errno);
-    }
-    return true;
 }
 
 bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
