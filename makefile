@@ -159,7 +159,7 @@ passed = `grep :PASS $(results_path)/*.txt`
 fail = `grep :fail $(results_path)/*.txt`
 ignore = `grep :ignore $(results_path)/*.txt`
 # summary = `tail -n2 $(results_path)/*.txt`
-summary = `grep -T Tests $(results_path)/*.txt`
+summary = `grep -T Tests $(results_path)/*.txt | column -t`
 
 do-test: $(results) | $(build_paths)
 	@echo -e "-----------------------\nIGNORES:\n-----------------------"
