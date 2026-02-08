@@ -142,7 +142,7 @@ ifneq (,$(filter $(TYPE),test))
 	do_build_deps = do-test
 endif
 ifneq (,$(filter $(TYPE),dbtest))
-	do_build_deps = $(patsubst $(test_path)/Test%.c,$(bin_path)/Test%.exe,$(test_src) )
+	do_build_deps = $(patsubst $(test_path)/Test%.c,$(bin_path)/Test%.$(TARGET_EXTENSION),$(test_src) )
 endif
 
 $(TYPES):
