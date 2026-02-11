@@ -20,3 +20,4 @@ MaxEmptyLinesToKeep: 1
 DeriveLineEnding: false
 UseCRLF: false
 # IndentPPDirectives: BeforeHash
+AlignEscapedNewlines: Left

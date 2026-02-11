@@ -1,11 +1,15 @@
 #ifndef ERROR_H
 #define ERROR_H
 #include "State.h"
+#include "setjmp.h"
 
 #ifdef TEST
 // set when exit is called during tests
-extern int exit_flag;
-extern int exit_errno;
+extern volatile int exit_flag;
+extern volatile int exit_errno;
+extern volatile int jmp_set;
+extern int expected_exit_errno;
+extern jmp_buf test_exit_jmp;
 // expose to check whether they are correctly set in tests
 extern struct SimulationState *sim_state;
 extern struct SimulationEnv *sim_env;

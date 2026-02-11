@@ -2,9 +2,9 @@
 #include "State.h"
 #include "unity.h"
 
-struct SimulationState *ss;
-struct SimulationEnv *se;
-struct LoggingState *ls;
+static struct SimulationState *ss;
+static struct SimulationEnv *se;
+static struct LoggingState *ls;
 
 void setUp(void)
 {

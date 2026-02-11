@@ -255,9 +255,10 @@ void test_safe_log_buffer_overflow(void)
     memset(huge_format, 'A', sizeof(huge_format) - 1);
     huge_format[sizeof(huge_format) - 1] = '\0';
 
-    safe_log(temp_log, huge_format);
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, exit_flag,
-                                  "Expected safe_log to trigger exit on buffer overflow");
+    EXPECT_EXIT(1, {
+        safe_log(temp_log, huge_format);
+        TEST_FAIL_MESSAGE("Expected nnlevels argcount failure");
+    });
 }
 
 // fflush failure (needs mocking, optional)

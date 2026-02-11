@@ -3,6 +3,20 @@
 
 #include <stdio.h>
 
+#define EXPECT_EXIT(code, block)                       \
+    do {                                               \
+        expected_exit_errno = (code);                  \
+        if (setjmp(test_exit_jmp) == 0) {              \
+            jmp_set = 1;                               \
+            block                                      \
+        } else {                                       \
+            TEST_ASSERT_EQUAL_INT_MESSAGE(             \
+                expected_exit_errno,                   \
+                exit_errno,                            \
+                "Expected exit errno does not match actual exit errno"); \
+        }                                              \
+    } while (0)
+
 void fopen_error(const char *filename, const FILE *file);
 void init_temp(FILE **temp_log);
 void clean_temp(FILE **temp_log);

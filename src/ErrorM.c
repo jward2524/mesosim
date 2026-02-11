@@ -2,14 +2,18 @@
 #include "FileIO.h"
 #include "State.h"
 #include <errno.h>
+#include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #ifdef TEST
 #define INTERNAL
-int exit_flag = 0;
-int exit_errno = 0;
+volatile int exit_flag = 0;
+volatile int exit_errno = 0;
+volatile int jmp_set = 0;
+int expected_exit_errno = 0;
+jmp_buf test_exit_jmp;
 #else
 #define INTERNAL static
 #endif
@@ -78,6 +82,11 @@ void call_exit(int error_num)
 #ifdef TEST
     exit_flag = 1;
     exit_errno = error_num;
+    if (!jmp_set) {
+        fprintf(stderr, "Error: setjmp was not called - wrap test with EXPECT_EXIT\n");
+        abort();
+    }
+    longjmp(test_exit_jmp, 1);
 #else
     exit(error_num);
 #endif
