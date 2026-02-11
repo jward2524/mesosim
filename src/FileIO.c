@@ -18,7 +18,6 @@ char outFile[260] = ""; // MAX_PATH variable Windows related, default 260
 
 static void calloc_nnE(struct SimulationEnv *se);
 static int parse_datalog_params(char *params, int cursor, struct LoggingState *ls, FILE *temp_log);
-static int parse_boolean(char *str);
 static void parse_log_list(char *input_str, double *list, int *len);
 
 static bool fopen_error(char *filename, FILE *file, char *base_msg)
@@ -628,19 +627,6 @@ int parse_input(char *line, FILE *temp_log, struct SimulationState *ss, struct S
         exit(FILE_COMMAND_IGNORED);
     }
     return SUCCESS;
-}
-
-static int parse_boolean(char *str)
-{
-    if (strncmp(str, "true", 4) == 0 || strncmp(str, "True", 4) == 0 ||
-        strncmp(str, "TRUE", 4) == 0 || strncmp(str, "T", 1) == 0 || strncmp(str, "1", 1) == 0)
-        return 1;
-    else if (strncmp(str, "false", 5) == 0 || strncmp(str, "False", 5) == 0 ||
-             strncmp(str, "FALSE", 5) == 0 || strncmp(str, "F", 1) == 0 ||
-             strncmp(str, "0", 1) == 0)
-        return 0;
-    else
-        return -1;
 }
 
 static void parse_log_list(char *input_str, double *list, int *len)

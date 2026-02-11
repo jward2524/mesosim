@@ -36,4 +36,8 @@ void primitive_basis2ucell_params(double ltmt[3][3], double c[6]);
 int get_type_from_name(char *atom_name, char **atom_names, int atom_names_cnt,
                        unsigned char *atom_type);
 
+int tokenize_line(char *line, char **tokens, int maxtok);
+char *dup_str(const char *s);
+int parse_boolean(char *str);
+
 #endif // UTILS_H

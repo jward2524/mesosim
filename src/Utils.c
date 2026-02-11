@@ -1,6 +1,7 @@
 ﻿#include "Utils.h" // includes State.h
 #include "Vector.h"
 #include <assert.h>
+#include <ctype.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -94,7 +95,9 @@ int get_bond_index(int a, int b, int num_elements)
 // calculate the number of bond types
 int get_num_bond_types(int num_elements)
 {
-    return fact(num_elements + 2 - 1) / (fact(2) * fact(num_elements - 1));
+    // number of bond types is number of combinations with replacement of num_elements things taken 2 at a time
+    // fact(num_elements + 2 - 1) / (fact(2) * fact(num_elements - 1));
+    return (num_elements * (num_elements + 1)) / 2;
 }
 
 // returns the factorial of n
@@ -342,4 +345,79 @@ int get_type_from_name(char *atom_name, char **atom_names, int atom_names_cnt,
         fprintf(stderr, "Atom name found but didn't return earlier, something went wrong");
         return 1;
     }
+}
+
+//
+
+/**
+ * @brief Tokenize in-place a line into an array of tokens (whitespace-delimited) turns spaces into
+ * null characters
+ *
+ * @param line input line to tokenize - will be modified by inserting null characters
+ * @param tokens output array of char* pointers to tokens in line - should be pre-allocated with size >= number of expected tokens for the line being parsed
+ * @param maxtok maximum number of tokens to parse - should be >= number of expected tokens for the line being parsed
+ * @return int number of tokens
+ */
+int tokenize_line(char *line, char **tokens, int maxtok)
+{
+    int ntok = 0;
+    char *p = line;
+    while (*p && (ntok < maxtok)) {
+        // trim whitespace between tokens
+        while (*p && isspace((unsigned char)*p))
+            ++p;
+        if (!*p)
+            break;
+
+        // mark start of next token
+        tokens[ntok] = p;
+        ntok++;
+
+        // find next whitespace and replace it with null character
+        while (*p && !isspace((unsigned char)*p))
+            ++p;
+        if (*p) {
+            *p = '\0';
+            p++;
+        }
+    }
+    return ntok;
+}
+
+/**
+ * @brief Duplicate a string. Replicates the behavior of strdup, which isn't part of the C library until C23.
+ * 
+ * @param s input string to duplicate
+ * @return char* pointer to the duplicated string, or NULL if allocation fails
+ */
+char *dup_str(const char *s)
+{
+    char *copy;
+    size_t len;
+
+    if (s == NULL)
+        return NULL;
+
+    // +1 for the null terminator
+    len = strlen(s) + 1;
+
+    copy = malloc(len);
+    if (copy == NULL)
+        return NULL;
+
+    memcpy(copy, s, len);
+    return copy;
+}
+
+int parse_boolean(char *str)
+{
+    if (strncmp(str, "true", 4) == 0 || strncmp(str, "True", 4) == 0 ||
+        strncmp(str, "TRUE", 4) == 0 || strncmp(str, "T", 1) == 0 || strncmp(str, "1", 1) == 0)
+        return 1;
+    else if (strncmp(str, "false", 5) == 0 || strncmp(str, "False", 5) == 0 ||
+             strncmp(str, "FALSE", 5) == 0 || strncmp(str, "F", 1) == 0 ||
+             strncmp(str, "0", 1) == 0)
+        return 0;
+    else
+        return -1;
 }

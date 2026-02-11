@@ -65,6 +65,7 @@ struct SimulationEnv {
     double simbox_vectors_cart[3][3]; // [[u1 u2 u3], [v1 v2 v3], [w1 w2 w3]]
     double simbox_origin_cart[3];
 
+    // TODO: change this (and get_env_index) to be a 3D array nne[shell][i][j] where i and j are atom types
     double *nn_energy; // nnE[env_idx]
 
     bool *is_soluble; // [num_elements] (implemented as always [8])
@@ -72,6 +73,7 @@ struct SimulationEnv {
     int dissolution;   // flag for whether dissolution events can occur
     char **atom_names; // [num_elements][BUFFER_SIZE or 3 or something]
     int atom_names_cnt;
+    // TODO: remove this, can just use num_elements
 
     /* symmetry related variables */
     double rmat[3][3];  // visualization?

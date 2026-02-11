@@ -99,12 +99,6 @@ typedef struct {
     // double color[3];
 } Atom_type;
 
-// command line commands // XXX
-typedef struct {
-    char name[25];
-    int count;
-} Command;
-
 // the direction of an atomic jump / diffusion move
 // in lattice coordinates
 typedef struct {

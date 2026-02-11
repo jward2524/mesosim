@@ -269,34 +269,6 @@ int parse_properties_value(const char *propval, PropertyDesc **out_props, int *o
     return 0;
 }
 
-// Tokenize in-place a line into an array of tokens (whitespace-delimited)
-// turns spaces into null characters
-int tokenize_line(char *line, char **tokens, int maxtok)
-{
-    int ntok = 0;
-    char *p = line;
-    while (*p && (ntok < maxtok)) {
-        // trim whitespace between tokens
-        while (*p && isspace((unsigned char)*p))
-            ++p;
-        if (!*p)
-            break;
-
-        // mark start of next token
-        tokens[ntok] = p;
-        ntok++;
-
-        // find next whitespace and replace it with null character
-        while (*p && !isspace((unsigned char)*p))
-            ++p;
-        if (*p) {
-            *p = '\0';
-            p++;
-        }
-    }
-    return ntok;
-}
-
 // Map property tokens into Atom fields
 // check before use that token count is correct
 int fill_atom_from_tokens(Atom *atom, char **tokens, int ntokens, char **atom_names,
