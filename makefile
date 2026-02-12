@@ -156,18 +156,18 @@ do-build: $(do_build_deps) | $(build_paths)
 # --- Test results ---
 results = $(patsubst $(test_path)/Test%.c,$(results_path)/Test%.txt,$(test_src) )
 passed = `grep :PASS $(results_path)/*.txt`
-fail = `grep :fail $(results_path)/*.txt`
-ignore = `grep :ignore $(results_path)/*.txt`
+fail = `grep :FAIL $(results_path)/*.txt`
+ignore = `grep :IGNORE $(results_path)/*.txt`
 # summary = `tail -n2 $(results_path)/*.txt`
 summary = `grep -T Tests $(results_path)/*.txt | column -t`
 
 do-test: $(results) | $(build_paths)
+	@echo -e "-----------------------\nPASSED:\n-----------------------"
+	@echo "$(passed)"
 	@echo -e "-----------------------\nIGNORES:\n-----------------------"
 	@echo "$(ignore)"
 	@echo -e "-----------------------\nFAILURES:\n-----------------------"
 	@echo "$(fail)"
-	@echo -e "-----------------------\nPASSED:\n-----------------------"
-	@echo "$(passed)"
 	@echo -e "-----------------------\nSUMMARY:\n-----------------------"
 	@echo "$(summary)"
 	@echo -e "\nDONE"
