@@ -6,6 +6,7 @@
 
 extern const size_t BUFFER_SIZE;
 extern const size_t ARR_BUFFER_SIZE;
+extern char outFile[260];
 
 void safe_log(FILE *stream, const char *fmt, ...);
 

@@ -44,6 +44,8 @@ typedef struct {
 
 void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
                       struct SimulationEnv *se, struct LoggingState *ls);
+void finalize_atom_dependent(const ParseContext *ctx, struct SimulationEnv *se);
+void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se);
 void finalize_config(const ParseContext *ctx, struct SimulationState *ss,
                      struct SimulationEnv *se, struct LoggingState *ls);
 void print_help(const char *cmd);

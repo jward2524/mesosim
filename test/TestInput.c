@@ -46,6 +46,7 @@ void test_parse_two_atomtypes_one_shell(void) {
     FILE *fp = open_mem(input);
 
     parse_input_file(fp, &ctx, ss, se, ls);
+    finalize_config(&ctx, ss, se, ls);
     fclose(fp);
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(2, se->atom_names_cnt, "Number of atom types");
@@ -72,6 +73,7 @@ void test_parse_three_atomtypes_two_shells(void) {
     FILE *fp = open_mem(input);
 
     parse_input_file(fp, &ctx, ss, se, ls);
+    finalize_config(&ctx, ss, se, ls);
     fclose(fp);
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(3, se->num_elements, "Number of elements");
@@ -104,6 +106,7 @@ void test_missing_atomtype_fails(void) {
 
     EXPECT_EXIT(EXIT_FAILURE, {
         parse_input_file(fp, &ctx, ss, se, ls);
+        finalize_config(&ctx, ss, se, ls);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected failure");
     });
@@ -119,6 +122,7 @@ void test_missing_nne_shell_fails(void) {
 
     EXPECT_EXIT(EXIT_FAILURE, {
         parse_input_file(fp, &ctx, ss, se, ls);
+        finalize_config(&ctx, ss, se, ls);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected failure");
     });
@@ -186,6 +190,7 @@ void test_nne_level_exceeds_nnlevels_fails(void) {
 
     EXPECT_EXIT(EXIT_FAILURE, {
         parse_input_file(fp, &ctx, ss, se, ls);
+        finalize_config(&ctx, ss, se, ls);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected nne level overflow failure");
     });
@@ -202,6 +207,7 @@ void test_duplicate_nne_definition_fails(void) {
 
     EXPECT_EXIT(EXIT_FAILURE, {
         parse_input_file(fp, &ctx, ss, se, ls);
+        finalize_config(&ctx, ss, se, ls);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected duplicate nne failure");
     });
@@ -217,6 +223,7 @@ void test_nne_too_few_values_fails(void) {
 
     EXPECT_EXIT(EXIT_FAILURE, {
         parse_input_file(fp, &ctx, ss, se, ls);
+        finalize_config(&ctx, ss, se, ls);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected nne value count failure");
     });
@@ -231,6 +238,7 @@ void test_composition_count_mismatch_fails(void) {
 
     EXPECT_EXIT(EXIT_FAILURE, {
         parse_input_file(fp, &ctx, ss, se, ls);
+        finalize_config(&ctx, ss, se, ls);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected composition count mismatch");
     });
