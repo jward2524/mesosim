@@ -643,7 +643,7 @@ void test_potential_non_numeric_sweep_fails(void) {
 }
 
 void test_datalog_invalid_mode_keyword_fails(void) {
-    const char *input = "datalog linear cadence 1\n";
+    const char *input = "datalog lineart cadence 1\n";
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
@@ -654,7 +654,7 @@ void test_datalog_invalid_mode_keyword_fails(void) {
 }
 
 void test_datalog_interval_non_numeric_fails(void) {
-    const char *input = "datalog linear interval nope\n";
+    const char *input = "datalog lineart interval nope\n";
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 

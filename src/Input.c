@@ -75,9 +75,6 @@ static int parse_double(const char *s, double *out) {
 }
 
 /* ================= Command handlers ================= */
-typedef int (*CmdFunc)(int argc, char **argv, int line, ParseContext *ctx,
-                       struct SimulationState *ss, struct SimulationEnv *se,
-                       struct LoggingState *ls);
 
 static int cmd_atomtype(int argc, char **argv, int line, ParseContext *ctx,
                         struct SimulationState *ss, struct SimulationEnv *se,
@@ -334,9 +331,9 @@ static int cmd_datalog(int argc, char **argv, int line, ParseContext *ctx,
     }
 
     int interval_type = 0;
-    if (strcmp(argv[1], "linear") == 0) {
+    if (strcmp(argv[1], "lineart") == 0) {
         interval_type = REGULAR_TIME_INTERVALS;
-    } else if (strcmp(argv[1], "ln") == 0) {
+    } else if (strcmp(argv[1], "lnt") == 0) {
         interval_type = LN_TIME_INTERVALS;
     } else if (strcmp(argv[1], "iteration") == 0) {
         interval_type = ITERATION_INTERVALS;
@@ -560,32 +557,24 @@ static int cmd_help(int argc, char **argv, int line, ParseContext *ctx,
                     struct SimulationState *ss, struct SimulationEnv *se,
                     struct LoggingState *ls);
 
-typedef struct {
-    const char *name;
-    CmdFunc func;
-    const char *usage;
-    const char *description;
-} Command;
-
-
-static Command commands[] = {
-    { "systemsize",  cmd_systemsize,  "systemsize NX NY NZ", "Simulation box size in lattice units." },
-    { "temp",        cmd_temp,        "temp T", "Simulation temperature in K." },
-    { "seed",        cmd_seed,        "seed random|default|N", "Random seed selection." },
-    { "potential",   cmd_potential,   "potential U0 [dUdt Umax]", "Constant or swept potential." },
-    { "datalog",     cmd_datalog,     "datalog (linear|ln|iteration) (interval a [b]|list ...)", "Logging schedule configuration." },
-    { "struct",      cmd_struct,      "struct FCC|BCC|SC", "Crystal structure type." },
-    { "output",      cmd_output,      "output path/outfile.out", "Output log filename." },
-    { "geometry",    cmd_geometry,    "geometry (sheet N|cluster R|file path)", "Initial geometry configuration." },
-    { "atomtype",    cmd_atomtype,    "atomtype A B [C ...]",  "Define atom types and their order." },
-    { "composition", cmd_composition, "composition xA xB [xC ...]", "Atomic composition fractions; order follows atomtype." },
-    { "dissolution", cmd_dissolution, "dissolution true|false ...", "Dissolution flags per atom type; order follows atomtype." },
-    { "nnlevels",    cmd_nnlevels,    "nnlevels N", "Number of nearest-neighbor shells." },
-    { "nne",         cmd_nne,         "1nne eAA eAB ...", "Nearest-neighbor energies for shell n (flattened upper-triangle)." },
-    { "run",         cmd_run,         "run time|iteration value", "Simulation end condition." },
-    { "flavor",      cmd_flavor,      "flavor KMC|MC", "Simulation algorithm flavor." },
-    { "logtype",     cmd_logtype,     "logtype [iter] [csv] [xyz]", "Enable output formats." },
-    { "help",        cmd_help,        "help [command]", "Show documentation for commands." },
+Command commands[] = {
+    { "systemsize",  cmd_systemsize,  "systemsize NX NY NZ", "Simulation box size in lattice units.",  CMDCAT_GEOMETRY, 1},
+    { "temp",        cmd_temp,        "temp T", "Simulation temperature in K.", CMDCAT_THERMODYNAMICS, 1},
+    { "seed",        cmd_seed,        "seed random|default|N", "Selection of the random seed value. Default: default", CMDCAT_RUN, 0},
+    { "potential",   cmd_potential,   "potential U0 [dUdt Umax]", "Constant or swept electric potential. Default: 0", CMDCAT_THERMODYNAMICS, 0},
+    { "datalog",     cmd_datalog,     "datalog (linear|ln|iteration) (interval a [b]|list ...)", "Logging schedule configuration.", CMDCAT_OUTPUT, 0},
+    { "struct",      cmd_struct,      "struct FCC|BCC|SC", "Crystal structure type.", CMDCAT_GEOMETRY, 1},
+    { "output",      cmd_output,      "output path/outfile.out", "Output log filename.", CMDCAT_OUTPUT, 0},
+    { "geometry",    cmd_geometry,    "geometry (sheet N|cluster R|file path)", "Initial geometry configuration.", CMDCAT_GEOMETRY, 1},
+    { "atomtype",    cmd_atomtype,    "atomtype A B [C ...]",  "Define atom types and their order.", CMDCAT_GEOMETRY, 1},
+    { "composition", cmd_composition, "composition xA xB [xC ...]", "Atomic composition fractions; order follows atomtype.", CMDCAT_GEOMETRY, 1},
+    { "dissolution", cmd_dissolution, "dissolution true|false ...", "Dissolution flags per atom type; order follows atomtype.", CMDCAT_GEOMETRY, 1},
+    { "nnlevels",    cmd_nnlevels,    "nnlevels N", "Number of nearest-neighbor shells.", CMDCAT_THERMODYNAMICS, 1},
+    { "nne",         cmd_nne,         "1nne eAA eAB ...", "Nearest-neighbor energies for shell n (flattened upper-triangle). For a three-component system: AA AB AC BB BC CC", CMDCAT_THERMODYNAMICS, 1},
+    { "run",         cmd_run,         "run time|iteration value", "Simulation end condition.", CMDCAT_RUN, 1},
+    { "flavor",      cmd_flavor,      "flavor KMC|MC", "Simulation algorithm flavor.", CMDCAT_RUN, 1},
+    { "logtype",     cmd_logtype,     "logtype [iter] [csv] [xyz]", "Enable output formats.", CMDCAT_OUTPUT, 0},
+    { "help",        cmd_help,        "help [command]", "Show documentation for commands.", CMDCAT_OUTPUT, 0},
     { NULL, NULL, NULL, NULL }
 };
 

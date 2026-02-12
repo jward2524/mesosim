@@ -45,7 +45,7 @@ COMPILE = $(CC) -c
 LINK = $(CC)
 DEPEND = $(CC) -MM -MG -MF
 
-TYPES := release debug test dbtest
+TYPES := release debug test dbtest docs
 DEFAULT_TYPE := release
 
 # Deduce TYPE from a file path like build/<TYPE>/..., else empty string
@@ -102,6 +102,7 @@ src_path := src
 include_path := include
 test_path := test
 build_path := build
+docs_path := docs
 # depend_path := build/depends
 # # LIB_PATH := lib
 
@@ -144,6 +145,9 @@ endif
 ifneq (,$(filter $(TYPE),dbtest))
 	do_build_deps = $(patsubst $(test_path)/Test%.c,$(bin_path)/Test%.$(TARGET_EXTENSION),$(test_src) )
 endif
+ifneq (,$(filter $(TYPE),docs))
+	do_build_deps = do-docs
+endif
 
 $(TYPES):
 	@echo -e "Building type: $@\n"
@@ -152,6 +156,10 @@ $(TYPES):
 do-build: $(do_build_deps) | $(build_paths)
 # 	$(info TYPE=$(TYPE))
 	@touch print-$(TYPE)
+
+do-docs: $(bin_path)/InputMrk.$(TARGET_EXTENSION) | $(build_paths)
+	@./$< > docs/Commands.md
+	@echo "Documentation generated at docs/Commands.md"
 
 # --- Test results ---
 results = $(patsubst $(test_path)/Test%.c,$(results_path)/Test%.txt,$(test_src) )
@@ -202,6 +210,12 @@ $(obj_path)/%.o:: $(unity_path)/%.c $(unity_path)/%.h | $(obj_path)
 
 $(build_paths):
 	$(mkdir) $@
+
+$(bin_path)/InputMrk.$(TARGET_EXTENSION): $(obj_path)/InputMrk.o $(objs_mmain) | $(bin_path)
+	$(CC) $(ALL_CFLAGS) $(objs_mmain) $< -o $@ $(ALL_LDFLAGS)
+
+$(obj_path)/InputMrk.o: $(docs_path)/InputMrk.c | $(obj_path)
+	$(COMPILE) $(ALL_CFLAGS) $< -o $@
 
 # --- Print updated files ---
 # prints the filenames of files that were updated since the last 

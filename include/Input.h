@@ -40,6 +40,31 @@ typedef struct {
     int dissolution_line;
 } ParseContext;
 
+/* ================= Command Table =============== */
+
+enum CmdCategory {
+    CMDCAT_UNCAT = -1,
+    CMDCAT_GEOMETRY = 0,
+    CMDCAT_THERMODYNAMICS,
+    CMDCAT_OUTPUT,
+    CMDCAT_RUN,
+};
+
+typedef int (*CmdFunc)(int argc, char **argv, int line, ParseContext *ctx,
+                       struct SimulationState *ss, struct SimulationEnv *se,
+                       struct LoggingState *ls);
+
+typedef struct {
+    const char *name;
+    CmdFunc func;
+    const char *usage;
+    const char *description;
+    const enum CmdCategory category;
+    const int required;
+} Command;
+
+extern Command commands[];
+
 /* ================= Parsing API ================= */
 
 void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
