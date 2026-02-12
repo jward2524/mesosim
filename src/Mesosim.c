@@ -4,6 +4,7 @@
 #include "MC.h"
 #include "Simulation.h"
 #include "State.h"
+#include "Input.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,18 +22,25 @@ static struct SimulationState *sim_state;
 static struct SimulationEnv *sim_env;
 static struct LoggingState *log_state;
 
-static void usage(void)
+static void usage(int help_type)
 {
-    printf("Usage: mesosim [OPTIONS] [FILE]\n"
-           "Execute the mesosim KMC simulation program, with FILE as the input file\n"
-           "\n"
-           "Options:\n"
-           "  -h, --help\tDisplay this message\n"
-           "  -v, --verbose\tPrint additional information\n");
+    if (help_type == 2){
+        printf("\nInput file commands:\n\n");
+        print_help(NULL);
+    }
+    else {
+        printf("Usage: mesosim [OPTIONS] [FILE]\n"
+               "Execute the mesosim KMC simulation program, with FILE as the input file\n"
+               "\n"
+               "Options:\n"
+               "  -h, --help\tDisplay this message\n"
+               "  -i, --help-input\tDisplay input file help\n"
+               "  -v, --verbose\tPrint additional information\n");
+    }
     call_exit(EXIT_SUCCESS);
 }
 
-static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbose_flag)
+static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbose_flag, int *help_type)
 {
     if (argc <= 1) {
         pfilename = NULL;
@@ -47,6 +55,11 @@ static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbo
         char *arg = argv[i];
         if ((strcmp(arg, "-h") == 0) || (strcmp(arg, "--help") == 0)) {
             *pfilename = NULL;
+            *help_type = 1;
+            return;
+        } else if ((strcmp(arg, "-i") == 0) || (strcmp(arg, "--help-input") == 0)) {
+            *pfilename = NULL;
+            *help_type = 2;
             return;
         } else if ((strcmp(arg, "-v") == 0) || (strcmp(arg, "--verbose") == 0)) {
             *verbose_flag = 1;
@@ -73,9 +86,10 @@ int main(int argc, char *argv[])
 
     char *input_filename = NULL;
     int verbose_flag = 0;
-    parse_arguments(argc, argv, &input_filename, &verbose_flag);
+    int help_type = 0;
+    parse_arguments(argc, argv, &input_filename, &verbose_flag, &help_type);
     if (!input_filename) {
-        usage();
+        usage(help_type);
     }
 
     // start the time
