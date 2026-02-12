@@ -59,8 +59,7 @@ void test_parse_input_geometry_file(void)
 void test_process_in_file_cluster(void)
 {
     char filename[] = "test/cluster_nns.in";
-    input_file = fopen(filename, "r");
-    fopen_error(filename, input_file);
+    input_file = open_file(filename);
 
     int ret = process_in_file(temp_log, input_file, ss, se, ls);
     TEST_ASSERT_TRUE_MESSAGE(ret, "fxn return");
@@ -113,8 +112,7 @@ void test_process_in_file_cluster(void)
 void test_process_in_file_mc(void)
 {
     char filename[] = "test/mc.in";
-    input_file = fopen(filename, "r");
-    fopen_error(filename, input_file);
+    input_file = open_file(filename);
 
     int ret = process_in_file(temp_log, input_file, ss, se, ls);
     TEST_ASSERT_TRUE_MESSAGE(ret, "fxn return");
@@ -167,8 +165,7 @@ void test_process_xyz_file(void)
     strncpy(se->atoms_filename, filename, strlen(filename));
     // initialize_from_file(ss, se, ls);
 
-    atom_file = fopen(filename, "r");
-    fopen_error(filename, atom_file);
+    atom_file = open_file(filename);
 
     se->lattice_type = FCC;
     se->system_size_x = 256;

@@ -35,7 +35,7 @@ typedef struct {
     int composition_count;
     int composition_line;
 
-    int *dissolution_raw;
+    bool *dissolution_raw;
     int dissolution_count;
     int dissolution_line;
 } ParseContext;

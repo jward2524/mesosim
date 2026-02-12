@@ -589,6 +589,47 @@ static Command commands[] = {
     { NULL, NULL, NULL, NULL }
 };
 
+/* ================= Parser ================= */
+
+void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
+                      struct SimulationEnv *se, struct LoggingState *ls) {
+    char line[MAX_LINE];
+    char *argv[MAX_TOKENS];
+    int lineno = 0;
+
+    while (fgets(line, sizeof(line), fp)) {
+        lineno++;
+        if (line[0] == '#')
+            continue;
+
+        int argc = tokenize_line(line, argv, MAX_TOKENS);
+        if (argc == 0) continue;
+
+        int matched = 0;
+        for (Command *c = commands; c->name != NULL; c++) {
+            if (strcmp(argv[0], c->name) == 0 ||
+                (strcmp(c->name, "nne") == 0 && isdigit(argv[0][0]))) {
+                int ret = c->func(argc, argv, lineno, ctx, ss, se, ls);
+                if (ret) {
+                    // if handler fails
+                    fprintf(stderr,
+                        "Error in command '%s' at line %d\nUsage: %s\n",
+                        argv[0], lineno, c->usage);
+                    call_exit(EXIT_FAILURE);
+                }
+                matched = 1;
+                break;
+            }
+        }
+
+        if (!matched) {
+            fprintf(stderr, "Unknown command '%s' at line %d\n",
+                    argv[0], lineno);
+            call_exit(EXIT_FAILURE);
+        }
+    }
+}
+
 /* ================= Help ================= */
 
 void print_help(const char *cmd) {
@@ -815,45 +856,4 @@ void finalize_config(const ParseContext *ctx, struct SimulationState *ss,
     (void)ls;
     finalize_atom_dependent(ctx, se);
     finalize_nne(ctx, se);
-}
-
-/* ================= Parser ================= */
-
-void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
-                      struct SimulationEnv *se, struct LoggingState *ls) {
-    char line[MAX_LINE];
-    char *argv[MAX_TOKENS];
-    int lineno = 0;
-
-    while (fgets(line, sizeof(line), fp)) {
-        lineno++;
-        if (line[0] == '#')
-            continue;
-
-        int argc = tokenize_line(line, argv, MAX_TOKENS);
-        if (argc == 0) continue;
-
-        int matched = 0;
-        for (Command *c = commands; c->name != NULL; c++) {
-            if (strcmp(argv[0], c->name) == 0 ||
-                (strcmp(c->name, "nne") == 0 && isdigit(argv[0][0]))) {
-                int ret = c->func(argc, argv, lineno, ctx, ss, se, ls);
-                if (ret) {
-                    // if handler fails
-                    fprintf(stderr,
-                        "Error in command '%s' at line %d\nUsage: %s\n",
-                        argv[0], lineno, c->usage);
-                    call_exit(EXIT_FAILURE);
-                }
-                matched = 1;
-                break;
-            }
-        }
-
-        if (!matched) {
-            fprintf(stderr, "Unknown command '%s' at line %d\n",
-                    argv[0], lineno);
-            call_exit(EXIT_FAILURE);
-        }
-    }
 }

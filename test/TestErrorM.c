@@ -132,5 +132,6 @@ int main(void)
 
     UNITY_END();
 
+    // return 0 else makefile throws error
     return 0;
 }

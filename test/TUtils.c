@@ -16,6 +16,13 @@ void fopen_error(const char *filename, const FILE *file)
     }
 }
 
+FILE *open_file(const char *filename)
+{
+    FILE *file = fopen(filename, "r");
+    fopen_error(filename, file);
+    return file;
+}
+
 void init_temp(FILE **temp_log)
 {
     *temp_log = fopen(temp_name, "w+");

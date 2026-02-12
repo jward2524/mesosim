@@ -18,6 +18,7 @@
     } while (0)
 
 void fopen_error(const char *filename, const FILE *file);
+FILE *open_file(const char *filename);
 void init_temp(FILE **temp_log);
 void clean_temp(FILE **temp_log);
 void close_if_exists(FILE **file);
