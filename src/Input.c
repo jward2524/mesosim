@@ -16,7 +16,7 @@
 // if it returns 1, handler succeeeded
 
 /* ================= Utilities ================= */
-// TODO: replace with XYZParser.c:tokenize_line
+// TODO: replace with InputXYZ.c:tokenize_line
 // static int tokenize(char *line, char **argv) {
 //     int argc = 0;
 //     char *tok = strtok(line, " \t\r\n");

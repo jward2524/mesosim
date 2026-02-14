@@ -1,4 +1,4 @@
-#include "XYZParser.h"
+#include "InputXYZ.h"
 #include "Utils.h"
 #include <stdlib.h>
 #include <string.h>

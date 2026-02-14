@@ -1,4 +1,4 @@
-#include "XYZParser.h"
+#include "InputXYZ.h"
 #include "unity.h"
 
 void setUp(void)

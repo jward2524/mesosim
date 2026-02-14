@@ -1,8 +1,9 @@
 ﻿#include "FileIO.h"
 #include "Atoms.h"
 #include "ErrorM.h"
+#include "Input.h"
 #include "Utils.h"
-#include "XYZParser.h"
+#include "InputXYZ.h"
 #include <ctype.h>
 #include <errno.h>
 #include <math.h>
