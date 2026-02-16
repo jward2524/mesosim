@@ -105,6 +105,7 @@ void test_parse_input_cluster_nns_file_success(void) {
 
     parse_input_file(fp, &ctx, ss, se, ls);
     finalize_config(&ctx, ss, se, ls);
+    check_required_inputs(&ctx);
     fclose(fp);
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_x, "System size x");
@@ -168,7 +169,7 @@ void test_parse_input_multi_command_unknown_mid_file_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_UNKNOWN_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected unknown command failure in multi-command file");
     });
@@ -185,7 +186,7 @@ void test_parse_input_multi_command_finalize_composition_sum_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected composition sum failure at finalize for multi-command file");
@@ -200,7 +201,7 @@ void test_parse_input_missing_atomtype_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
         fclose(fp);
@@ -216,7 +217,7 @@ void test_parse_input_missing_nne_shell_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
         fclose(fp);
@@ -231,7 +232,7 @@ void test_parse_input_unknown_command_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_UNKNOWN_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected an unknown command failure");
     });
@@ -244,7 +245,7 @@ void test_nnlevels_wrong_argcount_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected nnlevels argcount failure");
     });
@@ -257,7 +258,7 @@ void test_composition_non_numeric_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected non-numeric composition failure");
     });
@@ -270,7 +271,7 @@ void test_dissolution_invalid_boolean_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected invalid boolean failure");
     });
@@ -284,7 +285,7 @@ void test_nne_level_exceeds_nnlevels_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
         fclose(fp);
@@ -301,7 +302,7 @@ void test_nne_duplicate_definition_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_DUPLICATE_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
         fclose(fp);
@@ -317,7 +318,7 @@ void test_nne_too_few_values_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
         fclose(fp);
@@ -332,7 +333,7 @@ void test_composition_count_mismatch_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
         fclose(fp);
@@ -359,7 +360,7 @@ void test_systemsize_non_numeric_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected systemsize parse failure");
     });
@@ -381,7 +382,7 @@ void test_temp_non_numeric_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected temp parse failure");
     });
@@ -403,8 +404,8 @@ void test_seed_non_numeric_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
-        parse_input_file(fp, &ctx, ss, se, ls);
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
+        parse_input_file (fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected seed parse failure");
     });
 }
@@ -428,7 +429,7 @@ void test_potential_bad_argcount_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected potential argcount failure");
     });
@@ -453,7 +454,7 @@ void test_datalog_unknown_type_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected datalog type failure");
     });
@@ -477,7 +478,7 @@ void test_struct_invalid_value_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected struct value failure");
     });
@@ -499,7 +500,7 @@ void test_output_missing_arg_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected output arg failure");
     });
@@ -522,7 +523,7 @@ void test_geometry_invalid_type_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected geometry type failure");
     });
@@ -546,7 +547,7 @@ void test_run_unknown_mode_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected run mode failure");
     });
@@ -568,7 +569,7 @@ void test_flavor_invalid_value_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected flavor value failure");
     });
@@ -592,7 +593,7 @@ void test_logtype_missing_arg_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected logtype arg failure");
     });
@@ -603,7 +604,7 @@ void test_systemsize_wrong_argcount_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected systemsize argcount failure");
     });
@@ -614,7 +615,7 @@ void test_temp_extra_arg_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected temp argcount failure");
     });
@@ -625,7 +626,7 @@ void test_seed_missing_arg_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected seed missing arg failure");
     });
@@ -636,7 +637,7 @@ void test_potential_non_numeric_sweep_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected potential numeric parse failure");
     });
@@ -647,7 +648,7 @@ void test_datalog_invalid_mode_keyword_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected datalog mode keyword failure");
     });
@@ -658,7 +659,7 @@ void test_datalog_interval_non_numeric_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected datalog interval parse failure");
     });
@@ -669,7 +670,7 @@ void test_geometry_cluster_non_numeric_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected geometry cluster parse failure");
     });
@@ -680,7 +681,7 @@ void test_geometry_file_missing_name_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected geometry file missing name failure");
     });
@@ -691,7 +692,7 @@ void test_run_iteration_non_numeric_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected run iteration parse failure");
     });
@@ -702,7 +703,7 @@ void test_run_bad_argcount_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected run argcount failure");
     });
@@ -716,7 +717,7 @@ void test_nne_non_numeric_value_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected nne numeric parse failure");
     });
@@ -729,7 +730,7 @@ void test_composition_sum_not_one_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_atom_dependent(&ctx, se);
         TEST_FAIL_MESSAGE("Expected composition sum finalize failure");
@@ -743,7 +744,7 @@ void test_dissolution_count_mismatch_additional_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_atom_dependent(&ctx, se);
         TEST_FAIL_MESSAGE("Expected dissolution count mismatch finalize failure");
@@ -771,7 +772,7 @@ void test_atomtype_missing_args_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected atomtype missing-args failure");
     });
@@ -796,7 +797,7 @@ void test_composition_missing_values_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected composition missing-values failure");
     });
@@ -823,7 +824,7 @@ void test_dissolution_missing_values_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected dissolution missing-values failure");
     });
@@ -845,7 +846,7 @@ void test_nnlevels_non_numeric_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected nnlevels non-numeric failure");
     });
@@ -858,7 +859,7 @@ void test_nne_missing_values_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected nne missing-values failure");
     });
@@ -870,7 +871,7 @@ void test_finalize_nne_missing_nnlevels_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_nne(&ctx, se);
         TEST_FAIL_MESSAGE("Expected finalize_nne without nnlevels failure");
@@ -902,7 +903,7 @@ void test_finalize_atom_dependent_missing_atomtype_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_atom_dependent(&ctx, se);
         TEST_FAIL_MESSAGE("Expected finalize_atom_dependent missing atomtype failure");
@@ -934,7 +935,7 @@ void test_finalize_nne_direct_duplicate_shell_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_DUPLICATE_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_nne(&ctx, se);
         TEST_FAIL_MESSAGE("Expected finalize_nne duplicate shell failure");
@@ -948,13 +949,196 @@ void test_finalize_nne_direct_level_exceeds_nnlevels_fails(void) {
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
-    EXPECT_EXIT(EXIT_FAILURE, {
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_nne(&ctx, se);
         TEST_FAIL_MESSAGE("Expected finalize_nne level overflow failure");
     });
 }
 
+void test_required_commands_all_present_success(void) {
+    const char *input =
+        "systemsize 8 8 8\n"
+        "struct FCC\n"
+        "geometry cluster 4\n"
+        "atomtype Ag Au\n"
+        "composition 0.5 0.5\n"
+        "dissolution true false\n"
+        "nnlevels 1\n"
+        "1nne 0.1 0.2 0.3\n"
+        "run iteration 10\n"
+        "flavor KMC\n"
+        "temp 300\n";
+
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    parse_input_file(fp, &ctx, ss, se, ls);
+    finalize_config(&ctx, ss, se, ls);
+    fclose(fp);
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(8, se->system_size_x, "System size x");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, se->lattice_type, "Lattice type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(GEOMETRY_CLUSTER, se->geometry, "Geometry type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, se->atom_names_cnt, "Atom type count");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, se->substrate_composition[0], "Composition 0");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, se->substrate_composition[1], "Composition 1");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, se->is_soluble[0], "Solubility 0");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->is_soluble[1], "Solubility 1");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, se->num_nn_levels, "NN levels");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, se->nn_energy[0], "NN energy 0");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, se->nn_energy[1], "NN energy 1");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.3, se->nn_energy[2], "NN energy 2");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, ss->sim_end_type, "Sim end type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(10, ss->final_iteration, "Final iteration");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_KMC, se->flavor, "Flavor");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(300.0, ss->temperature, "Temperature");
+}
+
+void test_missing_required_systemsize_fails(void) {
+    const char *input =
+        /* "systemsize 8 8 8\n" intentionally omitted */
+        "struct FCC\n"
+        "geometry cluster 4\n"
+        "atomtype Ag Au\n"
+        "composition 0.5 0.5\n"
+        "dissolution true false\n"
+        "nnlevels 1\n"
+        "1nne 0.1 0.2 0.3\n"
+        "run iteration 10\n"
+        "flavor KMC\n"
+        "temp 300\n";
+
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
+        parse_input_file(fp, &ctx, ss, se, ls);
+        finalize_config(&ctx, ss, se, ls);
+        check_required_inputs(&ctx);
+        fclose(fp);
+        TEST_FAIL_MESSAGE("Expected failure due to missing required command: systemsize");
+    });
+}
+
+void test_missing_required_struct_fails(void) {
+    const char *input =
+        "systemsize 8 8 8\n"
+        /* "struct FCC\n" intentionally omitted */
+        "geometry cluster 4\n"
+        "atomtype Ag Au\n"
+        "composition 0.5 0.5\n"
+        "dissolution true false\n"
+        "nnlevels 1\n"
+        "1nne 0.1 0.2 0.3\n"
+        "run iteration 10\n"
+        "flavor KMC\n"
+        "temp 300\n";
+
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
+        parse_input_file(fp, &ctx, ss, se, ls);
+        finalize_config(&ctx, ss, se, ls);
+        check_required_inputs(&ctx);
+        fclose(fp);
+        TEST_FAIL_MESSAGE("Expected failure due to missing required command: struct");
+    });
+}
+
+void test_missing_multiple_required_commands_fails(void) {
+    const char *input =
+        /* "systemsize 8 8 8\n" intentionally omitted */
+        /* "struct FCC\n" intentionally omitted */
+        "geometry cluster 4\n"
+        "atomtype Ag Au\n"
+        "composition 0.5 0.5\n"
+        "dissolution true false\n"
+        "nnlevels 1\n"
+        "1nne 0.1 0.2 0.3\n"
+        "run iteration 10\n"
+        "flavor KMC\n"
+        "temp 300\n";
+
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
+        parse_input_file(fp, &ctx, ss, se, ls);
+        finalize_config(&ctx, ss, se, ls);
+        check_required_inputs(&ctx);
+        fclose(fp);
+        TEST_FAIL_MESSAGE("Expected failure due to multiple missing required commands: systemsize, struct");
+    });
+}
+
+void test_missing_all_required_commands_fails(void) {
+    const char *input = "# No required commands present\n";
+
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
+        parse_input_file(fp, &ctx, ss, se, ls);
+        // finalize_config(&ctx, ss, se, ls);
+        check_required_inputs(&ctx);
+        fclose(fp);
+        TEST_FAIL_MESSAGE("Expected failure due to all required commands missing");
+    });
+}
+
+void test_required_commands_invalid_args_fail_for_argument(void) {
+    const char *input =
+        "systemsize 8 X 8\n" // 'X' is invalid
+        "struct FCC\n"
+        "geometry cluster 4\n"
+        "atomtype Ag Au\n"
+        "composition 0.5 0.5\n"
+        "dissolution true false\n"
+        "nnlevels 1\n"
+        "1nne 0.1 0.2 0.3\n"
+        "run iteration 10\n"
+        "flavor KMC\n"
+        "temp 300\n";
+
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
+        parse_input_file(fp, &ctx, ss, se, ls);
+        finalize_config(&ctx, ss, se, ls);
+        check_required_inputs(&ctx);
+        fclose(fp);
+        TEST_FAIL_MESSAGE("Expected failure due to invalid argument in required command");
+    });
+}
+
+void test_required_commands_commented_out_treated_as_missing(void) {
+    const char *input =
+        "# systemsize 8 8 8\n" // commented out
+        "struct FCC\n"
+        "geometry cluster 4\n"
+        "atomtype Ag Au\n"
+        "composition 0.5 0.5\n"
+        "dissolution true false\n"
+        "nnlevels 1\n"
+        "1nne 0.1 0.2 0.3\n"
+        "run iteration 10\n"
+        "flavor KMC\n"
+        "temp 300\n";
+
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
+        parse_input_file(fp, &ctx, ss, se, ls);
+        finalize_config(&ctx, ss, se, ls);
+        check_required_inputs(&ctx);
+        fclose(fp);
+        TEST_FAIL_MESSAGE("Expected failure due to required command being commented out");
+    });
+}
 
 /* ================= Runner ================= */
 
@@ -972,6 +1156,16 @@ int main(void) {
     RUN_TEST(test_parse_input_missing_atomtype_fails);
     RUN_TEST(test_parse_input_missing_nne_shell_fails);
     RUN_TEST(test_parse_input_unknown_command_fails);
+
+    RUN_TEST(test_required_commands_all_present_success);
+    RUN_TEST(test_missing_required_systemsize_fails);
+    RUN_TEST(test_missing_required_struct_fails);
+    RUN_TEST(test_missing_multiple_required_commands_fails);
+    RUN_TEST(test_missing_all_required_commands_fails);
+
+    // Command requirements
+    RUN_TEST(test_required_commands_invalid_args_fail_for_argument);
+    RUN_TEST(test_required_commands_commented_out_treated_as_missing);
 
     // atomtype
     RUN_TEST(test_atomtype_three_types_success);
@@ -1064,8 +1258,8 @@ int main(void) {
     RUN_TEST(test_finalize_nne_direct_duplicate_shell_fails);
     RUN_TEST(test_finalize_nne_direct_level_exceeds_nnlevels_fails);
 
-    int num_failures = UNITY_END();
-    
+    UNITY_END();
+
     // return 0 else makefile throws error
     return 0;
 }

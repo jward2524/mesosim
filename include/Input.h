@@ -1,6 +1,23 @@
 #ifndef KMC_INPUT_H
 #define KMC_INPUT_H
 
+/* ================= Input Error Flags ================= */
+/**
+ * Error flags for input parsing and validation.
+ * Used to distinguish error types in call_exit/clean_and_error.
+ */
+typedef enum {
+    INPUT_ERR_NONE = 0,           // No error
+    INPUT_ERR_INVALID_ARG,        // Invalid argument or value
+    INPUT_ERR_MISSING_CMD,        // Missing required command
+    INPUT_ERR_DUPLICATE_CMD,      // Duplicate command
+    INPUT_ERR_COUNT_MISMATCH,     // Argument count mismatch
+    INPUT_ERR_MISSING_DEPENDENCY, // Command dependency was not met
+    INPUT_ERR_UNKNOWN_CMD,        // Unknown command
+    INPUT_ERR_ALLOC,              // Allocation failure
+    INPUT_ERR_OTHER               // Other/unclassified error
+} InputErrorFlag;
+
 #include "State.h"
 #include <stdio.h>
 
@@ -38,6 +55,9 @@ typedef struct {
     bool *dissolution_raw;
     int dissolution_count;
     int dissolution_line;
+
+    // array that holds flags for whether required commands were provided
+    int *requirements;
 } ParseContext;
 
 /* ================= Command Table =============== */
@@ -50,7 +70,7 @@ enum CmdCategory {
     CMDCAT_RUN,
 };
 
-typedef int (*CmdFunc)(int argc, char **argv, int line, ParseContext *ctx,
+typedef InputErrorFlag (*CmdFunc)(int argc, char **argv, int line, ParseContext *ctx,
                        struct SimulationState *ss, struct SimulationEnv *se,
                        struct LoggingState *ls);
 
@@ -73,6 +93,7 @@ void finalize_atom_dependent(const ParseContext *ctx, struct SimulationEnv *se);
 void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se);
 void finalize_config(const ParseContext *ctx, struct SimulationState *ss,
                      struct SimulationEnv *se, struct LoggingState *ls);
+void check_required_inputs(const ParseContext *ctx);
 void print_help(const char *cmd);
 
 #endif
