@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 static struct SimulationState *ss = NULL;
 static struct SimulationEnv *se = NULL;
@@ -36,6 +37,8 @@ void tearDown(void)
 }
 
 /* ================= Tests ================= */
+
+/* === End to end tests === */
 
 void test_parse_input_two_atomtypes_one_shell_success(void) {
     const char *input = "atomtype Ag Au\n"
@@ -98,6 +101,7 @@ void test_parse_input_three_atomtypes_two_shells_success(void) {
                                      "2nd shell nne energy for atom type 2-2");
 }
 
+// TODO
 void test_parse_input_cluster_nns_file_success(void) {
     ParseContext ctx = {0};
     FILE *fp = open_file("test/cluster_nns.in");
@@ -120,10 +124,8 @@ void test_parse_input_cluster_nns_file_success(void) {
     TEST_ASSERT_EQUAL_STRING_MESSAGE("Ag", se->atom_names[0], "Atom type name at index 0");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("Au", se->atom_names[1], "Atom type name at index 1");
 
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.75, se->substrate_composition[0],
-                                     "Composition for atom type 0");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.25, se->substrate_composition[1],
-                                     "Composition for atom type 1");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.75, se->substrate_composition[0], "Composition for atom type 0");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.25, se->substrate_composition[1], "Composition for atom type 1");
     TEST_ASSERT_TRUE_MESSAGE(se->is_soluble[0], "Solubility for atom type 0");
     TEST_ASSERT_FALSE_MESSAGE(se->is_soluble[1], "Solubility for atom type 1");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, se->dissolution, "Dissolution flag");
@@ -138,24 +140,37 @@ void test_parse_input_cluster_nns_file_success(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, se->nn_energy[5], "2nd shell nne energy at index 2");
 
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.9, se->initial_overpotential, "Initial overpotential");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.03, se->overpotential_ramp_rate,
-                                     "Overpotential ramp rate");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.03, se->overpotential_ramp_rate, "Overpotential ramp rate");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.2, se->max_overpotential, "Maximum overpotential");
 
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_iter_csv, "Iter CSV output flag");
+    // Output CSV command
     TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "State CSV output flag");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", ls->csv_filename, "CSV filename");
+    TEST_ASSERT_TRUE_MESSAGE(ls->csv_filename_provided, "CSV filename provided");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode, "CSV schedule mode");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->csv_schedule.interval, "CSV interval value");
+    // Check next_log_checkpoint for interval iteration mode
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_log_checkpoint, "CSV next_log_checkpoint should match first checkpoint");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(4, ls->csv_field_count, "CSV field count");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", ls->csv_fields[2], "CSV field 2");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("temperature", ls->csv_fields[3], "CSV field 3");
+
+    // Output XYZ command
     TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ITERATION_INTERVALS, ls->analysis_type, "Analysis type");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_log_checkpoint, "Next log checkpoint");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->log_interval, "Log interval");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->framenum, "Frame number reset");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
+    TEST_ASSERT_TRUE_MESSAGE(ls->xyz_prefix_provided, "XYZ prefix provided");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode, "XYZ schedule mode");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->xyz_schedule.interval, "XYZ interval value");
+    // Check next_log_checkpoint for interval time mode
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->next_log_checkpoint, "XYZ next_log_checkpoint should match first checkpoint");
 
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293.0, ss->temperature, "Temperature value");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(12345U, se->rand_seed, "Random seed value");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_KMC, se->flavor, "Simulation flavor");
     TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, ss->sim_end_type, "Simulation end type");
-    TEST_ASSERT_EQUAL_UINT_MESSAGE(2000U, (unsigned int)ss->final_iteration,
-                                   "Final iteration value");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(2000U, (unsigned int)ss->final_iteration, "Final iteration value");
 }
 
 void test_parse_input_multi_command_unknown_mid_file_fails(void) {
@@ -174,6 +189,8 @@ void test_parse_input_multi_command_unknown_mid_file_fails(void) {
         TEST_FAIL_MESSAGE("Expected unknown command failure in multi-command file");
     });
 }
+
+/* === Dependency checks === */
 
 void test_parse_input_multi_command_finalize_composition_sum_fails(void) {
     const char *input = "systemsize 16 16 16\n"
@@ -224,6 +241,8 @@ void test_parse_input_missing_nne_shell_fails(void) {
         TEST_FAIL_MESSAGE("Expected failure");
     });
 }
+
+/* === Individual command checks === */
 
 void test_parse_input_unknown_command_fails(void) {
     const char *input = "atomtype A B\n"
@@ -435,31 +454,6 @@ void test_potential_bad_argcount_fails(void) {
     });
 }
 
-void test_datalog_interval_values_success(void) {
-    const char *input = "datalog iteration interval 200\n";
-    ParseContext ctx = {0};
-    FILE *fp = open_mem(input);
-
-    parse_input_file(fp, &ctx, ss, se, ls);
-    fclose(fp);
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ITERATION_INTERVALS, ls->analysis_type, "Analysis type");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_log_checkpoint, "Next log checkpoint");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->log_interval, "Log interval");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->framenum, "Frame number reset");
-}
-
-void test_datalog_unknown_type_fails(void) {
-    const char *input = "datalog weird interval 1\n";
-    ParseContext ctx = {0};
-    FILE *fp = open_mem(input);
-
-    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
-        parse_input_file(fp, &ctx, ss, se, ls);
-        TEST_FAIL_MESSAGE("Expected datalog type failure");
-    });
-}
-
 void test_struct_fcc_success(void) {
     const char *input = "struct FCC\n";
     ParseContext ctx = {0};
@@ -484,25 +478,203 @@ void test_struct_invalid_value_fails(void) {
     });
 }
 
-void test_output_valid_path_success(void) {
-    const char *input = "output output/test_file.out\n";
+void test_output_csv_interval_iteration_success(void) {
+    const char *input = "output csv test/output/cluster.csv interval iteration 200 fields iter time energy temperature\n";
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
     parse_input_file(fp, &ctx, ss, se, ls);
     fclose(fp);
 
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("output/test_file.out", outFile, "Output filename");
+    TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "CSV output flag");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", ls->csv_filename, "CSV filename");
+    TEST_ASSERT_TRUE_MESSAGE(ls->csv_filename_provided, "CSV filename provided");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode,
+                                  "CSV schedule iteration interval mode");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->csv_schedule.interval, "CSV interval value");
+    // Check next_log_checkpoint for interval iteration mode
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_log_checkpoint, "CSV next_log_checkpoint should match first checkpoint");
+    TEST_ASSERT_NULL_MESSAGE(ls->csv_schedule.list, "CSV list value in interval mode");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(4, ls->csv_field_count, "CSV field count");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", ls->csv_fields[2], "CSV field 2");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("temperature", ls->csv_fields[3], "CSV field 3");
 }
 
-void test_output_missing_arg_fails(void) {
-    const char *input = "output\n";
+void test_output_csv_list_time_success(void) {
+    const char *input = "output csv test/output/cluster.csv list time 0.1 0.2 0.3 fields iter time energy\n";
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    parse_input_file(fp, &ctx, ss, se, ls);
+    fclose(fp);
+
+    TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "CSV output flag");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", ls->csv_filename, "CSV filename");
+    TEST_ASSERT_TRUE_MESSAGE(ls->csv_filename_provided, "CSV filename provided");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_LIST_TIME, ls->csv_schedule.mode, "CSV list time schedule mode");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls->csv_schedule.list_len, "CSV schedule list length");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ls->csv_schedule.interval, "CSV interval value in list mode");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->csv_schedule.list[0], "CSV schedule list value 0");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, ls->csv_schedule.list[1], "CSV schedule list value 1");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.3, ls->csv_schedule.list[2], "CSV schedule list value 2");
+    // Check next_log_checkpoint for list time mode
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->next_log_checkpoint, "CSV next_log_checkpoint should match first checkpoint in list");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls->csv_field_count, "CSV field count");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", ls->csv_fields[2], "CSV field 2");
+}
+
+void test_output_xyz_interval_time_success(void) {
+    const char *input = "output xyz test/output/cluster interval time 0.5\n";
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    parse_input_file(fp, &ctx, ss, se, ls);
+    fclose(fp);
+
+    TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
+    TEST_ASSERT_TRUE_MESSAGE(ls->xyz_prefix_provided, "XYZ filename provided");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode, "XYZ schedule interval time mode");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->xyz_schedule.interval, "XYZ interval value");
+    // Check next_log_checkpoint for interval time mode
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->next_log_checkpoint, "XYZ next_log_checkpoint should match first checkpoint");
+}
+
+void test_output_invalid_mode_fails(void) {
+    const char *input = "output csv test/output/cluster.csv cadence iteration 200 fields iter time\n";
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
+        parse_input_file(fp, &ctx, ss, se, ls);
+        TEST_FAIL_MESSAGE("Expected output mode failure");
+    });
+}
+
+void test_output_missing_fields_keyword_fails(void) {
+    const char *input = "output csv test/output/cluster.csv interval iteration 200 iter time energy\n";
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
+        parse_input_file(fp, &ctx, ss, se, ls);
+        TEST_FAIL_MESSAGE("Expected missing fields keyword failure");
+    });
+}
+
+void test_output_fields_empty_fails(void) {
+    const char *input = "output csv test/output/cluster.csv interval iteration 200 fields\n";
     ParseContext ctx = {0};
     FILE *fp = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
-        TEST_FAIL_MESSAGE("Expected output arg failure");
+        TEST_FAIL_MESSAGE("Expected empty fields failure");
+    });
+}
+
+void test_output_xyz_with_fields_fails(void) {
+    const char *input = "output xyz test/output/cluster.xyz interval iteration 200 fields iter time\n";
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
+        parse_input_file(fp, &ctx, ss, se, ls);
+        TEST_FAIL_MESSAGE("Expected failure for output xyz with fields");
+    });
+}
+
+void test_output_csv_default_filename_time_success(void) {
+    const char *input = "output csv interval iteration 100 fields iter time\n";
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+    time_t now = time(NULL);
+
+    parse_input_file(fp, &ctx, ss, se, ls);
+    fclose(fp);
+
+    // Extract the time from the filename, which should be of the form "[time].csv"
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->csv_filename, "CSV filename should not be NULL");
+    const char *dot = strrchr(ls->csv_filename, '.');
+    TEST_ASSERT_NOT_NULL_MESSAGE(dot, "CSV filename should contain a dot");
+    size_t len = (size_t)(dot - ls->csv_filename);
+    char time_part[32];
+    TEST_ASSERT_TRUE_MESSAGE(len < sizeof(time_part), "Time part too long");
+    strncpy(time_part, ls->csv_filename, len);
+    time_part[len] = '\0';
+    char *endptr;
+    long file_time = strtol(time_part, &endptr, 10);
+    TEST_ASSERT_TRUE_MESSAGE(*endptr == '\0', "CSV filename time part should be fully numeric");
+    TEST_ASSERT_TRUE_MESSAGE(file_time > 0, "Extracted time from filename should be positive");
+
+    long deviation = file_time - (long)now;
+    if (deviation < 0) {
+        deviation = -deviation;
+    }
+    long max_deviation = 1;
+    char deviation_msg[64];
+    snprintf(deviation_msg, sizeof(deviation_msg), "CSV filename time deviation should be <= %ld second(s)", max_deviation);
+    TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
+    TEST_ASSERT_FALSE_MESSAGE(ls->csv_filename_provided, "CSV filename_provided should be false");
+}
+
+void test_output_xyz_default_prefix_time_success(void) {
+    const char *input = "output xyz interval iteration 100\n";
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+    time_t now = time(NULL);
+
+    parse_input_file(fp, &ctx, ss, se, ls);
+    fclose(fp);
+
+    // Extract the time from the prefix, which should be of the form "[time].xyz"
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->xyz_prefix, "XYZ prefix should not be NULL");
+    const char *dot = strrchr(ls->xyz_prefix, '.');
+    TEST_ASSERT_NOT_NULL_MESSAGE(dot, "XYZ prefix should contain a dot");
+    size_t len = (size_t)(dot - ls->xyz_prefix);
+    char time_part[32];
+    TEST_ASSERT_TRUE_MESSAGE(len < sizeof(time_part), "Time part too long");
+    strncpy(time_part, ls->xyz_prefix, len);
+    time_part[len] = '\0';
+    char *endptr;
+    long file_time = strtol(time_part, &endptr, 10);
+    TEST_ASSERT_TRUE_MESSAGE(*endptr == '\0', "XYZ prefix time part should be fully numeric");
+    TEST_ASSERT_TRUE_MESSAGE(file_time > 0, "Extracted time from prefix should be positive");
+
+    long deviation = file_time - (long)now;
+    if (deviation < 0) {
+        deviation = -deviation;
+    }
+    long max_deviation = 1;
+    char deviation_msg[64];
+    snprintf(deviation_msg, sizeof(deviation_msg), "XYZ prefix time deviation should be <= %ld second(s)", max_deviation);
+    TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
+    TEST_ASSERT_FALSE_MESSAGE(ls->xyz_prefix_provided, "XYZ prefix_provided should be false");
+}
+
+void test_output_unrecognized_field_fails(void) {
+    const char *input = "output csv test/output/cluster.csv interval iteration 200 fields iter time notafield\n";
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
+        parse_input_file(fp, &ctx, ss, se, ls);
+        TEST_FAIL_MESSAGE("Expected failure for unrecognized field");
+    });
+}
+
+void test_output_non_numeric_interval_fails(void) {
+    const char *input = "output csv test/output/cluster.csv interval iteration notanumber fields iter time\n";
+    ParseContext ctx = {0};
+    FILE *fp = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
+        parse_input_file(fp, &ctx, ss, se, ls);
+        TEST_FAIL_MESSAGE("Expected failure for non-numeric interval");
     });
 }
 
@@ -575,30 +747,6 @@ void test_flavor_invalid_value_fails(void) {
     });
 }
 
-void test_logtype_all_formats_success(void) {
-    const char *input = "logtype iter csv xyz\n";
-    ParseContext ctx = {0};
-    FILE *fp = open_mem(input);
-
-    parse_input_file(fp, &ctx, ss, se, ls);
-    fclose(fp);
-
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_iter_csv, "Iter CSV output flag");
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "State CSV output flag");
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
-}
-
-void test_logtype_missing_arg_fails(void) {
-    const char *input = "logtype\n";
-    ParseContext ctx = {0};
-    FILE *fp = open_mem(input);
-
-    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
-        parse_input_file(fp, &ctx, ss, se, ls);
-        TEST_FAIL_MESSAGE("Expected logtype arg failure");
-    });
-}
-
 void test_systemsize_wrong_argcount_fails(void) {
     const char *input = "systemsize 10 11\n";
     ParseContext ctx = {0};
@@ -640,28 +788,6 @@ void test_potential_non_numeric_sweep_fails(void) {
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected potential numeric parse failure");
-    });
-}
-
-void test_datalog_invalid_mode_keyword_fails(void) {
-    const char *input = "datalog lineart cadence 1\n";
-    ParseContext ctx = {0};
-    FILE *fp = open_mem(input);
-
-    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
-        parse_input_file(fp, &ctx, ss, se, ls);
-        TEST_FAIL_MESSAGE("Expected datalog mode keyword failure");
-    });
-}
-
-void test_datalog_interval_non_numeric_fails(void) {
-    const char *input = "datalog lineart interval nope\n";
-    ParseContext ctx = {0};
-    FILE *fp = open_mem(input);
-
-    EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
-        parse_input_file(fp, &ctx, ss, se, ls);
-        TEST_FAIL_MESSAGE("Expected datalog interval parse failure");
     });
 }
 
@@ -865,6 +991,8 @@ void test_nne_missing_values_fails(void) {
     });
 }
 
+/* === Finalization checks === */
+
 void test_finalize_nne_missing_nnlevels_fails(void) {
     const char *input = "atomtype A B\n"
                         "1nne 0.1 0.2 0.3\n";
@@ -956,6 +1084,7 @@ void test_finalize_nne_direct_level_exceeds_nnlevels_fails(void) {
     });
 }
 
+/* === Required commands checks === */
 void test_required_commands_all_present_success(void) {
     const char *input =
         "systemsize 8 8 8\n"
@@ -1216,19 +1345,22 @@ int main(void) {
     RUN_TEST(test_potential_bad_argcount_fails);
     RUN_TEST(test_potential_non_numeric_sweep_fails);
 
-    // datalog
-    RUN_TEST(test_datalog_interval_values_success);
-    RUN_TEST(test_datalog_unknown_type_fails);
-    RUN_TEST(test_datalog_invalid_mode_keyword_fails);
-    RUN_TEST(test_datalog_interval_non_numeric_fails);
-
     // struct
     RUN_TEST(test_struct_fcc_success);
     RUN_TEST(test_struct_invalid_value_fails);
 
     // output
-    RUN_TEST(test_output_valid_path_success);
-    RUN_TEST(test_output_missing_arg_fails);
+    RUN_TEST(test_output_csv_interval_iteration_success);
+    RUN_TEST(test_output_csv_list_time_success);
+    RUN_TEST(test_output_xyz_interval_time_success);
+    RUN_TEST(test_output_invalid_mode_fails);
+    RUN_TEST(test_output_missing_fields_keyword_fails);
+    RUN_TEST(test_output_fields_empty_fails);
+    RUN_TEST(test_output_xyz_with_fields_fails);
+    RUN_TEST(test_output_unrecognized_field_fails);
+    RUN_TEST(test_output_non_numeric_interval_fails);
+    RUN_TEST(test_output_csv_default_filename_time_success);
+    RUN_TEST(test_output_xyz_default_prefix_time_success);
 
     // geometry
     RUN_TEST(test_geometry_cluster_success);
@@ -1245,10 +1377,6 @@ int main(void) {
     // flavor
     RUN_TEST(test_flavor_kmc_success);
     RUN_TEST(test_flavor_invalid_value_fails);
-
-    // logtype
-    RUN_TEST(test_logtype_all_formats_success);
-    RUN_TEST(test_logtype_missing_arg_fails);
 
     // Direct finalizer tests
     RUN_TEST(test_finalize_nne_missing_nnlevels_fails);

@@ -8,10 +8,9 @@ nnlevels 2
 1nne 0.15 0.15 0.15
 2nne 0.10 0.10 0.10
 potential 0.9 0.03 1.2
-logtype iter csv xyz
-datalog iteration interval 200
 temp 293
 seed 12345
 flavor KMC
 run iteration 2000
-output test/output/cluster.out
+output csv test/output/cluster.csv interval iteration 200 fields iter time energy temperature
+output xyz test/output/cluster interval time 0.1

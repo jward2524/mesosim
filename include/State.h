@@ -147,6 +147,21 @@ struct SimulationState {
     int total_atoms_dissolved;
 };
 
+typedef enum {
+    OUTPUT_SCHEDULE_NONE = 0,
+    OUTPUT_SCHEDULE_INTERVAL_ITERATION,
+    OUTPUT_SCHEDULE_INTERVAL_TIME,
+    OUTPUT_SCHEDULE_LIST_ITERATION,
+    OUTPUT_SCHEDULE_LIST_TIME
+} OutputScheduleMode;
+
+typedef struct {
+    OutputScheduleMode mode;           // schedule mode
+    double interval;                   // interval value (if mode is interval)
+    double *list;                      // list of output points (if mode is list)
+    int list_len;                      // number of entries in list
+} OutputSchedule;
+
 // variables that describe state of logging
 // files and when to log
 struct LoggingState {
@@ -172,6 +187,19 @@ struct LoggingState {
     int framenum;     // counter/id for number of outputs / output files
 
     int verbose;
+
+    // CSV output configuration
+    char csv_filename[256];
+    bool csv_filename_provided;
+    char **csv_fields;
+    int csv_field_count;
+    OutputSchedule csv_schedule;
+
+    // XYZ output configuration
+    char xyz_prefix[256];
+    bool xyz_prefix_provided;
+    OutputSchedule xyz_schedule;
+    int xyz_framenum;
 };
 
 #endif // COMMON_H
