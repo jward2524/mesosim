@@ -9,6 +9,7 @@
 
 #ifdef TEST
 #define INTERNAL
+#include "unity.h"
 volatile int exit_flag = 0;
 volatile int exit_errno = 0;
 volatile int jmp_set = 0;
@@ -83,9 +84,11 @@ void call_exit(int error_num)
     exit_flag = 1;
     exit_errno = error_num;
     if (!jmp_set) {
-        fprintf(stderr, "Error: setjmp was not called - wrap test with EXPECT_EXIT\n");
-        abort();
+        jmp_set = 0;
+        fprintf(stderr, "Error: setjmp was not called - exit call was unexpected\nIf expected, wrap test with EXPECT_EXIT\n");
+        TEST_FAIL_MESSAGE("Exit call was unexpected");
     }
+    jmp_set = 0;
     longjmp(test_exit_jmp, 1);
 #else
     exit(error_num);
