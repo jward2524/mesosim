@@ -63,6 +63,7 @@ DEBUG ?= $(if $(filter $(TYPE),debug dbtest),1,0)
 # --- Flags ---
 BASE_CFLAGS ?= -std=c11
 # add test_path to find unity_config.h
+# needed by unity_internals.h
 unity_CFLAGS = -DTEST -DUNITY_INCLUDE_CONFIG_H -I$(test_path) -I$(unity_path)
 
 ifeq ($(DEBUG),1)
@@ -170,8 +171,8 @@ ignore = `grep :IGNORE $(results_path)/*.txt`
 summary = `grep -T Tests $(results_path)/*.txt | column -t`
 
 do-test: $(results) | $(build_paths)
-	@echo -e "-----------------------\nPASSED:\n-----------------------"
-	@echo "$(passed)"
+# 	@echo -e "-----------------------\nPASSED:\n-----------------------"
+# 	@echo "$(passed)"
 	@echo -e "-----------------------\nIGNORES:\n-----------------------"
 	@echo "$(ignore)"
 	@echo -e "-----------------------\nFAILURES:\n-----------------------"
@@ -194,7 +195,7 @@ $(bin_path)/Test%.$(TARGET_EXTENSION): $(objs_mmain) $(obj_path)/Test%.o $(obj_p
 
 # :: (double-colon) rules are independent from each other
 # test_path/TestSomething.c
-$(obj_path)/%.o:: $(test_path)/%.c | $(obj_path)
+$(obj_path)/%.o:: $(test_path)/%.c $(test_path)/TUtils.h | $(obj_path)
 	$(COMPILE) $(ALL_CFLAGS) $< -o $@
 
 # src_path/Something.c
@@ -202,7 +203,7 @@ $(obj_path)/%.o:: $(src_path)/%.c $(include_path)/%.h $(xs_hpath) | $(obj_path)
 	$(COMPILE) $(ALL_CFLAGS) $< -o $@
 
 # unity_path/unity.c
-$(obj_path)/%.o:: $(unity_path)/%.c $(unity_path)/%.h | $(obj_path)
+$(obj_path)/%.o:: $(unity_path)/%.c $(unity_path)/%.h $(test_path)/unity_config.h | $(obj_path)
 	$(COMPILE) $(ALL_CFLAGS) $< -o $@
 
 # $(depend_path)/%.d: $(test_path)/%.c
