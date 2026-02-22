@@ -80,7 +80,7 @@ void test_process_in_file_cluster(void)
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, se->nn_energy[3], "nn energy shell 2 idx 0");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, se->nn_energy[4], "nn energy shell 2 idx 1");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, se->nn_energy[5], "nn energy shell 2 idx 2");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ITERATION_INTERVALS, ls->analysis_type, "logging analysis type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->analysis_type, "logging analysis type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->framenum, "frame number");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, se->lattice_type, "lattice type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors,

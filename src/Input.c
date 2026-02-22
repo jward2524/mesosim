@@ -1,7 +1,7 @@
 #include "Input.h"
-#include "Utils.h"
 #include "ErrorM.h"
 #include "FileIO.h"
+#include "Utils.h"
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
@@ -9,28 +9,16 @@
 #include <string.h>
 #include <time.h>
 
-#define MAX_LINE   1024
+#define MAX_LINE 1024
 #define MAX_TOKENS 256
 
 // if function returns 0, function failed
 // if it returns 1, handler succeeeded
 
 /* ================= Utilities ================= */
-// TODO: replace with InputXYZ.c:tokenize_line
-// static int tokenize(char *line, char **argv) {
-//     int argc = 0;
-//     char *tok = strtok(line, " \t\r\n");
-//     while (tok && argc < MAX_TOKENS) {
-//         argv[argc++] = tok;
-//         tok = strtok(NULL, " \t\r\n");
-//     }
-//     return argc;
-// }
-// 
 
-// int tokenize_line(char *line, char **tokens, int maxtok);
-
-static int parse_int(const char *s, int *out) {
+static int parse_int(const char *s, int *out)
+{
     char *e;
     errno = 0;
     long v = strtol(s, &e, 10);
@@ -41,7 +29,8 @@ static int parse_int(const char *s, int *out) {
     return 0;
 }
 
-static int parse_uint(const char *s, unsigned int *out) {
+static int parse_uint(const char *s, unsigned int *out)
+{
     char *e;
     errno = 0;
     unsigned long v = strtoul(s, &e, 10);
@@ -52,7 +41,8 @@ static int parse_uint(const char *s, unsigned int *out) {
     return 0;
 }
 
-static int parse_ulong(const char *s, unsigned long *out) {
+static int parse_ulong(const char *s, unsigned long *out)
+{
     char *e;
     errno = 0;
     unsigned long v = strtoul(s, &e, 10);
@@ -63,11 +53,12 @@ static int parse_ulong(const char *s, unsigned long *out) {
     return 0;
 }
 
-static int parse_double(const char *s, double *out) {
+static int parse_double(const char *s, double *out)
+{
     char *e;
     errno = 0;
     double v = strtod(s, &e);
-    if ((e == s) || (*e != '\0')  || (errno != 0)) {
+    if ((e == s) || (*e != '\0') || (errno != 0)) {
         return 1;
     }
     *out = v;
@@ -77,8 +68,8 @@ static int parse_double(const char *s, double *out) {
 /* ================= Command handlers ================= */
 
 static InputErrorFlag cmd_atomtype(int argc, char **argv, int line, ParseContext *ctx,
-                        struct SimulationState *ss, struct SimulationEnv *se,
-                        struct LoggingState *ls)
+                                   struct SimulationState *ss, struct SimulationEnv *se,
+                                   struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
@@ -96,7 +87,7 @@ static InputErrorFlag cmd_atomtype(int argc, char **argv, int line, ParseContext
         return INPUT_ERR_ALLOC;
     }
     for (int i = 0; i < se->atom_names_cnt; i++) {
-        se->atom_names[i] = dup_str(argv[i+1]);
+        se->atom_names[i] = dup_str(argv[i + 1]);
     }
     se->num_elements = argc - 1;
     se->num_bond_types = get_num_bond_types(se->num_elements);
@@ -104,9 +95,10 @@ static InputErrorFlag cmd_atomtype(int argc, char **argv, int line, ParseContext
     return INPUT_ERR_NONE;
 }
 
-static InputErrorFlag cmd_composition(int argc, char **argv, int line,
-                           ParseContext *ctx, struct SimulationState *ss,
-                           struct SimulationEnv *se, struct LoggingState *ls) {
+static InputErrorFlag cmd_composition(int argc, char **argv, int line, ParseContext *ctx,
+                                      struct SimulationState *ss, struct SimulationEnv *se,
+                                      struct LoggingState *ls)
+{
     (void)ss;
     (void)se;
     (void)ls;
@@ -119,23 +111,25 @@ static InputErrorFlag cmd_composition(int argc, char **argv, int line,
     ctx->composition_count = argc - 1;
     ctx->composition_raw = malloc((size_t)ctx->composition_count * sizeof(double));
     if (ctx->composition_raw == NULL) {
-        fprintf(stderr, "Couldn't allocate memory for composition array in ParseContext: %s", strerror(errno));
+        fprintf(stderr, "Couldn't allocate memory for composition array in ParseContext: %s",
+                strerror(errno));
         return INPUT_ERR_ALLOC;
     }
 
     for (int i = 0; i < ctx->composition_count; i++) {
-        int res = parse_double(argv[i+1], &ctx->composition_raw[i]);
+        int res = parse_double(argv[i + 1], &ctx->composition_raw[i]);
         if (res) {
-            fprintf(stderr, "Input error - could not read composition %s\n", argv[i+1]);
+            fprintf(stderr, "Input error - could not read composition %s\n", argv[i + 1]);
             return INPUT_ERR_INVALID_ARG;
         }
     }
     return INPUT_ERR_NONE;
 }
 
-static InputErrorFlag cmd_dissolution(int argc, char **argv, int line,
-                           ParseContext *ctx, struct SimulationState *ss,
-                           struct SimulationEnv *se, struct LoggingState *ls) {
+static InputErrorFlag cmd_dissolution(int argc, char **argv, int line, ParseContext *ctx,
+                                      struct SimulationState *ss, struct SimulationEnv *se,
+                                      struct LoggingState *ls)
+{
     (void)ss;
     (void)se;
     (void)ls;
@@ -148,7 +142,8 @@ static InputErrorFlag cmd_dissolution(int argc, char **argv, int line,
     ctx->dissolution_line = line;
     ctx->dissolution_raw = malloc((size_t)ctx->dissolution_count * sizeof(int));
     if (ctx->dissolution_raw == NULL) {
-        fprintf(stderr, "Couldn't allocate memory for dissolution array in ParseContext: %s", strerror(errno));
+        fprintf(stderr, "Couldn't allocate memory for dissolution array in ParseContext: %s",
+                strerror(errno));
         return INPUT_ERR_ALLOC;
     }
 
@@ -168,9 +163,10 @@ static InputErrorFlag cmd_dissolution(int argc, char **argv, int line,
     return INPUT_ERR_NONE;
 }
 
-static InputErrorFlag cmd_nnlevels(int argc, char **argv, int line,
-                        ParseContext *ctx, struct SimulationState *ss,
-                        struct SimulationEnv *se, struct LoggingState *ls) {
+static InputErrorFlag cmd_nnlevels(int argc, char **argv, int line, ParseContext *ctx,
+                                   struct SimulationState *ss, struct SimulationEnv *se,
+                                   struct LoggingState *ls)
+{
     (void)line;
     (void)ctx;
     (void)ss;
@@ -187,9 +183,10 @@ static InputErrorFlag cmd_nnlevels(int argc, char **argv, int line,
     return INPUT_ERR_NONE;
 }
 
-static InputErrorFlag cmd_nne(int argc, char **argv, int line,
-                   ParseContext *ctx, struct SimulationState *ss,
-                   struct SimulationEnv *se, struct LoggingState *ls) {
+static InputErrorFlag cmd_nne(int argc, char **argv, int line, ParseContext *ctx,
+                              struct SimulationState *ss, struct SimulationEnv *se,
+                              struct LoggingState *ls)
+{
     (void)ss;
     (void)se;
     (void)ls;
@@ -201,7 +198,8 @@ static InputErrorFlag cmd_nne(int argc, char **argv, int line,
     int level;
     int ret = sscanf(argv[0], "%dnne", &level);
     if ((ret != 1) || level <= 0) {
-        fprintf(stderr, "Input error - expected nne command format of [level]nne, got %s\n", argv[0]);
+        fprintf(stderr, "Input error - expected nne command format of [level]nne, got %s\n",
+                argv[0]);
         return INPUT_ERR_INVALID_ARG;
     }
 
@@ -220,27 +218,25 @@ static InputErrorFlag cmd_nne(int argc, char **argv, int line,
         }
     }
 
-    ctx->nne_cmds = realloc(ctx->nne_cmds, (size_t)(ctx->nne_cmd_count + 1) * sizeof(*ctx->nne_cmds));
+    ctx->nne_cmds =
+        realloc(ctx->nne_cmds, (size_t)(ctx->nne_cmd_count + 1) * sizeof(*ctx->nne_cmds));
     if (ctx->nne_cmds == NULL) {
-        fprintf(stderr, "Couldn't allocate memory for nne commands in ParseContext: %s", strerror(errno));
+        fprintf(stderr, "Couldn't allocate memory for nne commands in ParseContext: %s",
+                strerror(errno));
         free(values);
         return INPUT_ERR_ALLOC;
     }
 
-    ctx->nne_cmds[ctx->nne_cmd_count] = (struct NNECmd) {
-        .level = level,
-        .line = line,
-        .values = values,
-        .nvalues = nvals
-    };
+    ctx->nne_cmds[ctx->nne_cmd_count] =
+        (struct NNECmd){.level = level, .line = line, .values = values, .nvalues = nvals};
     ctx->nne_cmd_count++;
 
     return INPUT_ERR_NONE;
 }
 
-static InputErrorFlag cmd_systemsize(int argc, char **argv, int line,
-                          ParseContext *ctx, struct SimulationState *ss,
-                          struct SimulationEnv *se, struct LoggingState *ls)
+static InputErrorFlag cmd_systemsize(int argc, char **argv, int line, ParseContext *ctx,
+                                     struct SimulationState *ss, struct SimulationEnv *se,
+                                     struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
@@ -260,8 +256,8 @@ static InputErrorFlag cmd_systemsize(int argc, char **argv, int line,
 }
 
 static InputErrorFlag cmd_temp(int argc, char **argv, int line, ParseContext *ctx,
-                    struct SimulationState *ss, struct SimulationEnv *se,
-                    struct LoggingState *ls)
+                               struct SimulationState *ss, struct SimulationEnv *se,
+                               struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
@@ -279,8 +275,8 @@ static InputErrorFlag cmd_temp(int argc, char **argv, int line, ParseContext *ct
 }
 
 static InputErrorFlag cmd_seed(int argc, char **argv, int line, ParseContext *ctx,
-                    struct SimulationState *ss, struct SimulationEnv *se,
-                    struct LoggingState *ls)
+                               struct SimulationState *ss, struct SimulationEnv *se,
+                               struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
@@ -309,8 +305,8 @@ static InputErrorFlag cmd_seed(int argc, char **argv, int line, ParseContext *ct
 }
 
 static InputErrorFlag cmd_potential(int argc, char **argv, int line, ParseContext *ctx,
-                         struct SimulationState *ss, struct SimulationEnv *se,
-                         struct LoggingState *ls)
+                                    struct SimulationState *ss, struct SimulationEnv *se,
+                                    struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
@@ -337,83 +333,9 @@ static InputErrorFlag cmd_potential(int argc, char **argv, int line, ParseContex
     return INPUT_ERR_NONE;
 }
 
-static InputErrorFlag cmd_datalog(int argc, char **argv, int line, ParseContext *ctx,
-                       struct SimulationState *ss, struct SimulationEnv *se,
-                       struct LoggingState *ls)
-{
-    (void)line;
-    (void)ctx;
-    (void)ss;
-    (void)se;
-    if (argc < 4) {
-        fprintf(stderr, "Input error - not enough arguments for command %s\n", argv[0]);
-        return INPUT_ERR_COUNT_MISMATCH;
-    }
-
-    int interval_type = 0;
-    if (strcmp(argv[1], "lineart") == 0) {
-        interval_type = REGULAR_TIME_INTERVALS;
-    } else if (strcmp(argv[1], "lnt") == 0) {
-        interval_type = LN_TIME_INTERVALS;
-    } else if (strcmp(argv[1], "iteration") == 0) {
-        interval_type = ITERATION_INTERVALS;
-    } else {
-        fprintf(stderr, "Input error - unknown datalog type %s\n", argv[1]);
-        return INPUT_ERR_INVALID_ARG;
-    }
-
-    if (strcmp(argv[2], "interval") == 0) {
-        if (argc != 4 && argc != 5) {
-            fprintf(stderr, "Input error - datalog interval expects 1 or 2 numeric values\n");
-            return INPUT_ERR_COUNT_MISMATCH;
-        }
-        if (parse_double(argv[3], &ls->next_log_checkpoint)) {
-            fprintf(stderr, "Input error - invalid datalog checkpoint %s\n", argv[3]);
-            return INPUT_ERR_INVALID_ARG;
-        }
-        if (argc == 5) {
-            if (parse_double(argv[4], &ls->log_interval)) {
-                fprintf(stderr, "Input error - invalid datalog interval %s\n", argv[4]);
-                return INPUT_ERR_INVALID_ARG;
-            }
-        } else {
-            ls->log_interval = ls->next_log_checkpoint;
-        }
-        ls->analysis_type = interval_type;
-    } else if (strcmp(argv[2], "list") == 0) {
-        if (argc < 4) {
-            fprintf(stderr, "Input error - datalog list requires at least one value\n");
-            return INPUT_ERR_COUNT_MISMATCH;
-        }
-        int nvals = argc - 3;
-        ls->log_list = (double *)malloc((size_t)nvals * sizeof(double));
-        if (!ls->log_list) {
-            fprintf(stderr, "Input error - failed to allocate datalog list\n");
-            return INPUT_ERR_ALLOC;
-        }
-        for (int i = 0; i < nvals; i++) {
-            if (parse_double(argv[i + 3], &ls->log_list[i])) {
-                fprintf(stderr, "Input error - invalid datalog list value %s\n", argv[i + 3]);
-                free(ls->log_list);
-                ls->log_list = NULL;
-                ls->log_list_len = 0;
-                return INPUT_ERR_INVALID_ARG;
-            }
-        }
-        ls->log_list_len = nvals;
-        ls->analysis_type = (interval_type == ITERATION_INTERVALS) ? ITERATION_LIST : TIME_LIST;
-    } else {
-        fprintf(stderr, "Input error - expected datalog mode interval|list, got %s\n", argv[2]);
-        return INPUT_ERR_INVALID_ARG;
-    }
-
-    ls->framenum = 0;
-    return INPUT_ERR_NONE;
-}
-
 static InputErrorFlag cmd_struct(int argc, char **argv, int line, ParseContext *ctx,
-                      struct SimulationState *ss, struct SimulationEnv *se,
-                      struct LoggingState *ls)
+                                 struct SimulationState *ss, struct SimulationEnv *se,
+                                 struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
@@ -437,26 +359,204 @@ static InputErrorFlag cmd_struct(int argc, char **argv, int line, ParseContext *
     return INPUT_ERR_NONE;
 }
 
-static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *ctx,
-                      struct SimulationState *ss, struct SimulationEnv *se,
-                      struct LoggingState *ls)
+/* === Helpers for cmd_output === */
+
+static InputErrorFlag parse_output_schedule(int argc, char **argv, int *pidx, OutputSchedule *sched,
+                                            double *next_log_checkpoint, int expect_fields)
 {
-    (void)line;
-    (void)ctx;
-    (void)ss;
-    (void)se;
-    (void)ls;
-    if (argc != 2) {
-        fprintf(stderr, "Input error - expected 1 argument for command %s\n", argv[0]);
+    int idx = *pidx;
+    if (idx >= argc) {
+        fprintf(stderr, "Input error - output expects schedule mode\n");
         return INPUT_ERR_COUNT_MISMATCH;
     }
-    snprintf(outFile, 260, "%s", argv[1]);
+    if (strcmp(argv[idx], "interval") == 0) {
+        idx++;
+        if (idx + 1 >= argc) {
+            fprintf(stderr, "Input error - output interval expects type and value\n");
+            return INPUT_ERR_COUNT_MISMATCH;
+        }
+        if (strcmp(argv[idx], "iteration") == 0) {
+            sched->mode = OUTPUT_SCHEDULE_INTERVAL_ITERATION;
+        } else if (strcmp(argv[idx], "time") == 0) {
+            sched->mode = OUTPUT_SCHEDULE_INTERVAL_TIME;
+        } else {
+            fprintf(stderr, "Input error - output interval expects 'iteration' or 'time'\n");
+            return INPUT_ERR_INVALID_ARG;
+        }
+        idx++;
+        char *endptr = NULL;
+        double val = strtod(argv[idx], &endptr);
+        if (!endptr || *endptr != '\0') {
+            fprintf(stderr, "Input error - output interval value not numeric\n");
+            return INPUT_ERR_INVALID_ARG;
+        }
+        sched->interval = val;
+        sched->list = NULL;
+        sched->list_len = 0;
+        *next_log_checkpoint = val;
+        idx++;
+    } else if (strcmp(argv[idx], "list") == 0) {
+        idx++;
+        if (idx >= argc) {
+            fprintf(stderr, "Input error - output list expects type\n");
+            return INPUT_ERR_COUNT_MISMATCH;
+        }
+        if (strcmp(argv[idx], "iteration") == 0) {
+            sched->mode = OUTPUT_SCHEDULE_LIST_ITERATION;
+        } else if (strcmp(argv[idx], "time") == 0) {
+            sched->mode = OUTPUT_SCHEDULE_LIST_TIME;
+        } else {
+            fprintf(stderr, "Input error - output list expects 'iteration' or 'time'\n");
+            return INPUT_ERR_INVALID_ARG;
+        }
+        idx++;
+
+        // Parse list of values until 'fields' keyword (if expect_fields, aka if csv) or end (if
+        // not, aka xyz)
+        int list_start = idx;
+        int list_count = 0;
+        while (idx < argc && (!expect_fields || strcmp(argv[idx], "fields") != 0)) {
+            list_count++;
+            idx++;
+        }
+        if (list_count == 0) {
+            fprintf(stderr, "Input error - output list expects at least one value\n");
+            return INPUT_ERR_COUNT_MISMATCH;
+        }
+
+        sched->list = (double *)malloc(sizeof(double) * list_count);
+        if (!sched->list) {
+            fprintf(stderr, "Couldn't allocate memory for schedule list: %s", strerror(errno));
+            return INPUT_ERR_ALLOC;
+        }
+
+        for (int i = 0; i < list_count; ++i) {
+            char *endptr = NULL;
+            double val = strtod(argv[list_start + i], &endptr);
+            if (!endptr || *endptr != '\0') {
+                free(sched->list);
+                sched->list = NULL;
+                fprintf(stderr, "Input error - output list value not numeric\n");
+                return INPUT_ERR_INVALID_ARG;
+            }
+            sched->list[i] = val;
+        }
+        sched->list_len = list_count;
+        sched->interval = 0;
+        *next_log_checkpoint = sched->list[0];
+        idx = list_start + list_count;
+    } else {
+        fprintf(stderr, "Input error - output expects 'interval' or 'list'\n");
+        return INPUT_ERR_INVALID_ARG;
+    }
+    *pidx = idx;
     return INPUT_ERR_NONE;
 }
 
+static InputErrorFlag parse_output_csv(int argc, char **argv, struct LoggingState *ls)
+{
+    ls->output_state_csv = true;
+    int idx = 2;
+
+    // if filename is present and not a schedule keyword, use it; else generate default
+    if (idx < argc && strcmp(argv[idx], "interval") != 0 && strcmp(argv[idx], "list") != 0) {
+        snprintf(ls->csv_filename, sizeof(ls->csv_filename), "%s", argv[idx]);
+        idx++;
+    } else {
+        // generate default filename: [time in seconds].csv
+        time_t now = time(NULL);
+        snprintf(ls->csv_filename, sizeof(ls->csv_filename), "%ld.csv", (long)now);
+    }
+    InputErrorFlag err =
+        parse_output_schedule(argc, argv, &idx, &ls->csv_schedule, &ls->next_csv_checkpoint, 1);
+    if (err != INPUT_ERR_NONE) {
+        return err;
+    }
+
+    // parse 'fields' keyword
+    if (idx >= argc || strcmp(argv[idx], "fields") != 0) {
+        fprintf(stderr, "Input error - output csv expects 'fields' keyword\n");
+        return INPUT_ERR_MISSING_CMD;
+    }
+    idx++;
+    int field_count = argc - idx;
+    if (field_count <= 0) {
+        fprintf(stderr, "Input error - output csv expects at least one field\n");
+        return INPUT_ERR_COUNT_MISMATCH;
+    }
+
+    ls->csv_fields = (char **)malloc(sizeof(char *) * field_count);
+    if (!ls->csv_fields) {
+        fprintf(stderr, "Couldn't allocate memory for csv fields: %s", strerror(errno));
+        return INPUT_ERR_ALLOC;
+    }
+
+    for (int i = 0; i < field_count; ++i) {
+        int supported_field = 0;
+        for (size_t j = 0; j < CSV_FIELD_FUNCS_COUNT; j++) {
+            if (strcmp(argv[idx + i], csv_field_map[j].name) == 0) {
+                supported_field = 1;
+                ls->csv_fields[i] = dup_str(argv[idx + i]);
+                break;
+            }
+        }
+        if (!supported_field) {
+            fprintf(stderr, "Input error - unsupported csv field %s\n", argv[idx + i]);
+            return INPUT_ERR_INVALID_ARG;
+        }
+    }
+    ls->csv_field_count = field_count;
+    return INPUT_ERR_NONE;
+}
+
+static InputErrorFlag parse_output_xyz(int argc, char **argv, struct LoggingState *ls)
+{
+    ls->output_xyz = true;
+    int idx = 2;
+
+    // if prefix is present and not a schedule keyword, use it; else generate default
+    if (idx < argc && strcmp(argv[idx], "interval") != 0 && strcmp(argv[idx], "list") != 0) {
+        snprintf(ls->xyz_prefix, sizeof(ls->xyz_prefix), "%s", argv[idx]);
+        idx++;
+    } else {
+        // generate default prefix: [time].xyz
+        time_t now = time(NULL);
+        snprintf(ls->xyz_prefix, sizeof(ls->xyz_prefix), "%ld.xyz", (long)now);
+    }
+    InputErrorFlag err =
+        parse_output_schedule(argc, argv, &idx, &ls->xyz_schedule, &ls->next_xyz_checkpoint, 0);
+    if (err != INPUT_ERR_NONE) {
+        return err;
+    }
+    // Error if extra parameters are present (e.g., 'fields' or any other)
+    if (idx < argc) {
+        fprintf(stderr, "Input error - additional parameters after %s are not recognized\n", argv[idx]);
+        return INPUT_ERR_INVALID_ARG;
+    }
+    return INPUT_ERR_NONE;
+}
+
+static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *ctx,
+                                 struct SimulationState *ss, struct SimulationEnv *se,
+                                 struct LoggingState *ls)
+{
+    if (argc < 2) {
+        fprintf(stderr, "Input error - output command expects at least 1 argument\n");
+        return INPUT_ERR_COUNT_MISMATCH;
+    }
+    if (strcmp(argv[1], "csv") == 0) {
+        return parse_output_csv(argc, argv, ls);
+    } else if (strcmp(argv[1], "xyz") == 0) {
+        return parse_output_xyz(argc, argv, ls);
+    } else {
+        fprintf(stderr, "Input error - output expects 'csv' or 'xyz'\n");
+        return INPUT_ERR_INVALID_ARG;
+    }
+}
+
 static InputErrorFlag cmd_geometry(int argc, char **argv, int line, ParseContext *ctx,
-                        struct SimulationState *ss, struct SimulationEnv *se,
-                        struct LoggingState *ls)
+                                   struct SimulationState *ss, struct SimulationEnv *se,
+                                   struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
@@ -493,8 +593,8 @@ static InputErrorFlag cmd_geometry(int argc, char **argv, int line, ParseContext
 }
 
 static InputErrorFlag cmd_run(int argc, char **argv, int line, ParseContext *ctx,
-                   struct SimulationState *ss, struct SimulationEnv *se,
-                   struct LoggingState *ls)
+                              struct SimulationState *ss, struct SimulationEnv *se,
+                              struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
@@ -524,8 +624,8 @@ static InputErrorFlag cmd_run(int argc, char **argv, int line, ParseContext *ctx
 }
 
 static InputErrorFlag cmd_flavor(int argc, char **argv, int line, ParseContext *ctx,
-                      struct SimulationState *ss, struct SimulationEnv *se,
-                      struct LoggingState *ls)
+                                 struct SimulationState *ss, struct SimulationEnv *se,
+                                 struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
@@ -546,64 +646,92 @@ static InputErrorFlag cmd_flavor(int argc, char **argv, int line, ParseContext *
     return INPUT_ERR_NONE;
 }
 
-static InputErrorFlag cmd_logtype(int argc, char **argv, int line, ParseContext *ctx,
-                       struct SimulationState *ss, struct SimulationEnv *se,
-                       struct LoggingState *ls)
+
+/* ================= Help ================= */
+
+void print_help(const char *cmd)
+{
+    for (const Command *c = commands; c->name != NULL; c++) {
+        if (!cmd || strcmp(cmd, c->name) == 0) {
+            printf("%s\n  %s\n\n", c->usage, c->description);
+        }
+    }
+}
+
+static InputErrorFlag cmd_help(int argc, char **argv, int line, ParseContext *ctx,
+                               struct SimulationState *ss, struct SimulationEnv *se,
+                               struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
     (void)ss;
     (void)se;
-    if (argc < 2) {
-        fprintf(stderr, "Input error - expected at least 1 argument for command %s\n", argv[0]);
-        return INPUT_ERR_COUNT_MISMATCH;
-    }
-    for (int i = 1; i < argc; i++) {
-        if (strstr(argv[i], "iter") != NULL) {
-            ls->output_iter_csv = 1;
-        }
-        if (strstr(argv[i], "csv") != NULL) {
-            ls->output_state_csv = 1;
-        }
-        if (strstr(argv[i], "xyz") != NULL) {
-            ls->output_xyz = 1;
-        }
-    }
-    return INPUT_ERR_NONE;
+    (void)ls;
+    if (argc == 1)
+        print_help(NULL);
+    else
+        print_help(argv[1]);
+    return INPUT_ERR_OTHER;
 }
 
 /* ================= Command table ================= */
-static InputErrorFlag cmd_help(int argc, char **argv, int line, ParseContext *ctx,
-                    struct SimulationState *ss, struct SimulationEnv *se,
-                    struct LoggingState *ls);
 
-Command commands[] = {
-    { "systemsize",  cmd_systemsize,  "systemsize NX NY NZ", "Simulation box size in lattice units.",  CMDCAT_GEOMETRY, 1},
-    { "temp",        cmd_temp,        "temp T", "Simulation temperature in K.", CMDCAT_THERMODYNAMICS, 1},
-    { "seed",        cmd_seed,        "seed random|default|N", "Selection of the random seed value. Default: default", CMDCAT_RUN, 0},
-    { "potential",   cmd_potential,   "potential U0 [dUdt Umax]", "Constant or swept electric potential. Default: 0", CMDCAT_THERMODYNAMICS, 0},
-    { "datalog",     cmd_datalog,     "datalog (linear|ln|iteration) (interval a [b]|list ...)", "Logging schedule configuration.", CMDCAT_OUTPUT, 0},
-    { "struct",      cmd_struct,      "struct FCC|BCC|SC", "Crystal structure type.", CMDCAT_GEOMETRY, 1},
-    { "output",      cmd_output,      "output path/outfile.out", "Output log filename.", CMDCAT_OUTPUT, 0},
-    { "geometry",    cmd_geometry,    "geometry (sheet N|cluster R|file path)", "Initial geometry configuration.", CMDCAT_GEOMETRY, 1},
-    { "atomtype",    cmd_atomtype,    "atomtype A B [C ...]",  "Define atom types and their order.", CMDCAT_GEOMETRY, 1},
-    { "composition", cmd_composition, "composition xA xB [xC ...]", "Atomic composition fractions; order follows atomtype.", CMDCAT_GEOMETRY, 1},
-    { "dissolution", cmd_dissolution, "dissolution true|false ...", "Dissolution flags per atom type; order follows atomtype.", CMDCAT_GEOMETRY, 1},
-    { "nnlevels",    cmd_nnlevels,    "nnlevels N", "Number of nearest-neighbor shells.", CMDCAT_THERMODYNAMICS, 1},
-    { "nne",         cmd_nne,         "1nne eAA eAB ...", "Nearest-neighbor energies for shell n (flattened upper-triangle). For a three-component system: AA AB AC BB BC CC", CMDCAT_THERMODYNAMICS, 1},
-    { "run",         cmd_run,         "run time|iteration value", "Simulation end condition.", CMDCAT_RUN, 1},
-    { "flavor",      cmd_flavor,      "flavor KMC|MC", "Simulation algorithm flavor.", CMDCAT_RUN, 1},
-    { "logtype",     cmd_logtype,     "logtype [iter] [csv] [xyz]", "Enable output formats.", CMDCAT_OUTPUT, 0},
-    { "help",        cmd_help,        "help [command]", "Show documentation for commands.", CMDCAT_OUTPUT, 0},
-    { NULL, NULL, NULL, NULL, CMDCAT_UNCAT, 0 }
-};
+const Command commands[] = {
+    {"systemsize", cmd_systemsize, "systemsize NX NY NZ", "Simulation box size in lattice units.",
+     CMDCAT_GEOMETRY, 1},
+
+    {"temp", cmd_temp, "temp T", "Simulation temperature in K.", CMDCAT_THERMODYNAMICS, 1},
+
+    {"seed", cmd_seed, "seed random|default|N",
+     "Selection of the random seed value. Default: default", CMDCAT_RUN, 0},
+
+    {"potential", cmd_potential, "potential U0 [dUdt Umax]",
+     "Constant or swept electric potential. Default: 0", CMDCAT_THERMODYNAMICS, 0},
+
+    {"struct", cmd_struct, "struct FCC|BCC|SC", "Crystal structure type.", CMDCAT_GEOMETRY, 1},
+
+    {"output", cmd_output,
+     "output [csv [filename] | xyz [file prefix]] [interval|list] [time|iteration] [interval "
+     "step|list] {fields [list of fields]}",
+     "Data output scheme. CSV formats support {fields} fields. XYZ filename is used as a prefix, "
+     "and new xyz files are output following the schedule",
+     CMDCAT_OUTPUT, 0},
+
+    {"geometry", cmd_geometry, "geometry (sheet N|cluster R|file path)",
+     "Initial geometry configuration.", CMDCAT_GEOMETRY, 1},
+
+    {"atomtype", cmd_atomtype, "atomtype A B [C ...]", "Define atom types and their order.",
+     CMDCAT_GEOMETRY, 1},
+
+    {"composition", cmd_composition, "composition xA xB [xC ...]",
+     "Atomic composition fractions; order follows atomtype.", CMDCAT_GEOMETRY, 1},
+
+    {"dissolution", cmd_dissolution, "dissolution true|false ...",
+     "Dissolution flags per atom type; order follows atomtype.", CMDCAT_GEOMETRY, 1},
+
+    {"nnlevels", cmd_nnlevels, "nnlevels N", "Number of nearest-neighbor shells.",
+     CMDCAT_THERMODYNAMICS, 1},
+
+    {"nne", cmd_nne, "1nne eAA eAB ...",
+     "Nearest-neighbor energies for shell n (flattened upper-triangle). For a three-component "
+     "system: AA AB AC BB BC CC",
+     CMDCAT_THERMODYNAMICS, 1},
+
+    {"run", cmd_run, "run time|iteration value", "Simulation end condition.", CMDCAT_RUN, 1},
+
+    {"flavor", cmd_flavor, "flavor KMC|MC", "Simulation algorithm flavor.", CMDCAT_RUN, 1},
+
+    {"help", cmd_help, "help [command]", "Show documentation for commands.", CMDCAT_OUTPUT, 0},
+
+    {NULL, NULL, NULL, NULL, CMDCAT_UNCAT, 0}};
 
 void initialize_requirements(ParseContext *ctx)
 {
     size_t commands_count = sizeof(commands) / sizeof(commands[0]) - 1;
     ctx->requirements = malloc(commands_count * sizeof(int));
     if (ctx->requirements == NULL) {
-        fprintf(stderr, "Couldn't allocate memory for command requirements in ParseContext: %s", strerror(errno));
+        fprintf(stderr, "Couldn't allocate memory for command requirements in ParseContext: %s",
+                strerror(errno));
         call_exit(INPUT_ERR_ALLOC);
     }
     for (size_t i = 0; i < commands_count; i++) {
@@ -611,7 +739,8 @@ void initialize_requirements(ParseContext *ctx)
     }
 }
 
-void mark_requirement(ParseContext *ctx, Command *c) {
+void mark_requirement(ParseContext *ctx, const Command *c)
+{
     ptrdiff_t idx = c - commands;
     ctx->requirements[idx] = 1;
 }
@@ -619,7 +748,8 @@ void mark_requirement(ParseContext *ctx, Command *c) {
 /* ================= Parser ================= */
 
 void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
-                      struct SimulationEnv *se, struct LoggingState *ls) {
+                      struct SimulationEnv *se, struct LoggingState *ls)
+{
     char line[MAX_LINE];
     char *argv[MAX_TOKENS];
     int lineno = 0;
@@ -637,16 +767,15 @@ void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
             continue;
 
         int matched = 0;
-        for (Command *c = commands; c->name != NULL; c++) {
+        for (const Command *c = commands; c->name != NULL; c++) {
             if (strcmp(argv[0], c->name) == 0 ||
                 (strcmp(c->name, "nne") == 0 && isdigit(argv[0][0]))) {
                 mark_requirement(ctx, c);
                 InputErrorFlag err = c->func(argc, argv, lineno, ctx, ss, se, ls);
                 if (err != INPUT_ERR_NONE) {
                     // if handler fails
-                    fprintf(stderr,
-                        "Error in command '%s' at line %d\nUsage: %s\n",
-                        argv[0], lineno, c->usage);
+                    fprintf(stderr, "Error in command '%s' at line %d\nUsage: %s\n", argv[0],
+                            lineno, c->usage);
                     call_exit(err);
                 }
                 matched = 1;
@@ -660,33 +789,6 @@ void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
         }
     }
 }
-
-/* ================= Help ================= */
-
-void print_help(const char *cmd) {
-    for (Command *c = commands; c->name != NULL; c++) {
-        if (!cmd || strcmp(cmd, c->name) == 0) {
-            printf("%s\n  %s\n\n", c->usage, c->description);
-        }
-    }
-}
-
-static InputErrorFlag cmd_help(int argc, char **argv, int line, ParseContext *ctx,
-                    struct SimulationState *ss, struct SimulationEnv *se,
-                    struct LoggingState *ls)
-{
-    (void)line;
-    (void)ctx;
-    (void)ss;
-    (void)se;
-    (void)ls;
-    if (argc == 1)
-        print_help(NULL);
-    else
-        print_help(argv[1]);
-    return INPUT_ERR_OTHER;
-}
-
 
 /* ================= Finalization ================= */
 
@@ -712,7 +814,8 @@ void finalize_atom_dependent(const ParseContext *ctx, struct SimulationEnv *se)
         }
         se->substrate_composition = (double *)malloc((size_t)se->atom_names_cnt * sizeof(double));
         if (se->substrate_composition == NULL) {
-            fprintf(stderr, "Couldn't allocate memory for substrate composition: %s", strerror(errno));
+            fprintf(stderr, "Couldn't allocate memory for substrate composition: %s",
+                    strerror(errno));
             clean_and_error(INPUT_ERR_ALLOC);
         }
         memcpy(se->substrate_composition, ctx->composition_raw,
@@ -726,7 +829,8 @@ void finalize_atom_dependent(const ParseContext *ctx, struct SimulationEnv *se)
         }
         se->is_soluble = (bool *)malloc((size_t)se->atom_names_cnt * sizeof(bool));
         if (se->is_soluble == NULL) {
-            fprintf(stderr, "Couldn't allocate memory for dissolution flags, is_soluble: %s", strerror(errno));
+            fprintf(stderr, "Couldn't allocate memory for dissolution flags, is_soluble: %s",
+                    strerror(errno));
             clean_and_error(INPUT_ERR_ALLOC);
         }
         memcpy(se->is_soluble, ctx->dissolution_raw, (size_t)se->atom_names_cnt * sizeof(bool));
@@ -752,10 +856,10 @@ void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se)
 
     se->num_nn_types = se->num_nn_levels * se->num_bond_types;
     se->nn_energy = (double *)calloc((size_t)se->num_nn_types, sizeof(double));
-    
+
     int *defined = calloc((size_t)se->num_nn_levels, sizeof(int));
     int expected = se->num_bond_types;
-    
+
     for (int c = 0; c < ctx->nne_cmd_count; c++) {
         int lvl = ctx->nne_cmds[c].level;
         if (ctx->nne_cmds[c].nvalues != expected) {
@@ -768,7 +872,7 @@ void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se)
                     ctx->nne_cmds[c].line);
             clean_and_error(INPUT_ERR_INVALID_ARG);
         }
-        if (defined[lvl-1]) {
+        if (defined[lvl - 1]) {
             fprintf(stderr, "duplicate nne for level %d (line %d)\n", lvl, ctx->nne_cmds[c].line);
             clean_and_error(INPUT_ERR_DUPLICATE_CMD);
         }
@@ -784,13 +888,14 @@ void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se)
         int idx = 0;
         for (int i = 0; i < ntypes; i++) {
             for (int j = i; j < ntypes; j++) {
-                if (idx >= expected) break;
+                if (idx >= expected)
+                    break;
                 se->nn_energy[bond_index] = vals[idx];
                 idx++;
                 bond_index++;
             }
         }
-        defined[lvl-1] = 1;
+        defined[lvl - 1] = 1;
     }
 
     for (int i = 0; i < se->num_nn_levels; i++) {
@@ -849,7 +954,7 @@ void finalize_config(const ParseContext *ctx, struct SimulationState *ss, struct
 //     int *defined = calloc(se->num_nn_levels, sizeof(int));
 
 //     int expected = ntypes * (ntypes + 1) / 2;
-    
+
 //     for (int c = 0; c < ctx->nne_cmd_count; c++) {
 //         int lvl = ctx->nne_cmds[c].level;
 //         if (ctx->nne_cmds[c].values_count != expected) {

@@ -101,7 +101,6 @@ void test_parse_input_three_atomtypes_two_shells_success(void) {
                                      "2nd shell nne energy for atom type 2-2");
 }
 
-// TODO
 void test_parse_input_cluster_nns_file_success(void) {
     ParseContext ctx = {0};
     FILE *fp = open_file("test/cluster_nns.in");
@@ -146,11 +145,10 @@ void test_parse_input_cluster_nns_file_success(void) {
     // Output CSV command
     TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "State CSV output flag");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", ls->csv_filename, "CSV filename");
-    TEST_ASSERT_TRUE_MESSAGE(ls->csv_filename_provided, "CSV filename provided");
     TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode, "CSV schedule mode");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->csv_schedule.interval, "CSV interval value");
     // Check next_log_checkpoint for interval iteration mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_log_checkpoint, "CSV next_log_checkpoint should match first checkpoint");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_csv_checkpoint, "CSV next_csv_checkpoint should match first checkpoint");
     TEST_ASSERT_EQUAL_INT_MESSAGE(4, ls->csv_field_count, "CSV field count");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
@@ -160,17 +158,18 @@ void test_parse_input_cluster_nns_file_success(void) {
     // Output XYZ command
     TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
-    TEST_ASSERT_TRUE_MESSAGE(ls->xyz_prefix_provided, "XYZ prefix provided");
     TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode, "XYZ schedule mode");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->xyz_schedule.interval, "XYZ interval value");
     // Check next_log_checkpoint for interval time mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->next_log_checkpoint, "XYZ next_log_checkpoint should match first checkpoint");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->next_xyz_checkpoint, "XYZ next_xyz_checkpoint should match first checkpoint");
 
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293.0, ss->temperature, "Temperature value");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(12345U, se->rand_seed, "Random seed value");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_KMC, se->flavor, "Simulation flavor");
     TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, ss->sim_end_type, "Simulation end type");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(2000U, (unsigned int)ss->final_iteration, "Final iteration value");
+
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when not set");
 }
 
 void test_parse_input_multi_command_unknown_mid_file_fails(void) {
@@ -488,18 +487,19 @@ void test_output_csv_interval_iteration_success(void) {
 
     TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "CSV output flag");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", ls->csv_filename, "CSV filename");
-    TEST_ASSERT_TRUE_MESSAGE(ls->csv_filename_provided, "CSV filename provided");
     TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode,
                                   "CSV schedule iteration interval mode");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->csv_schedule.interval, "CSV interval value");
     // Check next_log_checkpoint for interval iteration mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_log_checkpoint, "CSV next_log_checkpoint should match first checkpoint");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_csv_checkpoint, "CSV next_csv_checkpoint should match first checkpoint");
     TEST_ASSERT_NULL_MESSAGE(ls->csv_schedule.list, "CSV list value in interval mode");
     TEST_ASSERT_EQUAL_INT_MESSAGE(4, ls->csv_field_count, "CSV field count");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", ls->csv_fields[2], "CSV field 2");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("temperature", ls->csv_fields[3], "CSV field 3");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_xyz, "XYZ output flag when only CSV output");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when not set");
 }
 
 void test_output_csv_list_time_success(void) {
@@ -512,7 +512,6 @@ void test_output_csv_list_time_success(void) {
 
     TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "CSV output flag");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", ls->csv_filename, "CSV filename");
-    TEST_ASSERT_TRUE_MESSAGE(ls->csv_filename_provided, "CSV filename provided");
     TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_LIST_TIME, ls->csv_schedule.mode, "CSV list time schedule mode");
     TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls->csv_schedule.list_len, "CSV schedule list length");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ls->csv_schedule.interval, "CSV interval value in list mode");
@@ -520,11 +519,13 @@ void test_output_csv_list_time_success(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, ls->csv_schedule.list[1], "CSV schedule list value 1");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.3, ls->csv_schedule.list[2], "CSV schedule list value 2");
     // Check next_log_checkpoint for list time mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->next_log_checkpoint, "CSV next_log_checkpoint should match first checkpoint in list");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->next_csv_checkpoint, "CSV next_checkpoint should match first checkpoint in list");
     TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls->csv_field_count, "CSV field count");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", ls->csv_fields[2], "CSV field 2");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_xyz, "XYZ output flag when only CSV output");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when only CSV");
 }
 
 void test_output_xyz_interval_time_success(void) {
@@ -537,11 +538,12 @@ void test_output_xyz_interval_time_success(void) {
 
     TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
-    TEST_ASSERT_TRUE_MESSAGE(ls->xyz_prefix_provided, "XYZ filename provided");
     TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode, "XYZ schedule interval time mode");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->xyz_schedule.interval, "XYZ interval value");
     // Check next_log_checkpoint for interval time mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->next_log_checkpoint, "XYZ next_log_checkpoint should match first checkpoint");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->next_xyz_checkpoint, "XYZ next_xyz_checkpoint should match first checkpoint");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_state_csv, "CSV output flag when only XYZ output");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when only CSV");
 }
 
 void test_output_invalid_mode_fails(void) {
@@ -619,7 +621,10 @@ void test_output_csv_default_filename_time_success(void) {
     char deviation_msg[64];
     snprintf(deviation_msg, sizeof(deviation_msg), "CSV filename time deviation should be <= %ld second(s)", max_deviation);
     TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
-    TEST_ASSERT_FALSE_MESSAGE(ls->csv_filename_provided, "CSV filename_provided should be false");
+
+    TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "CSV output flag");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_xyz, "XYZ output flag when only CSV output");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when only CSV");
 }
 
 void test_output_xyz_default_prefix_time_success(void) {
@@ -653,7 +658,7 @@ void test_output_xyz_default_prefix_time_success(void) {
     char deviation_msg[64];
     snprintf(deviation_msg, sizeof(deviation_msg), "XYZ prefix time deviation should be <= %ld second(s)", max_deviation);
     TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
-    TEST_ASSERT_FALSE_MESSAGE(ls->xyz_prefix_provided, "XYZ prefix_provided should be false");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when only CSV");
 }
 
 void test_output_unrecognized_field_fails(void) {

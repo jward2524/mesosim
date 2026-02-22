@@ -8,6 +8,16 @@ extern const size_t BUFFER_SIZE;
 extern const size_t ARR_BUFFER_SIZE;
 extern char outFile[260];
 
+// returns malloced pointer to string
+typedef const char *(*CsvFieldFuncPtr)(const struct SimulationState *state);
+typedef struct {
+    const char *name;
+    CsvFieldFuncPtr get_value;
+    unsigned flavor;
+} CsvFieldFunc;
+extern const CsvFieldFunc csv_field_map[];
+extern const size_t CSV_FIELD_FUNCS_COUNT;
+
 void safe_log(FILE *stream, const char *fmt, ...);
 
 bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,

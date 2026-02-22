@@ -1,6 +1,9 @@
 #ifndef KMC_INPUT_H
 #define KMC_INPUT_H
 
+#include "State.h"
+#include <stdio.h>
+
 /* ================= Input Error Flags ================= */
 /**
  * Error flags for input parsing and validation.
@@ -18,20 +21,17 @@ typedef enum {
     INPUT_ERR_OTHER               // Other/unclassified error
 } InputErrorFlag;
 
-#include "State.h"
-#include <stdio.h>
-
 /* ================= Simulation configuration ================= */
 
 typedef struct {
     int natomtypes;
     char **atomtypes;
 
-    double *composition;  // size natomtypes
-    int *dissolution;     // size natomtypes
+    double *composition; // size natomtypes
+    int *dissolution;    // size natomtypes
 
     int nnlevels;
-    double ***nne;        // nne[shell][i][j], symmetric
+    double ***nne; // nne[shell][i][j], symmetric
 
 } SimConfig;
 
@@ -39,7 +39,7 @@ typedef struct {
 
 struct NNECmd {
     int level;
-    double *values;   // flattened upper-triangle for arbitrary ntypes
+    double *values; // flattened upper-triangle for arbitrary ntypes
     int nvalues;
     int line;
 };
@@ -71,8 +71,8 @@ enum CmdCategory {
 };
 
 typedef InputErrorFlag (*CmdFunc)(int argc, char **argv, int line, ParseContext *ctx,
-                       struct SimulationState *ss, struct SimulationEnv *se,
-                       struct LoggingState *ls);
+                                  struct SimulationState *ss, struct SimulationEnv *se,
+                                  struct LoggingState *ls);
 
 typedef struct {
     const char *name;
@@ -83,7 +83,7 @@ typedef struct {
     const int required;
 } Command;
 
-extern Command commands[];
+extern const Command commands[];
 
 /* ================= Parsing API ================= */
 
@@ -91,8 +91,8 @@ void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
                       struct SimulationEnv *se, struct LoggingState *ls);
 void finalize_atom_dependent(const ParseContext *ctx, struct SimulationEnv *se);
 void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se);
-void finalize_config(const ParseContext *ctx, struct SimulationState *ss,
-                     struct SimulationEnv *se, struct LoggingState *ls);
+void finalize_config(const ParseContext *ctx, struct SimulationState *ss, struct SimulationEnv *se,
+                     struct LoggingState *ls);
 void check_required_inputs(const ParseContext *ctx);
 void print_help(const char *cmd);
 

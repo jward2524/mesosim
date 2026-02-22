@@ -1007,6 +1007,90 @@ bool process_kmx_file(FILE *temp_log, FILE *input_file, struct SimulationState *
     return true;
 }
 
+/* === CSV fields mapping === */
+
+const char* get_iteration(const struct SimulationState *ss) {
+    int len = snprintf(NULL, 0, "%lu", ss->iter);
+    char *buf = (char*)malloc(len + 1);
+    if (!buf) {
+        return NULL;
+    }
+    snprintf(buf, len + 1, "%lu", ss->iter);
+    return buf;
+}
+
+const char* get_time(const struct SimulationState *ss) {
+    int len = snprintf(NULL, 0, "%le", ss->elapsed_stime);
+    char *buf = (char*)malloc(len + 1);
+    if (!buf) {
+        return NULL;
+    }
+    snprintf(buf, len + 1, "%le", ss->elapsed_stime);
+    return buf;
+}
+
+const char* get_energy(const struct SimulationState *ss) {
+    int len = snprintf(NULL, 0, "%lf", ss->total_internal_energy);
+    char *buf = (char*)malloc(len + 1);
+    if (!buf) {
+        return NULL;
+    }
+    snprintf(buf, len + 1, "%lf", ss->total_internal_energy);
+    return buf;
+}
+
+const char* get_temperature(const struct SimulationState *ss) {
+    int len = snprintf(NULL, 0, "%lf", ss->temperature);
+    char *buf = (char*)malloc(len + 1);
+    if (!buf) {
+        return NULL;
+    }
+    snprintf(buf, len + 1, "%lf", ss->temperature);
+    return buf;
+}
+
+const char* get_overpotential(const struct SimulationState *ss) {
+    int len = snprintf(NULL, 0, "%lf", ss->overpotential);
+    char *buf = (char*)malloc(len + 1);
+    if (!buf) {
+        return NULL;
+    }
+    snprintf(buf, len + 1, "%lf", ss->overpotential);
+    return buf;
+}
+
+const char* get_total_atoms_dissolved(const struct SimulationState *ss) {
+    int len = snprintf(NULL, 0, "%d", ss->total_atoms_dissolved);
+    char *buf = (char*)malloc(len + 1);
+    if (!buf) {
+        return NULL;
+    }
+    snprintf(buf, len + 1, "%d", ss->total_atoms_dissolved);
+    return buf;
+}
+
+const char* get_mmc_steps(const struct SimulationState *ss) {
+    int len = snprintf(NULL, 0, "%lu", ss->iter);
+    char *buf = (char*)malloc(len + 1);
+    if (!buf) {
+        return NULL;
+    }
+    snprintf(buf, len + 1, "%lu", ss->iter);
+    return buf;
+}
+
+const CsvFieldFunc csv_field_map[] = {
+    {"iter", get_iteration, FLAVOR_UNDEFINED},
+    {"time", get_time, FLAVOR_UNDEFINED},
+    {"energy", get_energy, FLAVOR_UNDEFINED},
+    {"temperature", get_temperature, FLAVOR_UNDEFINED},
+    {"overpotential", get_overpotential, FLAVOR_KMC},
+    {"total_atoms_dissolved", get_total_atoms_dissolved, FLAVOR_KMC},
+    {"mmc_steps", get_mmc_steps, FLAVOR_MC}
+};
+
+const size_t CSV_FIELD_FUNCS_COUNT = sizeof(csv_field_map) / sizeof(CsvFieldFunc);
+
 // print a lot of information to the log
 void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls)
 {

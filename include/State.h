@@ -171,14 +171,6 @@ struct LoggingState {
     FILE *sim_log;
     char position_log_prefix[256];
 
-    bool output_xyz;
-
-    bool output_state_csv;
-    FILE *state_csv;
-
-    bool output_iter_csv;
-    FILE *iter_csv;
-
     int analysis_type;
     double log_interval; // interval between log checkpoints, based on analysis_type?
     double next_log_checkpoint;
@@ -188,18 +180,31 @@ struct LoggingState {
 
     int verbose;
 
+    // TODO: switch to a unified output format struct that can be used for both csv and xyz and iter
+    // use a base struct for shared fields and then extended structs for csv and xyz specific fields
+    // and a `formats` array in LoggingState to hold all defined formats for a simulation
+    // https://embeddedartistry.com/fieldatlas/technique-inheritance-and-polymorphism-in-c/
+
+    // iteration output configuration
+    bool output_iter_csv;
+    FILE *iter_csv;
+
     // CSV output configuration
+    bool output_state_csv;
+    FILE *state_csv;
     char csv_filename[256];
-    bool csv_filename_provided;
     char **csv_fields;
     int csv_field_count;
     OutputSchedule csv_schedule;
+    int csv_framenum;
+    double next_csv_checkpoint;
 
     // XYZ output configuration
+    bool output_xyz;
     char xyz_prefix[256];
-    bool xyz_prefix_provided;
     OutputSchedule xyz_schedule;
     int xyz_framenum;
+    double next_xyz_checkpoint;
 };
 
 #endif // COMMON_H
