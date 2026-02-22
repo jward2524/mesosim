@@ -35,34 +35,12 @@ void tearDown(void)
     close_if_exists(&input_file);
 }
 
-void test_parse_input_systemsize(void)
-{
-    char line[] = "systemsize 128 128 128";
-
-    parse_input(line, temp_log, ss, se, ls);
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_x, "system size x");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_y, "system size y");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_z, "system size z");
-}
-
-void test_parse_input_geometry_file(void)
-{
-    char line[] = "geometry file test/sheet.xyz";
-
-    parse_input(line, temp_log, ss, se, ls);
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(GEOMETRY_FROM_FILE, se->geometry, "simulation type");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/sheet.xyz", se->atoms_filename, "atoms filename");
-}
-
 void test_process_in_file_cluster(void)
 {
     char filename[] = "test/cluster_nns.in";
     input_file = open_file(filename);
 
-    int ret = process_in_file(temp_log, input_file, ss, se, ls);
-    TEST_ASSERT_TRUE_MESSAGE(ret, "fxn return");
+    process_in_file(input_file, ss, se, ls);
     TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_KMC, se->flavor, "flavor");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_x, "system size x");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_y, "system size y");
@@ -104,7 +82,7 @@ void test_process_in_file_cluster(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(2000, ss->final_iteration, "simulation max iteration");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->log_interval, "log interval");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_log_checkpoint, "log checkpoint");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_iter_csv, "output iter csv");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_steps_csv, "output iter csv");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_state_csv, "output state csv");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_xyz, "output xyz");
 }
@@ -114,8 +92,7 @@ void test_process_in_file_mc(void)
     char filename[] = "test/mc.in";
     input_file = open_file(filename);
 
-    int ret = process_in_file(temp_log, input_file, ss, se, ls);
-    TEST_ASSERT_TRUE_MESSAGE(ret, "fxn return");
+    process_in_file(input_file, ss, se, ls);
     TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_MC, se->flavor, "flavor");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_x, "system size x");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_y, "system size y");
@@ -154,7 +131,7 @@ void test_process_in_file_mc(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(2, ss->final_iteration, "simulation max iteration");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->log_interval, "log interval");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->next_log_checkpoint, "log checkpoint");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_iter_csv, "output iter csv");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_steps_csv, "output iter csv");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_state_csv, "output state csv");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_xyz, "output xyz");
 }
@@ -183,9 +160,8 @@ void test_process_xyz_file(void)
     initialize_zones(ss->zone_arr, se);
     initialize_simulation_variables(ss, se);
 
-    int res = process_xyz_file(temp_log, atom_file, ss, se, ls);
+    process_xyz_file(atom_file, ss, se, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(res, "Return value of process_xyz_file");
     TEST_ASSERT_EQUAL_INT_MESSAGE(499996, ss->atom_cnt, "Atom count");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293., ss->temperature, "Temperature");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.9, ss->overpotential, "Potential");
@@ -265,8 +241,6 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_parse_input_systemsize);
-    RUN_TEST(test_parse_input_geometry_file);
     RUN_TEST(test_process_in_file_mc);
     RUN_TEST(test_process_in_file_cluster);
     RUN_TEST(test_process_xyz_file);

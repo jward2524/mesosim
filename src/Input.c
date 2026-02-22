@@ -678,71 +678,68 @@ static InputErrorFlag cmd_help(int argc, char **argv, int line, ParseContext *ct
 
 const Command commands[] = {
     {"systemsize", cmd_systemsize, "systemsize NX NY NZ", "Simulation box size in lattice units.",
-     CMDCAT_GEOMETRY, 1},
+     CMDCAT_GEOMETRY, 1, 1},
 
-    {"temp", cmd_temp, "temp T", "Simulation temperature in K.", CMDCAT_THERMODYNAMICS, 1},
+    {"temp", cmd_temp, "temp T", "Simulation temperature in K.", CMDCAT_THERMODYNAMICS, 1, 1},
 
     {"seed", cmd_seed, "seed random|default|N",
-     "Selection of the random seed value. Default: default", CMDCAT_RUN, 0},
+     "Selection of the random seed value. Default: default", CMDCAT_RUN, 0, 0},
 
     {"potential", cmd_potential, "potential U0 [dUdt Umax]",
-     "Constant or swept electric potential. Default: 0", CMDCAT_THERMODYNAMICS, 0},
+     "Constant or swept electric potential. Default: 0", CMDCAT_THERMODYNAMICS, 0, -1},
 
-    {"struct", cmd_struct, "struct FCC|BCC|SC", "Crystal structure type.", CMDCAT_GEOMETRY, 1},
+    {"struct", cmd_struct, "struct FCC|BCC|SC", "Crystal structure type.", CMDCAT_GEOMETRY, 1, 1},
 
     {"output", cmd_output,
      "output [csv [filename] | xyz [file prefix]] [interval|list] [time|iteration] [interval "
      "step|list] {fields [list of fields]}",
      "Data output scheme. CSV formats support {fields} fields. XYZ filename is used as a prefix, "
      "and new xyz files are output following the schedule",
-     CMDCAT_OUTPUT, 0},
+     CMDCAT_OUTPUT, 0, 0},
 
     {"geometry", cmd_geometry, "geometry (sheet N|cluster R|file path)",
-     "Initial geometry configuration.", CMDCAT_GEOMETRY, 1},
+     "Initial geometry configuration.", CMDCAT_GEOMETRY, 1, 0},
 
     {"atomtype", cmd_atomtype, "atomtype A B [C ...]", "Define atom types and their order.",
-     CMDCAT_GEOMETRY, 1},
+     CMDCAT_GEOMETRY, 1, 1},
 
     {"composition", cmd_composition, "composition xA xB [xC ...]",
-     "Atomic composition fractions; order follows atomtype.", CMDCAT_GEOMETRY, 1},
+     "Atomic composition fractions; order follows atomtype.", CMDCAT_GEOMETRY, 1, 1},
 
     {"dissolution", cmd_dissolution, "dissolution true|false ...",
-     "Dissolution flags per atom type; order follows atomtype.", CMDCAT_GEOMETRY, 1},
+     "Dissolution flags per atom type; order follows atomtype.", CMDCAT_GEOMETRY, 1, -1},
 
     {"nnlevels", cmd_nnlevels, "nnlevels N", "Number of nearest-neighbor shells.",
-     CMDCAT_THERMODYNAMICS, 1},
+     CMDCAT_THERMODYNAMICS, 1, 1},
 
     {"nne", cmd_nne, "1nne eAA eAB ...",
      "Nearest-neighbor energies for shell n (flattened upper-triangle). For a three-component "
      "system: AA AB AC BB BC CC",
-     CMDCAT_THERMODYNAMICS, 1},
+     CMDCAT_THERMODYNAMICS, 1, 1},
 
-    {"run", cmd_run, "run time|iteration value", "Simulation end condition.", CMDCAT_RUN, 1},
+    {"run", cmd_run, "run time|iteration value", "Simulation end condition.", CMDCAT_RUN, 1, 1},
 
-    {"flavor", cmd_flavor, "flavor KMC|MC", "Simulation algorithm flavor.", CMDCAT_RUN, 1},
+    {"flavor", cmd_flavor, "flavor KMC|MC", "Simulation algorithm flavor.", CMDCAT_RUN, 1, 1},
 
-    {"help", cmd_help, "help [command]", "Show documentation for commands.", CMDCAT_OUTPUT, 0},
+    {"help", cmd_help, "help [command]", "Show documentation for commands.", CMDCAT_OUTPUT, 0, 0},
 
-    {NULL, NULL, NULL, NULL, CMDCAT_UNCAT, 0}};
+    {NULL, NULL, NULL, NULL, CMDCAT_UNCAT, 0, 0}};
 
 void initialize_requirements(ParseContext *ctx)
 {
     size_t commands_count = sizeof(commands) / sizeof(commands[0]) - 1;
-    ctx->requirements = malloc(commands_count * sizeof(int));
-    if (ctx->requirements == NULL) {
+    ctx->cmd_present = malloc(commands_count * sizeof(int));
+    if (ctx->cmd_present == NULL) {
         fprintf(stderr, "Couldn't allocate memory for command requirements in ParseContext: %s",
                 strerror(errno));
         call_exit(INPUT_ERR_ALLOC);
-    }
-    for (size_t i = 0; i < commands_count; i++) {
-        ctx->requirements[i] = !commands[i].required;
     }
 }
 
 void mark_requirement(ParseContext *ctx, const Command *c)
 {
     ptrdiff_t idx = c - commands;
-    ctx->requirements[idx] = 1;
+    ctx->cmd_present[idx] = 1;
 }
 
 /* ================= Parser ================= */
@@ -908,14 +905,28 @@ void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se)
     free(defined);
 }
 
-void check_required_inputs(const ParseContext *ctx)
+void check_required_inputs(const ParseContext *ctx, unsigned int flavor)
 {
     int failed_requirements = 0;
     size_t commands_count = sizeof(commands) / sizeof(commands[0]) - 1;
     for (size_t i = 0; i < commands_count; i++) {
-        if (ctx->requirements[i] != 1) {
+        // =1 if command is required and not present
+        // =0 if command is required and present, or not required
+        // =-1 if command is present and forbidden/ignored
+        int missing_req = (ctx->cmd_present[i] != 1);
+        if (flavor == FLAVOR_MC) {
+            missing_req = missing_req * commands[i].required_mc;
+        } else if (flavor == FLAVOR_KMC) {
+            missing_req = missing_req * commands[i].required_kmc;
+        } else {
+            fprintf(stderr, "Unknown simulation flavor %u\n", flavor);
+            clean_and_error(INPUT_ERR_MISSING_CMD);
+        }
+        if (missing_req == 1) {
             fprintf(stderr, "Required command %s was not provided\n", commands[i].name);
             failed_requirements = 1;
+        } else if (missing_req == -1) {
+            fprintf(stderr, "Command %s is not applicable for flavor %u - ignored\n", commands[i].name, flavor);
         }
     }
     if (failed_requirements) {
@@ -930,6 +941,7 @@ void finalize_config(const ParseContext *ctx, struct SimulationState *ss, struct
     (void)ls;
     finalize_atom_dependent(ctx, se);
     finalize_nne(ctx, se);
+    check_required_inputs(ctx, se->flavor);
 }
 
 // finalize_nne using multidimensional array for nn_energy

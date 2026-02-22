@@ -51,7 +51,8 @@ void test_parse_input_two_atomtypes_one_shell_success(void) {
     FILE *fp = open_mem(input);
 
     parse_input_file(fp, &ctx, ss, se, ls);
-    finalize_config(&ctx, ss, se, ls);
+    finalize_atom_dependent(&ctx, se);
+    finalize_nne(&ctx, se);
     fclose(fp);
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(2, se->atom_names_cnt, "Number of atom types");
@@ -78,7 +79,8 @@ void test_parse_input_three_atomtypes_two_shells_success(void) {
     FILE *fp = open_mem(input);
 
     parse_input_file(fp, &ctx, ss, se, ls);
-    finalize_config(&ctx, ss, se, ls);
+    finalize_atom_dependent(&ctx, se);
+    finalize_nne(&ctx, se);
     fclose(fp);
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(3, se->num_elements, "Number of elements");
@@ -108,7 +110,7 @@ void test_parse_input_cluster_nns_file_success(void) {
 
     parse_input_file(fp, &ctx, ss, se, ls);
     finalize_config(&ctx, ss, se, ls);
-    check_required_inputs(&ctx);
+    check_required_inputs(&ctx, se->flavor);
     fclose(fp);
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_x, "System size x");
@@ -169,7 +171,7 @@ void test_parse_input_cluster_nns_file_success(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, ss->sim_end_type, "Simulation end type");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(2000U, (unsigned int)ss->final_iteration, "Final iteration value");
 
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when not set");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when not set");
 }
 
 void test_parse_input_multi_command_unknown_mid_file_fails(void) {
@@ -204,7 +206,8 @@ void test_parse_input_multi_command_finalize_composition_sum_fails(void) {
 
     EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
         parse_input_file(fp, &ctx, ss, se, ls);
-        finalize_config(&ctx, ss, se, ls);
+        finalize_atom_dependent(&ctx, se);
+        finalize_nne(&ctx, se);
         TEST_FAIL_MESSAGE("Expected composition sum failure at finalize for multi-command file");
     });
 }
@@ -219,7 +222,7 @@ void test_parse_input_missing_atomtype_fails(void) {
 
     EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
         parse_input_file(fp, &ctx, ss, se, ls);
-        finalize_config(&ctx, ss, se, ls);
+        finalize_atom_dependent(&ctx, se);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected failure");
     });
@@ -235,7 +238,7 @@ void test_parse_input_missing_nne_shell_fails(void) {
 
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
-        finalize_config(&ctx, ss, se, ls);
+        finalize_nne(&ctx, se);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected failure");
     });
@@ -305,7 +308,7 @@ void test_nne_level_exceeds_nnlevels_fails(void) {
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
-        finalize_config(&ctx, ss, se, ls);
+        finalize_nne(&ctx, se);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected nne level overflow failure");
     });
@@ -322,7 +325,7 @@ void test_nne_duplicate_definition_fails(void) {
 
     EXPECT_EXIT(INPUT_ERR_DUPLICATE_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
-        finalize_config(&ctx, ss, se, ls);
+        finalize_nne(&ctx, se);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected duplicate nne failure");
     });
@@ -338,7 +341,7 @@ void test_nne_too_few_values_fails(void) {
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
-        finalize_config(&ctx, ss, se, ls);
+        finalize_nne(&ctx, se);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected nne value count failure");
     });
@@ -353,7 +356,7 @@ void test_composition_count_mismatch_fails(void) {
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
         parse_input_file(fp, &ctx, ss, se, ls);
-        finalize_config(&ctx, ss, se, ls);
+        finalize_atom_dependent(&ctx, se);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected composition count mismatch");
     });
@@ -499,7 +502,7 @@ void test_output_csv_interval_iteration_success(void) {
     TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", ls->csv_fields[2], "CSV field 2");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("temperature", ls->csv_fields[3], "CSV field 3");
     TEST_ASSERT_FALSE_MESSAGE(ls->output_xyz, "XYZ output flag when only CSV output");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when not set");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when not set");
 }
 
 void test_output_csv_list_time_success(void) {
@@ -525,7 +528,7 @@ void test_output_csv_list_time_success(void) {
     TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", ls->csv_fields[2], "CSV field 2");
     TEST_ASSERT_FALSE_MESSAGE(ls->output_xyz, "XYZ output flag when only CSV output");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when only CSV");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
 }
 
 void test_output_xyz_interval_time_success(void) {
@@ -543,7 +546,7 @@ void test_output_xyz_interval_time_success(void) {
     // Check next_log_checkpoint for interval time mode
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->next_xyz_checkpoint, "XYZ next_xyz_checkpoint should match first checkpoint");
     TEST_ASSERT_FALSE_MESSAGE(ls->output_state_csv, "CSV output flag when only XYZ output");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when only CSV");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
 }
 
 void test_output_invalid_mode_fails(void) {
@@ -624,7 +627,7 @@ void test_output_csv_default_filename_time_success(void) {
 
     TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "CSV output flag");
     TEST_ASSERT_FALSE_MESSAGE(ls->output_xyz, "XYZ output flag when only CSV output");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when only CSV");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
 }
 
 void test_output_xyz_default_prefix_time_success(void) {
@@ -658,7 +661,7 @@ void test_output_xyz_default_prefix_time_success(void) {
     char deviation_msg[64];
     snprintf(deviation_msg, sizeof(deviation_msg), "XYZ prefix time deviation should be <= %ld second(s)", max_deviation);
     TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_iter_csv, "Iteration CSV output flag when only CSV");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
 }
 
 void test_output_unrecognized_field_fails(void) {
@@ -1149,7 +1152,7 @@ void test_missing_required_systemsize_fails(void) {
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
-        check_required_inputs(&ctx);
+        check_required_inputs(&ctx, se->flavor);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected failure due to missing required command: systemsize");
     });
@@ -1175,7 +1178,7 @@ void test_missing_required_struct_fails(void) {
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
-        check_required_inputs(&ctx);
+        check_required_inputs(&ctx, se->flavor);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected failure due to missing required command: struct");
     });
@@ -1201,7 +1204,7 @@ void test_missing_multiple_required_commands_fails(void) {
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
-        check_required_inputs(&ctx);
+        check_required_inputs(&ctx, se->flavor);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected failure due to multiple missing required commands: systemsize, struct");
     });
@@ -1216,7 +1219,7 @@ void test_missing_all_required_commands_fails(void) {
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
         // finalize_config(&ctx, ss, se, ls);
-        check_required_inputs(&ctx);
+        check_required_inputs(&ctx, se->flavor);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected failure due to all required commands missing");
     });
@@ -1242,7 +1245,7 @@ void test_required_commands_invalid_args_fail_for_argument(void) {
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
-        check_required_inputs(&ctx);
+        check_required_inputs(&ctx, se->flavor);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected failure due to invalid argument in required command");
     });
@@ -1268,7 +1271,7 @@ void test_required_commands_commented_out_treated_as_missing(void) {
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
         parse_input_file(fp, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
-        check_required_inputs(&ctx);
+        check_required_inputs(&ctx, se->flavor);
         fclose(fp);
         TEST_FAIL_MESSAGE("Expected failure due to required command being commented out");
     });

@@ -161,6 +161,9 @@ void clean_and_error(int exit_error)
         if (log_state->state_csv)
             fclose(log_state->state_csv);
         free_if_exists((void **)&log_state->log_list);
+        free_if_exists((void **)&log_state->csv_fields);
+        free_if_exists((void **)&log_state->csv_schedule.list);
+        free_if_exists((void **)&log_state->xyz_schedule.list);
         free_if_exists((void **)&log_state);
     }
 

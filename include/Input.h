@@ -57,7 +57,7 @@ typedef struct {
     int dissolution_line;
 
     // array that holds flags for whether required commands were provided
-    int *requirements;
+    int *cmd_present;
 } ParseContext;
 
 /* ================= Command Table =============== */
@@ -80,7 +80,8 @@ typedef struct {
     const char *usage;
     const char *description;
     const enum CmdCategory category;
-    const int required;
+    const int required_kmc;
+    const int required_mc;
 } Command;
 
 extern const Command commands[];
@@ -91,9 +92,9 @@ void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
                       struct SimulationEnv *se, struct LoggingState *ls);
 void finalize_atom_dependent(const ParseContext *ctx, struct SimulationEnv *se);
 void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se);
+void check_required_inputs(const ParseContext *ctx, unsigned int flavor);
 void finalize_config(const ParseContext *ctx, struct SimulationState *ss, struct SimulationEnv *se,
                      struct LoggingState *ls);
-void check_required_inputs(const ParseContext *ctx);
 void print_help(const char *cmd);
 
 #endif

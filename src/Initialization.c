@@ -677,7 +677,12 @@ void initialize_from_file(struct SimulationState *ss, struct SimulationEnv *se,
         clean_and_error(errno);
     }
 
-    process_xyz_file(ls->sim_log, atom_file, ss, se, ls);
+    bool ret = process_xyz_file(atom_file, ss, se, ls);
+    if (!ret) {
+        fprintf(stderr, "Error processing xyz file %s\n - check stderr", se->atoms_filename);
+        clean_and_error(ret);
+    }
+
     // TODO: compatability check between parameters in comment line of xyz file and input file
     return;
 }

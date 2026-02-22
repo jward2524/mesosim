@@ -113,8 +113,7 @@ int main(int argc, char *argv[])
     safe_log(temp_log, "Attempting to read in file %s\n", input_filename);
 
     // pre-process the file information and fill in the gaps with defaults
-    bool res = simulation_parameters_from_file(input_filename, sim_state, sim_env, log_state,
-                                               temp_log, starttime);
+    bool res = simulation_parameters_from_file(input_filename, sim_state, sim_env, log_state);
 
     int failed_setup = 0;
     if ((res == false) || sim_state->simulation_should_kill_itself) {

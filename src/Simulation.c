@@ -257,7 +257,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
             }
         }
 
-        if (ls->output_iter_csv) {
+        if (ls->output_steps_csv) {
             int uvw1[] = {old_x, old_y, old_z};
             // lastxyzt will have old values if it wasn't diffusion
             int uvw2[] = {lastxt, lastyt, lastzt};

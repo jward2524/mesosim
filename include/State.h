@@ -186,7 +186,8 @@ struct LoggingState {
     // https://embeddedartistry.com/fieldatlas/technique-inheritance-and-polymorphism-in-c/
 
     // iteration output configuration
-    bool output_iter_csv;
+    bool output_steps_csv;
+    char steps_filename[256];
     FILE *iter_csv;
 
     // CSV output configuration
