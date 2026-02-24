@@ -762,7 +762,6 @@ void write_logs(int output_csv, int output_xyz, struct SimulationState *ss, stru
     return;
 }
 
-// TODO: updating of log checkpoints
 /**
  * @brief outputs to log file, csv, and xyz if checkpoints are reached; updates checkpoints for next output; updates framenums for next output
  * 
