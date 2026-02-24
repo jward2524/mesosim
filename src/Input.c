@@ -526,6 +526,7 @@ static InputErrorFlag parse_output_xyz(int argc, char **argv, struct LoggingStat
         time_t now = time(NULL);
         snprintf(ls->xyz_prefix, sizeof(ls->xyz_prefix), "%ld.xyz", (long)now);
     }
+
     InputErrorFlag err =
         parse_output_schedule(argc, argv, &idx, &ls->xyz_schedule, &ls->next_xyz_checkpoint, 0);
     if (err != INPUT_ERR_NONE) {
@@ -554,7 +555,14 @@ static InputErrorFlag parse_steps_csv(int argc, char **argv, struct LoggingState
         time_t now = time(NULL);
         snprintf(ls->steps_filename, sizeof(ls->steps_filename), "%ld_steps.csv", (long)now);
     }
-    // error if extra parameters are present (e.g., 'fields' or any other)
+
+    // Check for optional 'coord' parameter
+    if (idx < argc && strcmp(argv[idx], "coord") == 0) {
+        ls->steps_coord = true;
+        idx++;
+    }
+
+    // error if extra parameters are present (e.g., anything else)
     if (idx < argc) {
         fprintf(stderr, "Input error - additional parameters after %s are not recognized\n", argv[idx]);
         return INPUT_ERR_INVALID_ARG;

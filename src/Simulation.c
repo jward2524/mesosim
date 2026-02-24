@@ -80,6 +80,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         long transitioning_atom_idx;
         long transitioned_atom_idx;
         long selected_transition_idx;
+        int coord;
 
         // binary search to select transition
         while (!transition_found) {
@@ -109,6 +110,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 old_x = ss->atom_arr[transitioning_atom_idx]->lattice[0];
                 old_y = ss->atom_arr[transitioning_atom_idx]->lattice[1];
                 old_z = ss->atom_arr[transitioning_atom_idx]->lattice[2];
+
+                coord = ls->steps_coord ? get_coordination(transitioning_atom_idx, ss, se) : -1;
 
                 // perform transition
                 if (transition_jump_vector != se->num_transition_vectors) {
@@ -211,8 +214,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
             int uvw1[] = {old_x, old_y, old_z};
             // lastxyzt will have old values if it wasn't diffusion
             int uvw2[] = {lastxt, lastyt, lastzt};
-            log_kmc_steps(ls->steps_csv, ss->iter, ss->elapsed_stime, ss->total_internal_energy, uvw1,
-                         uvw2, is_evaporation);
+            log_kmc_steps(ls->steps_csv, ss->iter, ss->elapsed_stime, ss->total_internal_energy,
+                          uvw1, uvw2, is_evaporation, coord);
         }
 
         output_if_passed_checkpoint(ss, se, ls);
@@ -421,6 +424,7 @@ int refresh_transitions(long atom_idx, struct SimulationState *ss,
         int final_config_neighbor_cnt;
         for (unsigned char i = 0; i < se->num_transition_vectors; ++i) {
             // if unoccupied, consider transition
+            // [?]: real use of neighbor_atoms_idxs
             if (ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] == -1) {
                 // end_config is only used to identify the transitions that are functionally
                 // evaporations (no neighbors in end configuration)
@@ -715,201 +719,6 @@ void take_off_transition_list(long atom_idx, int offset_idx, struct SimulationSt
     return;
 }
 
-void check_system(struct SimulationState *ss, struct SimulationEnv *se)
-{
-    long m;
-    long n;
-    int errors;
-
-    int next_x, next_y, next_z;
-
-    // does a careful check to make sure that a system is ready to be simulated.
-    // assumptions:  (1) all real atoms are in the places they think they are
-    // (2) all buried atoms are actually buried.
-
-    // first, remove all atoms from the transition list.  We'll add them after we check neighbors
-
-    for (int j = 0; j < ss->atom_cnt; ++j)
-        for (int i = 0; i < se->num_transition_vectors + 1; ++i) // extra 1 for evaporation
-        {
-            if (ss->atom_arr[j]->transition_indices[i] != -1)
-                // something can happen in the "i" direction
-                take_off_transition_list(j, i, ss);
-        }
-
-    // for each atom, cycle through neighbor coordinates, and and reconcile occupancy
-
-    for (int j = 0; j < ss->atom_cnt; ++j)
-        for (int i = 0; i < se->num_transition_vectors; ++i) {
-            long k = atom_at_offset(ss->atom_arr[j]->lattice[0], ss->atom_arr[j]->lattice[1],
-                                    ss->atom_arr[j]->lattice[2], i, ss->atom_arr, ss->zone_arr, se);
-
-            if (k >= 0) {
-                // an atom has been found atom_idx this neighbor site.
-                ss->atom_arr[j]->neighbor_atom_idxs[i] = k;
-                ss->atom_arr[k]->neighbor_atom_idxs[se->opposite_tvectors[i]] = j;
-            }
-        }
-
-    // now we'll reconcile buried atoms.
-    // does this process need to happen if nothing is buried???
-    do {
-        errors = 0;
-
-        for (int j = 0; j < ss->atom_cnt; ++j)
-            for (int i = 0; i < se->num_transition_vectors; ++i) {
-                if (ss->atom_arr[j]->neighbor_atom_idxs[i] == -2) {
-                    // find coordinate of buried atom
-
-                    next_x = ss->atom_arr[j]->lattice[0] + se->transition_vectors[i].dx;
-                    next_y = ss->atom_arr[j]->lattice[1] + se->transition_vectors[i].dy;
-                    next_z = ss->atom_arr[j]->lattice[2] + se->transition_vectors[i].dz;
-
-                    adjust_pbc(&next_x, &next_y, &next_z, se);
-
-                    for (int k = 0; k < se->num_transition_vectors; ++k) {
-                        m = atom_at_offset(next_x, next_y, next_z, k, ss->atom_arr, ss->zone_arr,
-                                           se);
-
-                        if ((m >= 0) && (m != j)) {
-                            // another atom (m) is connected to this atom.  If it sees this position
-                            // as a buried atom, great.  Otherwise, reconcile
-
-                            n = ss->atom_arr[m]->neighbor_atom_idxs[se->opposite_tvectors[k]];
-                            if (n != -2) {
-                                if (n == -1)
-                                    ss->atom_arr[m]->neighbor_atom_idxs[se->opposite_tvectors[k]] =
-                                        -2;
-                                if (n == -3)
-                                    ss->atom_arr[j]->neighbor_atom_idxs[i] =
-                                        -3; // random trumps buried
-
-                                ++errors;
-                            }
-                        }
-                    }
-                }
-            }
-    } while (errors != 0);
-
-    // now we'll reconcile random buried atoms.
-    do {
-        errors = 0;
-
-        for (int j = 0; j < ss->atom_cnt; ++j)
-            for (int i = 0; i < se->num_transition_vectors; ++i) {
-                if (ss->atom_arr[j]->neighbor_atom_idxs[i] == -3) {
-                    // find coordinate of buried atom
-
-                    next_x = ss->atom_arr[j]->lattice[0] + se->transition_vectors[i].dx;
-                    next_y = ss->atom_arr[j]->lattice[1] + se->transition_vectors[i].dy;
-                    next_z = ss->atom_arr[j]->lattice[2] + se->transition_vectors[i].dz;
-
-                    adjust_pbc(&next_x, &next_y, &next_z, se);
-
-                    for (int k = 0; k < se->num_transition_vectors; ++k) {
-                        m = atom_at_offset(next_x, next_y, next_z, k, ss->atom_arr, ss->zone_arr,
-                                           se);
-
-                        if ((m >= 0) && (m != j)) {
-                            // another atom (m) is connected to this atom.  If it sees this position
-                            // as a buried atom, great.  Otherwise, reconcile
-
-                            n = ss->atom_arr[m]->neighbor_atom_idxs[se->opposite_tvectors[k]];
-                            if (n != -3) {
-                                ss->atom_arr[m]->neighbor_atom_idxs[se->opposite_tvectors[k]] = -3;
-                                ++errors;
-                            }
-                        }
-                    }
-                }
-            }
-    } while (errors != 0);
-    // now let's bury any atoms that should be buried - DON'T WANT THIS NOW!
-    /*for (j=0;j<atom_cnt;++j)
-    {
-            k = 0;		// k will be the number of buried or occupied neighbors
-
-            for (i=0;i<se->num_transition_vectors;++i)
-            {
-                    if (atom[j]->neighbor_atom_idxs[i] >= 0)
-                    {
-                            if (atom[j]->type == atom[atom[j]->neighbor_atom_idxs[i]]->type)
-                            ++k;
-                    }
-
-                    if (atom[j]->neighbor_atom_idxs[i] == -2)
-                            ++k;
-            }
-
-            // SPECIAL SC routine included here otherwise for second nearest neighbors?
-
-            if (k == se->num_transition_vectors)
-            {
-                    // bury atom j
-
-                    for (i=0;i<se->num_transition_vectors;++i)
-                    {
-                            m = atom[j]->neighbor_atom_idxs[i];
-                            if (m >= 0)
-                                    atom[m]->neighbor_atom_idxs[se->opposite_tvectors[i]] = -2;
-                    }
-
-                    // remove the atom from the atom list
-
-                    m = atom[j]->next_atom;
-                    n = atom[j]->previous_atom;
-
-                    if (n == -1)
-                    {
-                            // this is first atom on this list, so make the zone point to
-                            // the next element in the list.  Note that if the zone had only
-                            // one element, i should be -1, which will alert the offset that
-                            // the zone is empty
-
-                            findzone (&xzone, &yzone, &zzone, atom[j]->lattice[0],
-    atom[j]->lattice[1],atom[j]->lattice[2]);
-
-                            zone[xzone][yzone][zzone].offset = m;
-
-                            if (m != -1)
-                                    atom[m]->previous_atom = -1;
-                    }
-                    else
-                    {
-                            if (m == -1)
-                                    {
-                                            // this is the last element on this list,
-                                            atom[n]->next_atom = -1;
-                                    }
-                            else
-                                    {
-                                            // atom is embedded in the list; nothing special needs
-    be done
-
-                                            atom[m]->previous_atom = n;
-                                            atom[n]->next_atom = m;
-                                    }
-                    }
-
-                    if (j != (atom_cnt-1))
-                                    move_atom((atom_cnt-1), j);
-
-                    free(atom[atom_cnt-1]);
-                    atom[atom_cnt-1] = NULL;
-                    --atom_cnt;
-                    --j;
-            }
-    }*/
-
-    // now we can recalculate diffusion rates
-    for (int j = 0; j < ss->atom_cnt; ++j)
-        refresh_transitions(j, ss, se);
-    return;
-}
-
-/******************************************************************************/
-/******************************************************************************/
 // calculates surface diffusion rate using atom environment
 double calculate_surf_diffusion_rate(unsigned char *atom_env, int final_config_neighbor_cnt,
                                      double temperature, struct SimulationEnv *se)
@@ -950,8 +759,6 @@ double calculate_surf_diffusion_rate(unsigned char *atom_env, int final_config_n
     return 1e13 * exp(-energy / (kBoltz * temperature));
 }
 
-/******************************************************************************/
-/******************************************************************************/
 // calculates evaporation rate using atom environment
 double calculate_evaporation_rate(unsigned char *atom_env, double temperature, double overpotential,
                                   struct SimulationEnv *se)

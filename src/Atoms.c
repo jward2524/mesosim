@@ -301,6 +301,7 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
     // A: yes, but can't call refresh transitions on an atom without an index
 
     for (int i = 0; i < se->num_transition_vectors; ++i) {
+        // [?]: real use of neighbor_atoms_idxs
         neighbor_idx = ss->atom_arr[atom_idx]->neighbor_atom_idxs[i];
 
         switch (neighbor_idx) // might be irrelevant if burial removed // [ ]: burried
@@ -483,194 +484,6 @@ long atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
     return atom_idx;
 }
 
-// Remove the given atom from the list of atoms
-void kill_atom(long atom_number, struct SimulationState *ss, struct SimulationEnv *se)
-{
-    long i = 0, j;
-    int xzone, yzone, zzone;
-
-    // section about cosmetic bonds removed
-
-    // If atom is selected, gracefully remove it from the list of selected atoms: TODO: remove me?
-
-    /*if (atom[atom_number]->selected)
-    {
-            for (i=0;i<number_selected;++i)
-                    if (*selected[i] == atom_number)
-                    {
-                            *selected[i] = *selected[number_selected-1];
-                            break;
-                    }
-
-            free(selected[number_selected]);
-            --number_selected;
-    }*/
-
-    // copy the last atom in the atom list to this spot, and then free up the memory of the last
-    // atom
-
-    i = ss->atom_arr[atom_number]->next_atom;
-    j = ss->atom_arr[atom_number]->previous_atom;
-
-    if (j == -1) {
-        // this is the first atom on this list, so make the zone point to
-        // the next element in the list.  Note that if the zone had only
-        // one element, i should be -1, which will alert the offset that
-        // the zone is empty
-
-        findzone(&xzone, &yzone, &zzone, ss->atom_arr[atom_number]->lattice[0],
-                 ss->atom_arr[atom_number]->lattice[1], ss->atom_arr[atom_number]->lattice[2], se);
-        ss->zone_arr[xzone][yzone][zzone].offset = i;
-
-        if (i != -1)
-            ss->atom_arr[i]->previous_atom = -1;
-    } else {
-        if (i == -1) {
-            // this is the last element on this list,
-            ss->atom_arr[j]->next_atom = -1;
-        } else {
-            // atom is embedded in the list, nothing special needs be done
-
-            ss->atom_arr[i]->previous_atom = j;
-            ss->atom_arr[j]->next_atom = i;
-        }
-    }
-
-    // make all atoms whose neighbor this was see an empty spot
-
-    for (i = 0; i < se->num_transition_vectors; ++i) {
-        if (ss->atom_arr[atom_number]->neighbor_atom_idxs[i] >= 0) {
-            j = ss->atom_arr[atom_number]->neighbor_atom_idxs[i];
-            ss->atom_arr[j]->neighbor_atom_idxs[se->opposite_tvectors[i]] = -1;
-        }
-    }
-
-    // now move atom from the end of the atom list to this spot
-
-    if (atom_number != (ss->atom_cnt - 1))
-        move_atom((ss->atom_cnt - 1), atom_number, ss->atom_arr, ss->zone_arr, ss->transition_arr,
-                  se);
-
-    // TODO: does this realistically need to happen?
-    copy_atom(atom_number, ss->atom_cnt - 1, ss->atom_arr);
-
-    free(ss->atom_arr[ss->atom_cnt - 1]);
-    ss->atom_arr[ss->atom_cnt - 1] = NULL;
-    --ss->atom_cnt;
-    if (ss->atom_cnt < 0) {
-        fprintf(stderr, "Number of atoms (%ld) has dropped below zero", ss->atom_cnt);
-        clean_and_error(errno);
-    }
-
-    return;
-}
-
-/******************************************************************************/
-/******************************************************************************/
-
-// Copy all aspects of atom j into atom i
-
-void copy_atom(long int i, long int j, Atom **atom_arr)
-{
-    int m;
-
-    atom_arr[i]->type = atom_arr[j]->type;
-
-    for (m = 0; m < 3; ++m) {
-        atom_arr[i]->cartesian[m] = atom_arr[j]->cartesian[m];
-        atom_arr[i]->lattice[m] = atom_arr[j]->lattice[m];
-    }
-
-    atom_arr[i]->bsradius = atom_arr[j]->bsradius;
-    // atom[i]->sfradius = atom[j]->sfradius;
-
-    // atom[i]->visible = atom[j]->visible;
-    // atom[i]->selected = atom[j]->selected;
-
-    // atom[i]->style = atom[j]->style;
-
-    /*for (m=0;m<3;++m)
-            atom[i]->color[m] = atom[j]->color[m];*/
-
-    for (m = 0; m < MAXIMUM_NUMBER_OF_NEIGHBORS + DISSOLUTION; ++m)
-        atom_arr[i]->transition_indices[m] = atom_arr[j]->transition_indices[m];
-
-    // should there be something like transition_arr[] = new atom number?
-
-    // copy_atom, unlike move_atom, does not preserve the simulation linked list
-
-    atom_arr[i]->next_atom = atom_arr[j]->next_atom;
-    atom_arr[i]->previous_atom = atom_arr[j]->previous_atom;
-
-    /*if (generic_flag == 1) return;
-    int bn;
-    for (m=0;m<atom[j]->nob;++m)
-            {
-                    atom[i]->bond[m] = atom[j]->bond[m];
-
-                    bn = atom[i]->bond[m];
-
-                    if (bond[bn].from == j) bond[bn].from = i;
-                    if (bond[bn].to == j) bond[bn].to = i;
-            }
-
-    atom[i]->nob = atom[j]->nob;
-    atom[i]->biso = atom[j]->biso;*/ //all this seems irrelevant
-
-    return;
-}
-
-/******************************************************************************/
-/******************************************************************************/
-// conversion from aotm->lattice to cartesian and store in atom->cart_coord
-void organize(Atom **atom_arr, int atom_cnt,
-              double primitive_basis[3][3]) // atom_cnt=number of atoms
-{
-    // like copy_xyz_to_coord, [but adjusts center of gravity, too, if not commented out]
-
-    orthomol(atom_arr, atom_cnt, primitive_basis); // use the cell dimensions to orthogonalize
-    // centerg(a, atom_cnt, centroid); //don't do this!
-}
-
-// Orthogonalize all the lattice coordinates according to the cell orthogonalization matrix (com)
-// Convert lattice coordinates into cartesian coordinates
-void orthomol(Atom **atom_arr, int atom_cnt, double basis[3][3])
-{
-    int k;
-
-    for (k = 0; k < atom_cnt; ++k)
-        lattice2cartesian(atom_arr[k]->lattice, basis, atom_arr[k]->cartesian);
-
-    return;
-}
-
-// Translate the coordinates of the atoms so that their center of gravity is on the origin
-
-void centerg(Atom **atom_arr, int atom_cnt, double centroid[3])
-{
-    // static double dax, day, daz;
-    int i, j;
-
-    for (i = 0; i < 3; ++i)
-        centroid[i] = (double)0.0;
-
-    if (atom_cnt == 0)
-        return;
-
-    for (j = 0; j < atom_cnt; ++j)
-        for (i = 0; i < 3; ++i)
-            centroid[i] = centroid[i] + atom_arr[j]->cartesian[i];
-
-    for (i = 0; i < 3; ++i)
-        centroid[i] = centroid[i] / (double)atom_cnt;
-
-    for (j = 0; j < atom_cnt; ++j)
-        for (i = 0; i < 3; ++i)
-            atom_arr[j]->cartesian[i] = atom_arr[j]->cartesian[i] - centroid[i];
-
-    return;
-}
-
 // fills initial_config with type of neighbors to atom[at], before jump offset_idx
 int get_initial_configuration(long atom_idx, int num_transition_vectors, Atom **atom_arr,
                               int initial_config[]) // atom_idx is position in atom list, offset_idx
@@ -681,14 +494,15 @@ int get_initial_configuration(long atom_idx, int num_transition_vectors, Atom **
     int nn_count = 0; // nearest-neighbors
 
     for (offset_idx = 0; offset_idx < num_transition_vectors; ++offset_idx) {
+        // [?]: real use of neighbor_atoms_idxs
         neighbor_idx = atom_arr[atom_idx]->neighbor_atom_idxs[offset_idx];
 
         if (neighbor_idx == -1)
             initial_config[offset_idx] = -1; // site is empty
         else {
+            // site is occupied by some atom
             ++nn_count; // increment number of near neighbors
-            initial_config[offset_idx] =
-                atom_arr[neighbor_idx]->type; // site is occupied by some atom
+            initial_config[offset_idx] = atom_arr[neighbor_idx]->type;
         }
     }
 
@@ -730,4 +544,23 @@ int get_final_configuration(long at, int offset_idx, struct SimulationState *ss,
     }
 
     return nn_cnt;
+}
+
+
+int get_coordination(long int atom_idx, struct SimulationState *ss, struct SimulationEnv *se)
+{
+    int coordination = 0;
+
+    for (int i = 0; i < se->num_transition_vectors; ++i) {
+        // [?]: real use of neighbor_atoms_idxs
+        // long neighbor_idx = ss->atom_arr[atom_idx]->neighbor_atom_idxs[i];
+        long neighbor_idx =
+            atom_at_offset(ss->atom_arr[atom_idx]->lattice[0], ss->atom_arr[atom_idx]->lattice[1],
+                           ss->atom_arr[atom_idx]->lattice[2], i, ss->atom_arr, ss->zone_arr, se);
+        if (neighbor_idx >= 0) {
+            ++coordination;
+        }
+    }
+
+    return coordination;
 }

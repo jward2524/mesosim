@@ -184,6 +184,7 @@ struct LoggingState {
     bool output_steps_csv;
     char steps_filename[256];
     FILE *steps_csv;
+    bool steps_coord; // whether to log coordination in steps csv
 
     // CSV output configuration
     bool output_state_csv;

@@ -47,6 +47,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
 
     int old_u, old_v, old_w;
     int new_u, new_v, new_w;
+    int coord;
     int simulation_run = 1;
     while (simulation_run) {
         ss->iter++;
@@ -124,6 +125,8 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             // perform transition
             // duplicating what is in perform_simulation
 
+            coord = ls->steps_coord ? get_coordination(transitioning_atom_idx, ss, se) : -1;
+
             adjust_pbc(&new_u, &new_v, &new_w, se);
 
             unsigned char atype = ss->atom_arr[transitioning_atom_idx]->type;
@@ -151,7 +154,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             int uvw1[] = {old_u, old_v, old_w};
             int uvw2[] = {new_u, new_v, new_w};
             log_mc_steps(ls->steps_csv, ss->iter, ss->total_internal_energy, deltaE, perform_flag,
-                        uvw1, uvw2);
+                        uvw1, uvw2, coord);
         }
 
         output_if_passed_checkpoint(ss, se, ls);

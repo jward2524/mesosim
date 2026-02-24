@@ -36,5 +36,6 @@ int get_initial_configuration(long atom_index, int num_transition_vectors, Atom 
                               int initial_config[]);
 int get_final_configuration(long at, int offset_idx, struct SimulationState *ss,
                             struct SimulationEnv *se, int final_config[]);
+int get_coordination(long int atom_idx, struct SimulationState *ss, struct SimulationEnv *se);
 
 #endif // ATOMS_H

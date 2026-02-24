@@ -65,6 +65,7 @@ INTERNAL void free_if_exists(void **pointer)
 }
 
 #ifdef HAVE_FORK
+// TODO: replace with system call to gcore to create dump of process in subshell
 void create_coredump(void)
 {
     // pid = zero in child process, child PID in parent process

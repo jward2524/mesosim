@@ -170,11 +170,6 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
     // overwrites what was in the input file else if (ls->analysis_type == LN_TIME_INTERVALS)
     // ls->next_log_checkpoint = ls->next_log_checkpoint;
 
-    // first, remove any atoms that may exist
-    // [ ]: why would atom_cnt not be zero????
-    while (ss->atom_cnt != 0) // TODO: start here
-        kill_atom(ss->atom_cnt - 1, ss, se);
-
     return;
 }
 

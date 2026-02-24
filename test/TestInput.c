@@ -553,6 +553,21 @@ void test_output_iter_default_filename_success(void) {
     TEST_ASSERT_TRUE_MESSAGE(len > 10 && strcmp(ls->steps_filename + len - 10, "_steps.csv") == 0, "Default steps filename should end with _steps.csv");
 }
 
+void test_output_iter_default_filename_coord_success(void) {
+    const char *input = "output steps coord\n";
+    ParseContext ctx = {0};
+    mock_input_file = open_mem(input);
+
+    parse_input_file(mock_input_file, &ctx, ss, se, ls);
+
+    TEST_ASSERT_TRUE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag should be set for 'output iter'");
+    TEST_ASSERT_TRUE_MESSAGE(strlen(ls->steps_filename) > 0, "Default steps filename should be set");
+    TEST_ASSERT_TRUE_MESSAGE(ls->steps_coord, "Steps CSV coordination");
+    // Should end with _steps.csv
+    size_t len = strlen(ls->steps_filename);
+    TEST_ASSERT_TRUE_MESSAGE(len > 10 && strcmp(ls->steps_filename + len - 10, "_steps.csv") == 0, "Default steps filename should end with _steps.csv");
+}
+
 void test_output_iter_with_filename_success(void) {
     const char *input = "output steps my_steps.csv\n";
     ParseContext ctx = {0};
@@ -562,6 +577,18 @@ void test_output_iter_with_filename_success(void) {
 
     TEST_ASSERT_TRUE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag should be set for 'output iter' with filename");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("my_steps.csv", ls->steps_filename, "Steps filename should match provided filename");
+}
+
+void test_output_iter_with_filename_coord_success(void) {
+    const char *input = "output steps my_steps.csv coord\n";
+    ParseContext ctx = {0};
+    mock_input_file = open_mem(input);
+
+    parse_input_file(mock_input_file, &ctx, ss, se, ls);
+
+    TEST_ASSERT_TRUE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag should be set for 'output iter' with filename");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("my_steps.csv", ls->steps_filename, "Steps filename should match provided filename");
+    TEST_ASSERT_TRUE_MESSAGE(ls->steps_coord, "Steps csv coord flag");
 }
 
 void test_output_iter_with_filename_and_extra_args_fails(void) {
@@ -658,7 +685,7 @@ void test_output_csv_default_filename_time_success(void) {
 void test_output_xyz_default_prefix_time_success(void) {
     const char *input = "output xyz interval iteration 100\n";
     ParseContext ctx = {0};
-    mock_input_file = open_mem(input);
+    mock_input_file = open_mem(input);    
     time_t now = time(NULL);
 
     parse_input_file(mock_input_file, &ctx, ss, se, ls);
