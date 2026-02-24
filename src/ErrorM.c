@@ -156,12 +156,17 @@ void clean_and_error(int exit_error)
     if (log_state != NULL) {
         if (log_state->sim_log)
             fclose(log_state->sim_log);
-        if (log_state->iter_csv)
-            fclose(log_state->iter_csv);
+        if (log_state->steps_csv)
+            fclose(log_state->steps_csv);
         if (log_state->state_csv)
             fclose(log_state->state_csv);
-        free_if_exists((void **)&log_state->log_list);
+        if (log_state->csv_fields) {
+            for (int i = 0; i < log_state->csv_field_count; i++) {
+                free_if_exists((void **)&log_state->csv_fields[i]);
+            }
+        }
         free_if_exists((void **)&log_state->csv_fields);
+        free_if_exists((void **)&log_state->csv_field_funcs);
         free_if_exists((void **)&log_state->csv_schedule.list);
         free_if_exists((void **)&log_state->xyz_schedule.list);
         free_if_exists((void **)&log_state);

@@ -195,7 +195,7 @@ $(bin_path)/Test%.$(TARGET_EXTENSION): $(objs_mmain) $(obj_path)/Test%.o $(obj_p
 
 # :: (double-colon) rules are independent from each other
 # test_path/TestSomething.c
-$(obj_path)/%.o:: $(test_path)/%.c $(test_path)/TUtils.h | $(obj_path)
+$(obj_path)/%.o:: $(test_path)/%.c $(test_path)/TUtils.h $(xs_hpath) | $(obj_path)
 	$(COMPILE) $(ALL_CFLAGS) $< -o $@
 
 # src_path/Something.c

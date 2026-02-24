@@ -98,56 +98,31 @@ int main(int argc, char *argv[])
     initialize_states(&sim_state, &sim_env, &log_state);
 
     log_state->verbose = verbose_flag;
+    log_state->sim_log = stdout;
 
-    // write to a temporary file until a logfile is identified
-    //  not supported for msvcrt.dll [msys's mingw64]
-    FILE *temp_log = tmpfile();
-    if (temp_log == NULL) {
-        perror("Failed to make temp file");
-        clean_and_error(errno);
-    }
-    if (log_state->verbose)
-        printf("Temporary log created\n");
-    fputs("MESOSIM 2024\n", temp_log);
-    safe_log(temp_log, "Start time: %s\n", ctime(&starttime));
-    safe_log(temp_log, "Attempting to read in file %s\n", input_filename);
+    safe_log(log_state->sim_log, "Start time: %s\n", ctime(&starttime));
+    safe_log(log_state->sim_log, "Attempting to read in file %s\n", input_filename);
 
     // pre-process the file information and fill in the gaps with defaults
     bool res = simulation_parameters_from_file(input_filename, sim_state, sim_env, log_state);
+    open_log_files(log_state, sim_env->flavor);
 
     int failed_setup = 0;
     if ((res == false) || sim_state->simulation_should_kill_itself) {
-        safe_log(temp_log, "ERROR! Something bad happened when reading the input file\n");
+        safe_log(stderr, "ERROR! Something bad happened when reading the input file\n");
         failed_setup = 1;
     }
 
     if (sim_env->geometry == 0) {
-        safe_log(temp_log, "ERROR! Structure type was not specified in input file\n");
+        safe_log(stderr, "ERROR! Structure type was not specified in input file\n");
         failed_setup = 1;
     }
 
     if (failed_setup) {
-        safe_log(temp_log, "Saving log file for debugging\n");
-        char temp_filename[256];
-        snprintf(temp_filename, 256, "mesosim_temp_%d.log", (int)starttime);
-        FILE *debug_file = fopen(temp_filename, "w+");
-        if (debug_file == NULL) {
-            fprintf(stderr, "Failed to save temporary log file: %s\n", strerror(errno));
-            clean_and_error(errno);
-        }
-        write_backlog(temp_log, debug_file);
-        fclose(debug_file);
-        fclose(temp_log);
         clean_and_error(EXIT_FAILURE);
     }
 
     printf("Read file successfully\n");
-
-    // put everything that was in temp_log into outFile
-    write_backlog(temp_log, log_state->sim_log);
-    fclose(temp_log);
-
-    // finish_preprocessing();   //only called when deposition matters
 
     initialize_simulation(sim_state, sim_env, log_state);
 

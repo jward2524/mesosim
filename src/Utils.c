@@ -388,7 +388,7 @@ int tokenize_line(char *line, char **tokens, int maxtok)
  * @brief Duplicate a string. Replicates the behavior of strdup, which isn't part of the C library until C23.
  * 
  * @param s input string to duplicate
- * @return char* pointer to the duplicated string, or NULL if allocation fails
+ * @return malloc'd char pointer to the duplicated string, or NULL if allocation fails
  */
 char *dup_str(const char *s)
 {

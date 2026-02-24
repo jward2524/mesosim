@@ -107,7 +107,8 @@ void generate_input_markdown(FILE *fp, const Command *cmds)
 
     /* Print one example per required command */
     for (int i = 0; cmds[i].name != NULL; ++i) {
-        if (cmds[i].required && cmds[i].usage)
+        // arbitrary choice of kmc
+        if ((cmds[i].required_kmc == CMDREQ_REQUIRED) && cmds[i].usage)
             print_example_line(fp, cmds[i].usage);
     }
 
@@ -141,7 +142,7 @@ void generate_input_markdown(FILE *fp, const Command *cmds)
 
                     fprintf(fp, "| `%s` | %s | %s |\n",
                             cmds[k].name,
-                            cmds[k].required ? "Yes" : "No",
+                            cmds[k].required_kmc ? "Yes" : "No",
                             cmds[k].description ? cmds[k].description : "");
                 }
             }
@@ -160,7 +161,7 @@ void generate_input_markdown(FILE *fp, const Command *cmds)
         fprintf(fp, "**Category:** %s  \n", cmd_category_names[cmds[i].category + 1]);
 
         fprintf(fp, "**Required:** %s\n\n",
-                cmds[i].required ? "Yes" : "No");
+                (cmds[i].required_kmc == CMDREQ_REQUIRED) ? "Yes" : "No");
 
         if (cmds[i].usage) {
             fprintf(fp, "**Syntax**\n\n");

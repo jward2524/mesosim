@@ -70,6 +70,12 @@ enum CmdCategory {
     CMDCAT_RUN,
 };
 
+enum CmdRequired {
+    CMDREQ_REQUIRED,
+    CMDREQ_OPTIONAL,
+    CMDREQ_FORBIDDEN,
+};
+
 typedef InputErrorFlag (*CmdFunc)(int argc, char **argv, int line, ParseContext *ctx,
                                   struct SimulationState *ss, struct SimulationEnv *se,
                                   struct LoggingState *ls);
@@ -80,8 +86,8 @@ typedef struct {
     const char *usage;
     const char *description;
     const enum CmdCategory category;
-    const int required_kmc;
-    const int required_mc;
+    const enum CmdRequired required_kmc;
+    const enum CmdRequired required_mc;
 } Command;
 
 extern const Command commands[];
@@ -92,6 +98,7 @@ void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
                       struct SimulationEnv *se, struct LoggingState *ls);
 void finalize_atom_dependent(const ParseContext *ctx, struct SimulationEnv *se);
 void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se);
+void finalize_csv_fields(struct LoggingState *ls, unsigned int flavor);
 void check_required_inputs(const ParseContext *ctx, unsigned int flavor);
 void finalize_config(const ParseContext *ctx, struct SimulationState *ss, struct SimulationEnv *se,
                      struct LoggingState *ls);

@@ -12,9 +12,8 @@
 int adatom_before; // XXX: never used?
 
 int lastxt, lastyt, lastzt; // containers for coordinates of a next step
-bool checkpoint_reached = false;
 
-static const double FABS_TOL = 1e-6;
+// static const double FABS_TOL = 1e-6;
 
 // ENHANCE: pass struct with all simulation parameters as argument
 // potentially FILE* as arguments
@@ -33,51 +32,16 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 
     bool simulation_end = false;
 
-    // writes data time intervals and run time in original code
-
-    // simulation_is_going = true;
-
-    // print system and zone sizes to the file?
-
-    /*if (num_sims > 0) //this probably will not happen
-    {
-            initialize_initial_structure(geometry);
-            elapsed_stime = 0.0;
-    }*/
-
-    // initialize simulation kinetics, and draw a picture
-
-    // printf("transition time!\n");
     for (int i = 0; i < ss->atom_cnt; ++i) {
         // resets all kinetic paramters
         refresh_transitions(i, ss, se);
     }
     compute_transition_array(ss, se);
 
-    // TODO: move this out from here, to only where output is necessary
-    // replacement for copy_xyz_to_coord but might not be necessary
-    // organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis);
-
-    char suffix[BUFFER_SIZE];
-    if (ls->analysis_type == REGULAR_TIME_INTERVALS) {
-        snprintf(suffix, BUFFER_SIZE, "t0");
-    } else if (ls->analysis_type == LN_TIME_INTERVALS) {
-        snprintf(suffix, BUFFER_SIZE, "t0");
-    } else if (ls->analysis_type == ITERATION_INTERVALS) {
-        snprintf(suffix, BUFFER_SIZE, "i0");
-    }
-
-    // initial state
-    output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
-                    ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-    if (ls->output_state_csv) {
-        log_kmc_state_csv(ls->state_csv, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
-                          ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-    }
     if (ls->output_xyz) {
-        write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+        write_xyz_suffix(ls->xyz_suffix, ls->xyz_schedule.mode, 0.);
     }
-    ls->framenum++;
+    write_logs(ls->output_state_csv, ls->output_xyz, ss, se, ls);
 
     // start with everything current to the current state
     // choose a transition
@@ -243,68 +207,15 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         if (ls->verbose && (ss->iter % 200 == 0))
             printf("Iteration %ld, time %le\n", ss->iter, ss->elapsed_stime);
 
-        // TODO: implement the checkpoint lists
-        if ((ls->analysis_type == REGULAR_TIME_INTERVALS) ||
-            (ls->analysis_type == LN_TIME_INTERVALS)) {
-            checkpoint_reached = (ss->elapsed_stime >= ls->next_log_checkpoint);
-            snprintf(suffix, BUFFER_SIZE, "0");
-        } else if (ls->analysis_type == ITERATION_INTERVALS) {
-            checkpoint_reached = fabs(ls->next_log_checkpoint - (double)ss->iter) < FABS_TOL;
-            if (!checkpoint_reached && (ss->iter > ls->next_log_checkpoint)) {
-                fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing\n",
-                        ss->iter, ls->next_log_checkpoint);
-                clean_and_error(EXIT_FAILURE);
-            }
-        }
-
         if (ls->output_steps_csv) {
             int uvw1[] = {old_x, old_y, old_z};
             // lastxyzt will have old values if it wasn't diffusion
             int uvw2[] = {lastxt, lastyt, lastzt};
-            log_kmc_iter(ls->iter_csv, ss->iter, ss->elapsed_stime, ss->total_internal_energy, uvw1,
+            log_kmc_iter(ls->steps_csv, ss->iter, ss->elapsed_stime, ss->total_internal_energy, uvw1,
                          uvw2, is_evaporation);
         }
 
-        if (checkpoint_reached) {
-            // organize(ss->atom_arr, ss->atom_cnt, se->primitive_basis); //replaced but do i really
-            // need it
-
-            // update suffix and increment next checkpoint
-            if (ls->analysis_type == REGULAR_TIME_INTERVALS) {
-                snprintf(suffix, BUFFER_SIZE, "t%.4lf", ls->next_log_checkpoint);
-
-                // bring next_log_checkpoint up to and one step beyond elapsed_stime
-                while (ls->next_log_checkpoint <= ss->elapsed_stime) {
-                    ls->next_log_checkpoint += ls->log_interval;
-                }
-            } else if (ls->analysis_type == LN_TIME_INTERVALS) {
-                snprintf(suffix, BUFFER_SIZE, "t%.4lf", ls->next_log_checkpoint);
-                while (ls->next_log_checkpoint <= ss->elapsed_stime) {
-                    ls->next_log_checkpoint *= ls->log_interval;
-                }
-            } else if (ls->analysis_type == ITERATION_INTERVALS) {
-                snprintf(suffix, BUFFER_SIZE, "i%lu", (unsigned long)ls->next_log_checkpoint);
-                ls->next_log_checkpoint += ls->log_interval;
-            }
-
-            // record the elapsed time in a file here]
-            if (ls->verbose) {
-                printf("Writing file %d: iteration = %lu, elapsed_stime = %le\n", ls->framenum,
-                       ss->iter, ss->elapsed_stime);
-            }
-            output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
-                            ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-            if (ls->output_state_csv) {
-                log_kmc_state_csv(ls->state_csv, ls->framenum, ss->iter, ss->elapsed_stime,
-                                  ss->temperature, ss->overpotential, ss->atom_cnt,
-                                  ss->total_internal_energy);
-            }
-            if (ls->output_xyz) {
-                write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
-            }
-
-            ++ls->framenum;
-        }
+        output_if_passed_checkpoint(ss, se, ls);
 
         // check if simulation is over
         if (ss->sim_end_type == SIM_END_BY_STIME) {
@@ -315,25 +226,23 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     }
 
     // write elapsed_stime to mark finish
-    output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
-                    ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-    if (ls->output_state_csv) {
-        log_kmc_state_csv(ls->state_csv, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
-                          ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-    }
-    snprintf(suffix + strlen(suffix), BUFFER_SIZE - strlen(suffix), "_final");
-    write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
-
     if ((ss->final_iteration > 0) && (ss->iter >= ss->final_iteration)) {
+        if (ls->output_xyz) {
+            snprintf(ls->xyz_suffix, BUFFER_SIZE, "i%lu", (unsigned long)ss->iter);
+        }
+        write_logs(ls->output_state_csv, ls->output_xyz, ss, se, ls);
         safe_log(ls->sim_log, "Reached final iteration and terminated\n");
     }
     if ((ss->run_stime > 0) && (ss->elapsed_stime >= ss->run_stime)) {
+        if (ls->output_xyz) {
+            snprintf(ls->xyz_suffix, BUFFER_SIZE, "t%lf", ss->elapsed_stime);
+        }
+        write_logs(ls->output_state_csv, ls->output_xyz, ss, se, ls);
         safe_log(ls->sim_log, "Reached end of simulation time and terminated\n");
     }
 
     printf("Finished simulation\n");
 
-    // simulation_is_going = false;
     return 0;
 }
 

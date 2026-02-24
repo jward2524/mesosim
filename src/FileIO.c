@@ -15,11 +15,6 @@
 
 const size_t BUFFER_SIZE = 256;
 const size_t ARR_BUFFER_SIZE = 32;
-char outFile[260] = ""; // MAX_PATH variable Windows related, default 260
-
-static void calloc_nnE(struct SimulationEnv *se);
-static int parse_datalog_params(char *params, int cursor, struct LoggingState *ls, FILE *temp_log);
-static void parse_log_list(char *input_str, double *list, int *len);
 
 static void fopen_error(char *filename, FILE *file, char *base_msg)
 {
@@ -80,27 +75,22 @@ static void open_log_files(struct LoggingState *ls, unsigned flavor)
     if (ls->output_state_csv) {
         ls->state_csv = fopen(ls->csv_filename, "w+");
         fopen_error(ls->csv_filename, ls->state_csv, "Failed to open csv file, ");
-
-        if (flavor == FLAVOR_KMC) {
-            output_kmc_csv_header(ls->state_csv);
-        } else if (flavor == FLAVOR_MC) {
-            output_mc_csv_header(ls->state_csv);
-        }
+        output_csv_header(ls->state_csv, ls);
     } else {
         ls->state_csv = NULL;
     }
 
     if (ls->output_steps_csv) {
-        ls->iter_csv = fopen(ls->steps_filename, "w+");
-        fopen_error(ls->steps_filename, ls->iter_csv, "Failed to open steps csv file, ");
+        ls->steps_csv = fopen(ls->steps_filename, "w+");
+        fopen_error(ls->steps_filename, ls->steps_csv, "Failed to open steps csv file, ");
 
         if (flavor == FLAVOR_KMC) {
-            output_kmc_iter_header(ls->iter_csv);
+            output_kmc_iter_header(ls->steps_csv);
         } else if (flavor == FLAVOR_MC) {
-            output_mc_iter_header(ls->iter_csv);
+            output_mc_iter_header(ls->steps_csv);
         }
     } else {
-        ls->iter_csv = NULL;
+        ls->steps_csv = NULL;
     }
 }
 
@@ -111,7 +101,6 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
     fopen_error(filename, input_file, "Failed to open input file, ");
 
     process_in_file(input_file, ss, se, ls);
-    open_log_files(ls, se->flavor);
     fclose(input_file);
     return true;
 }
@@ -202,7 +191,7 @@ bool process_xyz_file(FILE *input_file, struct SimulationState *ss,
         } else if (strncmp(kv.key, "iteration", 9) == 0) {
             ss->iter = strtoul(kv.value, NULL, 10);
         } else if (strncmp(kv.key, "frame", 5) == 0) {
-            ls->framenum = atoi(kv.value);
+            ls->xyz_framenum = atoi(kv.value);
         } else if (strncmp(kv.key, "energy", 6) == 0) {
             ss->total_internal_energy = strtod(kv.value, NULL);
         }
@@ -276,74 +265,67 @@ bool process_xyz_file(FILE *input_file, struct SimulationState *ss,
 
 /* === CSV fields mapping === */
 
-const char* get_iteration(const struct SimulationState *ss) {
-    int len = snprintf(NULL, 0, "%lu", ss->iter);
-    char *buf = (char*)malloc(len + 1);
+static const char *fstring_to_buffer(const char *fmt, ...)
+{
+    va_list vargs;
+    va_start(vargs, fmt);
+    int len = vsnprintf(NULL, 0, fmt, vargs);
+    va_end(vargs);
+
+    // len is negative when vsnprintf errors
+    if (len < 0) {
+        return NULL;
+    }
+
+    char *buf = (char *)malloc((size_t)len + 1);
     if (!buf) {
         return NULL;
     }
-    snprintf(buf, len + 1, "%lu", ss->iter);
+
+    va_start(vargs, fmt);
+    vsnprintf(buf, (size_t)len + 1, fmt, vargs);
+    va_end(vargs);
+
     return buf;
+}
+
+static const char *get_iteration(const struct SimulationState *ss)
+{
+    return fstring_to_buffer("%lu", ss->iter);
 }
 
 const char* get_time(const struct SimulationState *ss) {
-    int len = snprintf(NULL, 0, "%le", ss->elapsed_stime);
-    char *buf = (char*)malloc(len + 1);
-    if (!buf) {
-        return NULL;
-    }
-    snprintf(buf, len + 1, "%le", ss->elapsed_stime);
-    return buf;
+    return fstring_to_buffer("%le", ss->elapsed_stime);
 }
 
-const char* get_energy(const struct SimulationState *ss) {
-    int len = snprintf(NULL, 0, "%lf", ss->total_internal_energy);
-    char *buf = (char*)malloc(len + 1);
-    if (!buf) {
-        return NULL;
-    }
-    snprintf(buf, len + 1, "%lf", ss->total_internal_energy);
-    return buf;
+const char *get_energy(const struct SimulationState *ss)
+{
+    return fstring_to_buffer("%lf", ss->total_internal_energy);
 }
 
-const char* get_temperature(const struct SimulationState *ss) {
-    int len = snprintf(NULL, 0, "%lf", ss->temperature);
-    char *buf = (char*)malloc(len + 1);
-    if (!buf) {
-        return NULL;
-    }
-    snprintf(buf, len + 1, "%lf", ss->temperature);
-    return buf;
+const char *get_temperature(const struct SimulationState *ss)
+{
+    return fstring_to_buffer("%lf", ss->temperature);
 }
 
-const char* get_overpotential(const struct SimulationState *ss) {
-    int len = snprintf(NULL, 0, "%lf", ss->overpotential);
-    char *buf = (char*)malloc(len + 1);
-    if (!buf) {
-        return NULL;
-    }
-    snprintf(buf, len + 1, "%lf", ss->overpotential);
-    return buf;
+const char *get_overpotential(const struct SimulationState *ss)
+{
+    return fstring_to_buffer("%lf", ss->overpotential);
 }
 
-const char* get_total_atoms_dissolved(const struct SimulationState *ss) {
-    int len = snprintf(NULL, 0, "%d", ss->total_atoms_dissolved);
-    char *buf = (char*)malloc(len + 1);
-    if (!buf) {
-        return NULL;
-    }
-    snprintf(buf, len + 1, "%d", ss->total_atoms_dissolved);
-    return buf;
+const char *get_atoms(const struct SimulationState *ss)
+{
+    return fstring_to_buffer("%ld", ss->atom_cnt);
 }
 
-const char* get_mmc_steps(const struct SimulationState *ss) {
-    int len = snprintf(NULL, 0, "%lu", ss->iter);
-    char *buf = (char*)malloc(len + 1);
-    if (!buf) {
-        return NULL;
-    }
-    snprintf(buf, len + 1, "%lu", ss->iter);
-    return buf;
+const char *get_atoms_dissolved(const struct SimulationState *ss)
+{
+    return fstring_to_buffer("%d", ss->total_atoms_dissolved);
+}
+
+const char *get_mmc_steps(const struct SimulationState *ss)
+{
+    return fstring_to_buffer("%lu", ss->mmc_steps);
 }
 
 const CsvFieldFunc csv_field_map[] = {
@@ -352,7 +334,8 @@ const CsvFieldFunc csv_field_map[] = {
     {"energy", get_energy, FLAVOR_UNDEFINED},
     {"temperature", get_temperature, FLAVOR_UNDEFINED},
     {"overpotential", get_overpotential, FLAVOR_KMC},
-    {"total_atoms_dissolved", get_total_atoms_dissolved, FLAVOR_KMC},
+    {"atoms", get_atoms, FLAVOR_UNDEFINED},
+    {"atoms_dissolved", get_atoms_dissolved, FLAVOR_KMC},
     {"mmc_steps", get_mmc_steps, FLAVOR_MC}
 };
 
@@ -408,21 +391,92 @@ void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct 
 
     safe_log(ls->sim_log, "Temperature is %lf K\n", ss->temperature);
 
-    if (se->overpotential_ramp_rate > 0.)
+    if (se->overpotential_ramp_rate > 0.) {
         safe_log(ls->sim_log, "Potential sweep [eV/s] from %lf to %lf at %lf\n", ss->overpotential,
                  se->overpotential_ramp_rate, se->max_overpotential);
-    else
+    } else {
         safe_log(ls->sim_log, "Potential constant [eV] at %lf\n", ss->overpotential);
+    }
 
-    if (ls->analysis_type == REGULAR_TIME_INTERVALS)
-        safe_log(ls->sim_log,
-                 "Recording data at linear intervals [s] from %lf to %lf at %lf increments\n",
-                 ls->next_log_checkpoint, ss->run_stime, ls->log_interval);
-    else if (ls->analysis_type == LN_TIME_INTERVALS)
-        safe_log(ls->sim_log,
-                 "Recording data at log intervals [s] from %lf to %lf at %lf multiples\n",
-                 ls->next_log_checkpoint, ss->run_stime, ls->log_interval);
-    // TODO: fill out for other analysis_types
+    if (ls->output_state_csv) {
+        safe_log(ls->sim_log, "CSV output to file %s", ls->csv_filename);
+
+        char *buf;
+        if (ls->csv_schedule.list != NULL) {
+            buf = (char *)malloc(32 * (size_t)ls->csv_schedule.list_len * sizeof(char));
+            buf[0] = '\0';
+            sprintf(buf, "%lf ", ls->csv_schedule.list[0]);
+            for (int i = 1; i < ls->csv_schedule.list_len; i++) {
+                char item[32];
+                strcat(buf, ", ");
+                sprintf(item, "%lf ", ls->csv_schedule.list[i]);
+                strcat(buf, item);
+            }
+        }
+
+        switch (ls->csv_schedule.mode) {
+        case OUTPUT_SCHEDULE_INTERVAL_ITERATION:
+            safe_log(ls->sim_log,
+                     "Recording data at linear intervals [iterations] from %lf to %lf at %lf increments\n",
+                     ls->next_csv_checkpoint, ss->run_stime, ls->csv_schedule.interval);
+            break;
+        case OUTPUT_SCHEDULE_INTERVAL_TIME:
+            safe_log(ls->sim_log,
+                     "Recording data at linear intervals [s] from %lf to %lf at %lf multiples\n",
+                     ls->next_csv_checkpoint, ss->run_stime, ls->csv_schedule.interval);
+            break;
+        case OUTPUT_SCHEDULE_LIST_ITERATION:
+            safe_log(ls->sim_log, "Recording data at iterations %s\n", buf);
+            break;
+        case OUTPUT_SCHEDULE_LIST_TIME:
+            safe_log(ls->sim_log, "Recording data at times %s\n", buf);
+            break;
+        default:
+            fprintf(stderr, "Invalid output schedule mode\n");
+            clean_and_error(EXIT_FAILURE);
+            break;
+        }
+    }
+
+    if (ls->output_xyz) {
+        safe_log(ls->sim_log, "XYZ output to file prefix %s", ls->xyz_prefix);
+
+        char *buf;
+        if (ls->xyz_schedule.list != NULL) {
+            buf = (char *)malloc(32 * (size_t)ls->xyz_schedule.list_len * sizeof(char));
+            buf[0] = '\0';
+            sprintf(buf, "%lf ", ls->xyz_schedule.list[0]);
+            for (int i = 1; i < ls->xyz_schedule.list_len; i++) {
+                char item[32];
+                strcat(buf, ", ");
+                sprintf(item, "%lf ", ls->xyz_schedule.list[i]);
+                strcat(buf, item);
+            }
+        }
+
+        switch (ls->xyz_schedule.mode) {
+        case OUTPUT_SCHEDULE_INTERVAL_ITERATION:
+            safe_log(ls->sim_log,
+                     "Recording data at linear intervals [iterations] from %lf to %lf at %lf increments\n",
+                     ls->next_xyz_checkpoint, ss->run_stime, ls->xyz_schedule.interval);
+            break;
+        case OUTPUT_SCHEDULE_INTERVAL_TIME:
+            safe_log(ls->sim_log,
+                     "Recording data at linear intervals [s] from %lf to %lf at %lf multiples\n",
+                     ls->next_xyz_checkpoint, ss->run_stime, ls->xyz_schedule.interval);
+            break;
+        case OUTPUT_SCHEDULE_LIST_ITERATION:
+            safe_log(ls->sim_log, "Recording data at iterations %s\n", buf);
+            break;
+        case OUTPUT_SCHEDULE_LIST_TIME:
+            safe_log(ls->sim_log, "Recording data at times %s\n", buf);
+            break;
+        default:
+            fprintf(stderr, "Invalid output schedule mode\n");
+            clean_and_error(EXIT_FAILURE);
+            break;
+        }
+    }
 
     safe_log(ls->sim_log, "Random seed is %u\n", se->rand_seed);
 
@@ -457,38 +511,52 @@ bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, doubl
     return true;
 }
 
-void output_kmc_csv_header(FILE *csv_file)
+void output_csv_header(FILE *csv_file, struct LoggingState *ls)
 {
-    safe_log(csv_file, "frame,iter,elapsed_stime,energy,temperature,overpotential,atoms\n");
+    safe_log(csv_file, "frame,");
+    for (int i = 0; i < ls->csv_field_count; ++i) {
+        safe_log(csv_file, "%s%s", ls->csv_fields[i], (i < ls->csv_field_count - 1) ? "," : "\n");
+    }
 }
 
-void log_kmc_state_csv(FILE *csv_file, int frame_num, unsigned long int iter, double elapsed_stime,
-                       double temperature, double overpotential, long int atom_cnt,
-                       double total_internal_energy)
+void log_state_csv(FILE *csv_file, struct SimulationState *ss, struct LoggingState *ls)
 {
-    safe_log(csv_file, "%d,", frame_num);
-    safe_log(csv_file, "%lu,", iter);
-    safe_log(csv_file, "%le,", elapsed_stime);
-    safe_log(csv_file, "%lf,", total_internal_energy);
-    safe_log(csv_file, "%lf,", temperature);
-    safe_log(csv_file, "%lf,", overpotential);
-    safe_log(csv_file, "%ld\n", atom_cnt);
+    safe_log(csv_file, "%d,", ls->csv_framenum);
+    for (int i = 0; i < ls->csv_field_count; ++i) {
+        // malloc'd string
+        const char *value_str = ls->csv_field_funcs[i](ss);
+        if (!value_str) {
+            fprintf(stderr, "Error formatting csv field %s: %s\n", ls->csv_fields[i], strerror(errno));
+            free((void *)value_str);
+            clean_and_error(EXIT_FAILURE);
+        }
+        safe_log(csv_file, "%s%s", value_str, (i < ls->csv_field_count - 1) ? "," : "\n");
+        free((void *)value_str);
+    }
 }
 
-void output_mc_csv_header(FILE *csv_file)
-{
-    safe_log(csv_file, "frame,mmc_step,iter,energy\n");
-}
+// void log_kmc_state_csv(FILE *csv_file, int frame_num, unsigned long int iter, double elapsed_stime,
+//                        double temperature, double overpotential, long int atom_cnt,
+//                        double total_internal_energy)
+// {
+//     safe_log(csv_file, "%d,", frame_num);
+//     safe_log(csv_file, "%lu,", iter);
+//     safe_log(csv_file, "%le,", elapsed_stime);
+//     safe_log(csv_file, "%lf,", total_internal_energy);
+//     safe_log(csv_file, "%lf,", temperature);
+//     safe_log(csv_file, "%lf,", overpotential);
+//     safe_log(csv_file, "%ld\n", atom_cnt);
+// }
 
-void log_mc_state_csv(FILE *csv_file, const int frame_num, const unsigned long int mmc_steps,
-                      const unsigned long int iter, const double sys_energy)
-{
-    safe_log(csv_file, "%d,", frame_num);
-    safe_log(csv_file, "%lu,", mmc_steps);
-    safe_log(csv_file, "%lu,", iter);
-    safe_log(csv_file, "%lf", sys_energy);
-    safe_log(csv_file, "\n");
-}
+// void log_mc_state_csv(FILE *csv_file, const int frame_num, const unsigned long int mmc_steps,
+//                       const unsigned long int iter, const double sys_energy)
+// {
+//     safe_log(csv_file, "%d,", frame_num);
+//     safe_log(csv_file, "%lu,", mmc_steps);
+//     safe_log(csv_file, "%lu,", iter);
+//     safe_log(csv_file, "%lf", sys_energy);
+//     safe_log(csv_file, "\n");
+// }
 
 void output_kmc_iter_header(FILE *csv_file)
 {
@@ -532,13 +600,13 @@ void log_mc_iter(FILE *csv_file, const unsigned long int iter, const double sys_
     safe_log(csv_file, "\n");
 }
 
-bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct SimulationState *ss,
+bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, struct SimulationState *ss,
                     struct SimulationEnv *se)
 {
     bool is_extended = 1;
 
     char filename_full[BUFFER_SIZE];
-    sprintf(filename_full, "%s_%d_%s.xyz", xyz_filename, frame_num, suffix);
+    sprintf(filename_full, "%s_%d_%s.xyz", xyz_prefix, frame_num, suffix);
     FILE *file = fopen(filename_full, "w+");
     if (file == NULL) {
         printf("ERROR! Couldn't open output file %s\n", filename_full);
@@ -591,4 +659,136 @@ bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct Simu
 #endif
 
     return true;
+}
+
+static int check_and_advance_checkpoint(OutputSchedule *sched, double *checkpoint, bool *state, struct SimulationState *ss)
+{
+    OutputScheduleMode mode = sched->mode;
+    int iter_reached = fabs(*checkpoint - (double)ss->iter) < FABS_TOL;
+    int stime_reached = ss->elapsed_stime >= *checkpoint;
+
+    int checkpoint_reached = (mode == OUTPUT_SCHEDULE_INTERVAL_ITERATION && iter_reached) ||
+                             (mode == OUTPUT_SCHEDULE_INTERVAL_TIME && stime_reached) ||
+                             (mode == OUTPUT_SCHEDULE_LIST_ITERATION && iter_reached) ||
+                             (mode == OUTPUT_SCHEDULE_LIST_TIME && stime_reached);
+
+    if (checkpoint_reached) {
+        if (mode == OUTPUT_SCHEDULE_INTERVAL_ITERATION || mode == OUTPUT_SCHEDULE_INTERVAL_TIME) {
+            // interval-based increments
+            if (!checkpoint_reached && (ss->iter > *checkpoint)) {
+                fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing\n",
+                        ss->iter, *checkpoint);
+                clean_and_error(EXIT_FAILURE);
+            }
+            if (mode == OUTPUT_SCHEDULE_INTERVAL_TIME) {
+                // kmc time steps can be large and skip over checkpoints, so advance in a loop until
+                // we are past the current time
+                while (*checkpoint <= ss->elapsed_stime) {
+                    *checkpoint += sched->interval;
+                }
+            } else {
+                *checkpoint += sched->interval;
+            }
+        } else if (mode == OUTPUT_SCHEDULE_LIST_ITERATION || mode == OUTPUT_SCHEDULE_LIST_TIME) {
+            // list-based increments
+            sched->list_idx++;
+            if (sched->list_idx < sched->list_len) {
+                *checkpoint = sched->list[sched->list_idx];
+                if (mode == OUTPUT_SCHEDULE_INTERVAL_TIME) {
+                    // kmc time steps can be large and skip over checkpoints, so advance in a loop
+                    // until we are past the current time
+                    while (*checkpoint <= ss->elapsed_stime) {
+                        fprintf(stderr,
+                                "Warning: simulation time %.4lf exceeded log checkpoint %.4lf "
+                                "without logging\n",
+                                ss->elapsed_stime, *checkpoint);
+                        sched->list_idx++;
+                        *checkpoint += sched->list[sched->list_idx];
+                    }
+                } else {
+                    *checkpoint += sched->interval;
+                }
+            } else {
+                // end of list reached, disable further logging
+                *state = false;
+            }
+        }
+    }
+    return checkpoint_reached;
+}
+
+/**
+ * @brief creates suffix for xyz file based on output schedule mode and checkpoint value (iteration or time)
+ * 
+ * @param suffix 
+ * @param mode 
+ * @param checkpoint 
+ */
+void write_xyz_suffix(char *suffix, OutputScheduleMode mode, double checkpoint)
+{
+    if ((mode == OUTPUT_SCHEDULE_INTERVAL_ITERATION) || (mode == OUTPUT_SCHEDULE_LIST_ITERATION)) {
+        snprintf(suffix, BUFFER_SIZE, "i%lu", (unsigned long)checkpoint);
+    } else if ((mode == OUTPUT_SCHEDULE_INTERVAL_TIME) || (mode == OUTPUT_SCHEDULE_LIST_TIME)) {
+        snprintf(suffix, BUFFER_SIZE, "t%.4lf", checkpoint);
+    }
+    return;
+}
+
+/**
+ * @brief writes to log files and increments framenums
+ * 
+ * @param output_csv whether to output to csv
+ * @param output_xyz whether to output to xyz
+ * @param ss 
+ * @param se 
+ * @param ls 
+ */
+void write_logs(int output_csv, int output_xyz, struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls)
+{
+    // udpate framenums after, so initial logs (t=0) show frame 0
+    output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
+                    ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+    ls->framenum++;
+
+    if (output_csv) {
+        log_state_csv(ls->state_csv, ss, ls);
+        ls->csv_framenum++;
+    }
+    if (output_xyz) {
+        // suffix is expected to be updated by caller
+        write_xyz_file(ls->xyz_prefix, ls->xyz_framenum, ls->xyz_suffix, ss, se);
+        ls->xyz_framenum++;
+    }
+    return;
+}
+
+// TODO: updating of log checkpoints
+/**
+ * @brief outputs to log file, csv, and xyz if checkpoints are reached; updates checkpoints for next output; updates framenums for next output
+ * 
+ * @param ss 
+ * @param se 
+ * @param ls 
+ */
+void output_if_passed_checkpoint(struct SimulationState *ss, struct SimulationEnv *se,
+                                 struct LoggingState *ls)
+{
+    output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
+                    ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+
+    int output_csv = 0;
+    int output_xyz = 0;
+    if (ls->output_state_csv) {
+        // only output csv if configed and checkpoint reached
+        output_csv = check_and_advance_checkpoint(&ls->csv_schedule, &ls->next_csv_checkpoint,
+                                                  &ls->output_state_csv, ss);
+    }
+    if (ls->output_xyz) {
+        write_xyz_suffix(ls->xyz_suffix, ls->xyz_schedule.mode, ls->next_xyz_checkpoint);
+        // only output xyz if configed and checkpoint reached
+        output_xyz = check_and_advance_checkpoint(&ls->xyz_schedule, &ls->next_xyz_checkpoint,
+                                                  &ls->output_xyz, ss);
+    }
+    write_logs(output_csv, output_xyz, ss, se, ls);
+    return;
 }

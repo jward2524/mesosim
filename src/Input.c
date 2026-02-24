@@ -364,6 +364,7 @@ static InputErrorFlag cmd_struct(int argc, char **argv, int line, ParseContext *
 static InputErrorFlag parse_output_schedule(int argc, char **argv, int *pidx, OutputSchedule *sched,
                                             double *next_log_checkpoint, int expect_fields)
 {
+    // TODO: forbid time-based schedules for MC simulations
     int idx = *pidx;
     if (idx >= argc) {
         fprintf(stderr, "Input error - output expects schedule mode\n");
@@ -424,7 +425,7 @@ static InputErrorFlag parse_output_schedule(int argc, char **argv, int *pidx, Ou
             return INPUT_ERR_COUNT_MISMATCH;
         }
 
-        sched->list = (double *)malloc(sizeof(double) * list_count);
+        sched->list = (double *)malloc(sizeof(double) * (size_t)list_count);
         if (!sched->list) {
             fprintf(stderr, "Couldn't allocate memory for schedule list: %s", strerror(errno));
             return INPUT_ERR_ALLOC;
@@ -442,6 +443,7 @@ static InputErrorFlag parse_output_schedule(int argc, char **argv, int *pidx, Ou
             sched->list[i] = val;
         }
         sched->list_len = list_count;
+        sched->list_idx = 0;
         sched->interval = 0;
         *next_log_checkpoint = sched->list[0];
         idx = list_start + list_count;
@@ -474,6 +476,7 @@ static InputErrorFlag parse_output_csv(int argc, char **argv, struct LoggingStat
     }
 
     // parse 'fields' keyword
+    // could store in ctx before finalizing, but not really necessary since fails fast
     if (idx >= argc || strcmp(argv[idx], "fields") != 0) {
         fprintf(stderr, "Input error - output csv expects 'fields' keyword\n");
         return INPUT_ERR_MISSING_CMD;
@@ -485,7 +488,7 @@ static InputErrorFlag parse_output_csv(int argc, char **argv, struct LoggingStat
         return INPUT_ERR_COUNT_MISMATCH;
     }
 
-    ls->csv_fields = (char **)malloc(sizeof(char *) * field_count);
+    ls->csv_fields = (char **)malloc(sizeof(char *) * (size_t)field_count);
     if (!ls->csv_fields) {
         fprintf(stderr, "Couldn't allocate memory for csv fields: %s", strerror(errno));
         return INPUT_ERR_ALLOC;
@@ -528,7 +531,30 @@ static InputErrorFlag parse_output_xyz(int argc, char **argv, struct LoggingStat
     if (err != INPUT_ERR_NONE) {
         return err;
     }
-    // Error if extra parameters are present (e.g., 'fields' or any other)
+    // error if extra parameters are present (e.g., 'fields' or any other)
+    if (idx < argc) {
+        fprintf(stderr, "Input error - additional parameters after %s are not recognized\n", argv[idx]);
+        return INPUT_ERR_INVALID_ARG;
+    }
+    // TODO: initialize suffix?
+    return INPUT_ERR_NONE;
+}
+
+static InputErrorFlag parse_steps_csv(int argc, char **argv, struct LoggingState *ls)
+{
+    ls->output_steps_csv = true;
+    int idx = 2;
+
+    // if filename is present, use it; else generate default
+    if (idx < argc) {
+        snprintf(ls->steps_filename, sizeof(ls->steps_filename), "%s", argv[idx]);
+        idx++;
+    } else {
+        // generate default filename: [time in seconds]_iter.csv
+        time_t now = time(NULL);
+        snprintf(ls->steps_filename, sizeof(ls->steps_filename), "%ld_steps.csv", (long)now);
+    }
+    // error if extra parameters are present (e.g., 'fields' or any other)
     if (idx < argc) {
         fprintf(stderr, "Input error - additional parameters after %s are not recognized\n", argv[idx]);
         return INPUT_ERR_INVALID_ARG;
@@ -540,6 +566,11 @@ static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *
                                  struct SimulationState *ss, struct SimulationEnv *se,
                                  struct LoggingState *ls)
 {
+    (void)line;
+    (void)ctx;
+    (void)ss;
+    (void)se;
+
     if (argc < 2) {
         fprintf(stderr, "Input error - output command expects at least 1 argument\n");
         return INPUT_ERR_COUNT_MISMATCH;
@@ -548,6 +579,8 @@ static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *
         return parse_output_csv(argc, argv, ls);
     } else if (strcmp(argv[1], "xyz") == 0) {
         return parse_output_xyz(argc, argv, ls);
+    } else if (strcmp(argv[1], "steps") == 0) {
+        return parse_steps_csv(argc, argv, ls);
     } else {
         fprintf(stderr, "Input error - output expects 'csv' or 'xyz'\n");
         return INPUT_ERR_INVALID_ARG;
@@ -675,60 +708,69 @@ static InputErrorFlag cmd_help(int argc, char **argv, int line, ParseContext *ct
 }
 
 /* ================= Command table ================= */
-
+// requriements: 1 = required, 0 = optional, -1 = forbidden
 const Command commands[] = {
     {"systemsize", cmd_systemsize, "systemsize NX NY NZ", "Simulation box size in lattice units.",
-     CMDCAT_GEOMETRY, 1, 1},
+     CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
-    {"temp", cmd_temp, "temp T", "Simulation temperature in K.", CMDCAT_THERMODYNAMICS, 1, 1},
+    {"temp", cmd_temp, "temp T", "Simulation temperature in K.", CMDCAT_THERMODYNAMICS,
+     CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
     {"seed", cmd_seed, "seed random|default|N",
-     "Selection of the random seed value. Default: default", CMDCAT_RUN, 0, 0},
+     "Selection of the random seed value. Default: default", CMDCAT_RUN, CMDREQ_OPTIONAL,
+     CMDREQ_OPTIONAL},
 
     {"potential", cmd_potential, "potential U0 [dUdt Umax]",
-     "Constant or swept electric potential. Default: 0", CMDCAT_THERMODYNAMICS, 0, -1},
+     "Constant or swept electric potential. Default: 0", CMDCAT_THERMODYNAMICS, CMDREQ_OPTIONAL,
+     CMDREQ_FORBIDDEN},
 
-    {"struct", cmd_struct, "struct FCC|BCC|SC", "Crystal structure type.", CMDCAT_GEOMETRY, 1, 1},
+    {"struct", cmd_struct, "struct FCC|BCC|SC", "Crystal structure type.", CMDCAT_GEOMETRY,
+     CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
     {"output", cmd_output,
-     "output [csv [filename] | xyz [file prefix]] [interval|list] [time|iteration] [interval "
+     "output [steps [filename] | csv [filename] | xyz [file prefix]] [interval|list] [time|iteration] [interval "
      "step|list] {fields [list of fields]}",
      "Data output scheme. CSV formats support {fields} fields. XYZ filename is used as a prefix, "
      "and new xyz files are output following the schedule",
-     CMDCAT_OUTPUT, 0, 0},
+     CMDCAT_OUTPUT, CMDREQ_OPTIONAL, CMDREQ_OPTIONAL},
 
     {"geometry", cmd_geometry, "geometry (sheet N|cluster R|file path)",
-     "Initial geometry configuration.", CMDCAT_GEOMETRY, 1, 0},
+     "Initial geometry configuration.", CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_OPTIONAL},
 
     {"atomtype", cmd_atomtype, "atomtype A B [C ...]", "Define atom types and their order.",
-     CMDCAT_GEOMETRY, 1, 1},
+     CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
     {"composition", cmd_composition, "composition xA xB [xC ...]",
-     "Atomic composition fractions; order follows atomtype.", CMDCAT_GEOMETRY, 1, 1},
+     "Atomic composition fractions; order follows atomtype.", CMDCAT_GEOMETRY, CMDREQ_REQUIRED,
+     CMDREQ_REQUIRED},
 
     {"dissolution", cmd_dissolution, "dissolution true|false ...",
-     "Dissolution flags per atom type; order follows atomtype.", CMDCAT_GEOMETRY, 1, -1},
+     "Dissolution flags per atom type; order follows atomtype.", CMDCAT_GEOMETRY, CMDREQ_REQUIRED,
+     CMDREQ_FORBIDDEN},
 
     {"nnlevels", cmd_nnlevels, "nnlevels N", "Number of nearest-neighbor shells.",
-     CMDCAT_THERMODYNAMICS, 1, 1},
+     CMDCAT_THERMODYNAMICS, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
     {"nne", cmd_nne, "1nne eAA eAB ...",
      "Nearest-neighbor energies for shell n (flattened upper-triangle). For a three-component "
      "system: AA AB AC BB BC CC",
-     CMDCAT_THERMODYNAMICS, 1, 1},
+     CMDCAT_THERMODYNAMICS, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
-    {"run", cmd_run, "run time|iteration value", "Simulation end condition.", CMDCAT_RUN, 1, 1},
+    {"run", cmd_run, "run time|iteration value", "Simulation end condition.", CMDCAT_RUN,
+     CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
-    {"flavor", cmd_flavor, "flavor KMC|MC", "Simulation algorithm flavor.", CMDCAT_RUN, 1, 1},
+    {"flavor", cmd_flavor, "flavor KMC|MC", "Simulation algorithm flavor.", CMDCAT_RUN,
+     CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
-    {"help", cmd_help, "help [command]", "Show documentation for commands.", CMDCAT_OUTPUT, 0, 0},
+    {"help", cmd_help, "help [command]", "Show documentation for commands.", CMDCAT_OUTPUT,
+     CMDREQ_OPTIONAL, CMDREQ_OPTIONAL},
 
-    {NULL, NULL, NULL, NULL, CMDCAT_UNCAT, 0, 0}};
+    {NULL, NULL, NULL, NULL, CMDCAT_UNCAT, CMDREQ_OPTIONAL, CMDREQ_OPTIONAL}};
 
 void initialize_requirements(ParseContext *ctx)
 {
     size_t commands_count = sizeof(commands) / sizeof(commands[0]) - 1;
-    ctx->cmd_present = malloc(commands_count * sizeof(int));
+    ctx->cmd_present = calloc(commands_count, sizeof(int));
     if (ctx->cmd_present == NULL) {
         fprintf(stderr, "Couldn't allocate memory for command requirements in ParseContext: %s",
                 strerror(errno));
@@ -905,6 +947,38 @@ void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se)
     free(defined);
 }
 
+// check that all fields specified in csv output are supported by the specified flavor
+void finalize_csv_fields(struct LoggingState *ls, unsigned int flavor)
+{
+    ls->csv_field_funcs = (CsvFieldFuncPtr *)malloc(sizeof(CsvFieldFuncPtr *) * (size_t)ls->csv_field_count);
+    if (!ls->csv_field_funcs) {
+        fprintf(stderr, "Couldn't allocate memory for csv fields: %s", strerror(errno));
+        clean_and_error(INPUT_ERR_ALLOC);
+    }
+
+    char *flavor_name = flavor == 1 ? "KMC" : (flavor == 2 ? "MC" : "Undefined");
+
+    // iterate over user-specified csv fields
+    for (int i = 0; i < ls->csv_field_count; ++i) {
+        const char *field_name = ls->csv_fields[i];
+        
+        // check field name against supported fields
+        for (size_t j = 0; j < CSV_FIELD_FUNCS_COUNT; j++) {
+            if (strcmp(field_name, csv_field_map[j].name) == 0) {
+                // if generally supported, check if supported for this flavor
+                if ((csv_field_map[j].flavor != FLAVOR_UNDEFINED) &&
+                    (csv_field_map[j].flavor != flavor)) {
+                    fprintf(stderr, "Input error - field '%s' is not supported for flavor %s\n",
+                            field_name, flavor_name);
+                    clean_and_error(INPUT_ERR_INVALID_ARG);
+                }
+                ls->csv_field_funcs[i] = csv_field_map[j].get_value;
+                break;
+            }
+        }
+    }
+}
+
 void check_required_inputs(const ParseContext *ctx, unsigned int flavor)
 {
     int failed_requirements = 0;
@@ -913,19 +987,22 @@ void check_required_inputs(const ParseContext *ctx, unsigned int flavor)
         // =1 if command is required and not present
         // =0 if command is required and present, or not required
         // =-1 if command is present and forbidden/ignored
-        int missing_req = (ctx->cmd_present[i] != 1);
+        int present = ctx->cmd_present[i];
+        int req;
         if (flavor == FLAVOR_MC) {
-            missing_req = missing_req * commands[i].required_mc;
+            req = commands[i].required_mc;
         } else if (flavor == FLAVOR_KMC) {
-            missing_req = missing_req * commands[i].required_kmc;
+            req = commands[i].required_kmc;
         } else {
             fprintf(stderr, "Unknown simulation flavor %u\n", flavor);
             clean_and_error(INPUT_ERR_MISSING_CMD);
         }
-        if (missing_req == 1) {
+
+        // ok: required && present, optional && !present, optional && present, forbidden && !present
+        if ((req == CMDREQ_REQUIRED) && !present) {
             fprintf(stderr, "Required command %s was not provided\n", commands[i].name);
             failed_requirements = 1;
-        } else if (missing_req == -1) {
+        } else if ((req == CMDREQ_FORBIDDEN) && present) {
             fprintf(stderr, "Command %s is not applicable for flavor %u - ignored\n", commands[i].name, flavor);
         }
     }
@@ -938,9 +1015,9 @@ void finalize_config(const ParseContext *ctx, struct SimulationState *ss, struct
                      struct LoggingState *ls)
 {
     (void)ss;
-    (void)ls;
     finalize_atom_dependent(ctx, se);
     finalize_nne(ctx, se);
+    finalize_csv_fields(ls, se->flavor);
     check_required_inputs(ctx, se->flavor);
 }
 

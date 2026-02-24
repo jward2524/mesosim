@@ -127,6 +127,7 @@ struct SimulationState {
     TransProb transition_probability;
 
     unsigned long iter;
+    unsigned long mmc_steps;
     unsigned long final_iteration; // max number of iterations
     double run_stime;              // simulation max runtime default (in seconds)
     bool simulation_should_kill_itself;
@@ -147,6 +148,7 @@ struct SimulationState {
     int total_atoms_dissolved;
 };
 
+// TODO: add logarithmic intervals
 typedef enum {
     OUTPUT_SCHEDULE_NONE = 0,
     OUTPUT_SCHEDULE_INTERVAL_ITERATION,
@@ -160,24 +162,17 @@ typedef struct {
     double interval;                   // interval value (if mode is interval)
     double *list;                      // list of output points (if mode is list)
     int list_len;                      // number of entries in list
+    int list_idx;                      // current index in list
 } OutputSchedule;
+
+// returns malloced pointer to string
+typedef const char *(*CsvFieldFuncPtr)(const struct SimulationState *ss);
 
 // variables that describe state of logging
 // files and when to log
 struct LoggingState {
-    char console_outstring[512];
-    // char outFile[260];
-    char default_extension[12];
     FILE *sim_log;
-    char position_log_prefix[256];
-
-    int analysis_type;
-    double log_interval; // interval between log checkpoints, based on analysis_type?
-    double next_log_checkpoint;
-    double *log_list; // list of log checkpoints
-    int log_list_len; // length of log_list
-    int framenum;     // counter/id for number of outputs / output files
-
+    int framenum; // counter/id for number of outputs / output files
     int verbose;
 
     // TODO: switch to a unified output format struct that can be used for both csv and xyz and iter
@@ -188,13 +183,14 @@ struct LoggingState {
     // iteration output configuration
     bool output_steps_csv;
     char steps_filename[256];
-    FILE *iter_csv;
+    FILE *steps_csv;
 
     // CSV output configuration
     bool output_state_csv;
     FILE *state_csv;
     char csv_filename[256];
     char **csv_fields;
+    CsvFieldFuncPtr *csv_field_funcs;
     int csv_field_count;
     OutputSchedule csv_schedule;
     int csv_framenum;
@@ -203,6 +199,7 @@ struct LoggingState {
     // XYZ output configuration
     bool output_xyz;
     char xyz_prefix[256];
+    char xyz_suffix[256];
     OutputSchedule xyz_schedule;
     int xyz_framenum;
     double next_xyz_checkpoint;

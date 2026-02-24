@@ -6,8 +6,6 @@
 extern const size_t BUFFER_SIZE;
 extern const size_t ARR_BUFFER_SIZE;
 
-// returns malloced pointer to string
-typedef const char *(*CsvFieldFuncPtr)(const struct SimulationState *ss);
 typedef struct {
     const char *name;
     CsvFieldFuncPtr get_value;
@@ -30,15 +28,18 @@ void input_logging(struct SimulationState *sim_state, struct SimulationEnv *sim_
 bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, double elapsed_stime,
                      double temperature, double overpotential, long int atom_cnt,
                      double total_internal_energy);
-void output_kmc_csv_header(FILE *csv_file);
-void log_kmc_state_csv(FILE *csv_file, int frame_num, unsigned long int iter, double elapsed_stime,
-                       double temperature, double overpotential, long int atom_cnt,
-                       double total_internal_energy);
-void output_mc_csv_header(FILE *csv_file);
-void log_mc_state_csv(FILE *csv_log_file, const int frame_num, const unsigned long int mmc_steps,
-                      const unsigned long int iter, const double sys_energy);
+// void output_kmc_csv_header(FILE *csv_file);
+// void log_kmc_state_csv(FILE *csv_file, int frame_num, unsigned long int iter, double elapsed_stime,
+//                        double temperature, double overpotential, long int atom_cnt,
+//                        double total_internal_energy);
+// void output_mc_csv_header(FILE *csv_file);
+// void log_mc_state_csv(FILE *csv_log_file, const int frame_num, const unsigned long int mmc_steps,
+//                       const unsigned long int iter, const double sys_energy);
 bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct SimulationState *ss,
                     struct SimulationEnv *se);
+
+void output_csv_header(FILE *csv_file, struct LoggingState *ls);
+void log_state_csv(FILE *csv_file, struct SimulationState *ss, struct LoggingState *ls);
 
 void write_backlog(FILE *, FILE *);
 
@@ -48,5 +49,10 @@ void log_kmc_iter(FILE *csv_log_file, const unsigned long int mcss, const double
 void output_mc_iter_header(FILE *csv_file);
 void log_mc_iter(FILE *csv_log_file, const unsigned long int mcss, const double sys_energy,
                  const double deltaE, const int performed, const int uvw1[3], const int uvw2[3]);
+
+void write_xyz_suffix(char *suffix, OutputScheduleMode mode, double checkpoint);
+void write_logs(int output_csv, int output_xyz, struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls);
+void output_if_passed_checkpoint(struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls);
+
 
 #endif // FILEIO_H

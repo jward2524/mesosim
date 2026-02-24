@@ -46,7 +46,7 @@ void test_initialize_simulation(void)
     se->nn_energy[3] = 0.10;
     se->nn_energy[4] = 0.10;
     se->nn_energy[5] = 0.10;
-    ls->analysis_type = ITERATION_INTERVALS;
+
     ls->framenum = 0;
     se->lattice_type = FCC;
     se->num_transition_vectors = MAXIMUM_NUMBER_OF_NEIGHBORS;

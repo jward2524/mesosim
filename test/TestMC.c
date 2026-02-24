@@ -30,9 +30,7 @@ void tearDown(void)
 void test_simulation(void)
 {
     char filename[] = "test/mc.in";
-    time_t starttime = 0;
-    time(&starttime);
-    simulation_parameters_from_file(filename, ss, se, ls, temp_log, starttime);
+    simulation_parameters_from_file(filename, ss, se, ls);
 
     initialize_simulation(ss, se, ls);
 
@@ -43,7 +41,7 @@ void test_simulation(void)
 int main(void)
 {
     UNITY_BEGIN();
-    // RUN_TEST(test_simulation);
+    RUN_TEST(test_simulation);
     UNITY_END();
 
     clean_temp(&temp_log);

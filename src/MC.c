@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const double FABS_TOL = 1e-6;
+// static const double FABS_TOL = 1e-6;
 
 static double calculate_new_energy(const long atom_idx, const int offset_idx,
                                    struct SimulationState *ss, struct SimulationEnv *se);
@@ -26,7 +26,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
                                     struct LoggingState *ls)
 {
     // Metropolis MC steps per particle
-    unsigned long int mmc_steps = 0;
+    ss->mmc_steps = 0;
 
     // TODO: was this set elsewhere?
     // ss->iter = 0;
@@ -40,25 +40,18 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
     snprintf(suffix, BUFFER_SIZE, "i0");
 
     // initial state
-    output_log_file(ls->sim_log, ls->framenum, mmc_steps, ss->elapsed_stime, ss->temperature,
-                    ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-    if (ls->output_state_csv) {
-        log_mc_state_csv(ls->state_csv, ls->framenum, mmc_steps, ss->iter,
-                         ss->total_internal_energy);
-    }
     if (ls->output_xyz) {
-        write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
+        write_xyz_suffix(ls->xyz_suffix, ls->xyz_schedule.mode, 0.);
     }
-    ls->framenum++;
+    write_logs(ls->output_state_csv, ls->output_xyz, ss, se, ls);
 
-    int checkpoint_reached = 0;
     int old_u, old_v, old_w;
     int new_u, new_v, new_w;
     int simulation_run = 1;
     while (simulation_run) {
         ss->iter++;
         if (ss->iter % (unsigned long)ss->atom_cnt == 0) {
-            mmc_steps++;
+            ss->mmc_steps++;
         }
         // flag if this iteration is the last iteration
         simulation_run = ss->iter < (ss->final_iteration * (unsigned long)ss->atom_cnt);
@@ -148,7 +141,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
                 // printf("Iteration %ld, energy %le\n", ss->iter, ss->total_internal_energy);
             }
             if (ss->iter % (unsigned long)ss->atom_cnt == 0) {
-                printf("MMC %lu, iteration %ld, energy %le\n", mmc_steps, ss->iter,
+                printf("MMC %lu, iteration %ld, energy %le\n", ss->mmc_steps, ss->iter,
                        ss->total_internal_energy);
             }
         }
@@ -157,57 +150,20 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         if (ls->output_steps_csv) {
             int uvw1[] = {old_u, old_v, old_w};
             int uvw2[] = {new_u, new_v, new_w};
-            log_mc_iter(ls->iter_csv, ss->iter, ss->total_internal_energy, deltaE, perform_flag,
+            log_mc_iter(ls->steps_csv, ss->iter, ss->total_internal_energy, deltaE, perform_flag,
                         uvw1, uvw2);
         }
 
-        if (ls->analysis_type == ITERATION_INTERVALS) {
-            checkpoint_reached = fabs(ls->next_log_checkpoint - (double)mmc_steps) < FABS_TOL;
-            if (!checkpoint_reached && (mmc_steps > ls->next_log_checkpoint)) {
-                fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing\n",
-                        mmc_steps, ls->next_log_checkpoint);
-                clean_and_error(EXIT_FAILURE);
-            }
-        }
+        output_if_passed_checkpoint(ss, se, ls);
 
-        if (checkpoint_reached) {
-            if (ls->analysis_type == ITERATION_INTERVALS) {
-                snprintf(suffix, BUFFER_SIZE, "i%lu", (unsigned long)ls->next_log_checkpoint);
-                ls->next_log_checkpoint += ls->log_interval;
-            }
-
-            // record iteration in a file here
-            if (ls->verbose) {
-                printf("Writing file %d: MC steps = %lu\n", ls->framenum, mmc_steps);
-            }
-            output_log_file(ls->sim_log, ls->framenum, mmc_steps, ss->elapsed_stime,
-                            ss->temperature, ss->overpotential, ss->atom_cnt,
-                            ss->total_internal_energy);
-            if (ls->output_state_csv) {
-                log_mc_state_csv(ls->state_csv, ls->framenum, mmc_steps, ss->iter,
-                                 ss->total_internal_energy);
-            }
-            if (ls->output_xyz) {
-                write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
-            }
-
-            ++ls->framenum;
-        }
     }
 
     // write elapsed_stime to mark finish
-    output_log_file(ls->sim_log, ls->framenum, mmc_steps, ss->elapsed_stime, ss->temperature,
-                    ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-    if (ls->output_state_csv) {
-        log_mc_state_csv(ls->state_csv, ls->framenum, mmc_steps, ss->iter,
-                         ss->total_internal_energy);
+    if (ls->output_xyz) {
+        snprintf(ls->xyz_suffix, BUFFER_SIZE, "i%lu", (unsigned long)ss->iter);
     }
-    snprintf(suffix + strlen(suffix), BUFFER_SIZE - strlen(suffix), "_final");
-    write_xyz_file(ls->position_log_prefix, ls->framenum, suffix, ss, se);
-
-    if ((ss->final_iteration > 0) && (mmc_steps >= ss->final_iteration)) {
-        safe_log(ls->sim_log, "Reached final iteration and terminated\n");
-    }
+    write_logs(ls->output_state_csv, ls->output_xyz, ss, se, ls);
+    safe_log(ls->sim_log, "Reached final iteration and terminated\n");
 
     printf("Finished simulation\n");
 

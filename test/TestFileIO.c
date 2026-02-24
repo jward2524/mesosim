@@ -35,6 +35,7 @@ void tearDown(void)
     close_if_exists(&input_file);
 }
 
+// mostly redundant with TestInput.c tests
 void test_process_in_file_cluster(void)
 {
     char filename[] = "test/cluster_nns.in";
@@ -58,8 +59,7 @@ void test_process_in_file_cluster(void)
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, se->nn_energy[3], "nn energy shell 2 idx 0");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, se->nn_energy[4], "nn energy shell 2 idx 1");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, se->nn_energy[5], "nn energy shell 2 idx 2");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->analysis_type, "logging analysis type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->framenum, "frame number");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->csv_framenum, "frame number");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, se->lattice_type, "lattice type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors,
                                   "number of transition vectors");
@@ -80,11 +80,13 @@ void test_process_in_file_cluster(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, ss->sim_end_type, "simulation end type");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ss->run_stime, "simulation max runtime");
     TEST_ASSERT_EQUAL_INT_MESSAGE(2000, ss->final_iteration, "simulation max iteration");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->log_interval, "log interval");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_log_checkpoint, "log checkpoint");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_steps_csv, "output iter csv");
+
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->csv_schedule.interval, "log interval");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_csv_checkpoint, "log checkpoint");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_steps_csv, "output iter csv");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_state_csv, "output state csv");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_xyz, "output xyz");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode, "logging analysis type");
 }
 
 void test_process_in_file_mc(void)
@@ -107,8 +109,8 @@ void test_process_in_file_mc(void)
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[0], "nn energy shell 1 idx 0");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[1], "nn energy shell 1 idx 1");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[2], "nn energy shell 1 idx 2");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ITERATION_INTERVALS, ls->analysis_type, "logging analysis type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->framenum, "frame number");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode, "logging analysis type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->csv_framenum, "frame number");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, se->lattice_type, "lattice type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors,
                                   "number of transition vectors");
@@ -129,8 +131,8 @@ void test_process_in_file_mc(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, ss->sim_end_type, "simulation end type");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ss->run_stime, "simulation max runtime");
     TEST_ASSERT_EQUAL_INT_MESSAGE(2, ss->final_iteration, "simulation max iteration");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->log_interval, "log interval");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->next_log_checkpoint, "log checkpoint");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->csv_schedule.interval, "log interval");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->next_csv_checkpoint, "log checkpoint");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_steps_csv, "output iter csv");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_state_csv, "output state csv");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_xyz, "output xyz");
@@ -168,7 +170,7 @@ void test_process_xyz_file(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(190, ss->iter, "Iteration");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.3, ss->elapsed_stime, "Time");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(7.65, ss->total_internal_energy, "Energy");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls->framenum, "Frame");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls->xyz_framenum, "Frame");
 
     // 0 Ag -256.000000 -96.000000 -96.000000
     // double cart[3] = {-256, -96, -96};
@@ -237,6 +239,124 @@ void test_safe_log_buffer_overflow(void)
 // fflush failure (needs mocking, optional)
 // Not trivial in standard C; usually requires dependency injection or linking fakes
 
+void test_output_csv_header_success(void)
+{
+    ls->csv_field_count = 2;
+    ls->csv_fields = malloc(2 * sizeof(char *));
+    ls->csv_fields[0] = dup_str("iter");
+    ls->csv_fields[1] = dup_str("energy");
+
+    rewind(temp_log);
+    output_csv_header(temp_log, ls);
+    rewind(temp_log);
+
+    char buffer[256];
+    fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("frame,iter,energy\n", buffer, "CSV header");
+}
+
+void test_log_state_csv_success(void)
+{
+    ss->iter = 42;
+    ss->total_internal_energy = 3.14;
+    
+    ls->csv_framenum = 2;
+    ls->csv_field_count = 2;
+    ls->csv_field_funcs = malloc(2 * sizeof(CsvFieldFuncPtr));
+    ls->csv_field_funcs[0] = csv_field_map[0].get_value; // get_iter
+    ls->csv_field_funcs[1] = csv_field_map[2].get_value; // get_energy
+
+    rewind(temp_log);
+    log_state_csv(temp_log, ss, ls);
+    rewind(temp_log);
+
+    char buffer[256];
+    fgets(buffer, sizeof(buffer), temp_log);
+    // default precision of floats/doubles is 6
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("2,42,3.140000\n", buffer, "CSV state log");
+}
+
+void test_log_state_csv_one_field(void)
+{
+    ss->iter = 99;
+    ls->csv_framenum = 5;
+    ls->csv_field_count = 1;
+    ls->csv_field_funcs = malloc(sizeof(CsvFieldFuncPtr));
+    ls->csv_field_funcs[0] = csv_field_map[0].get_value; // get_iter
+
+    rewind(temp_log);
+    log_state_csv(temp_log, ss, ls);
+    rewind(temp_log);
+
+    char buffer[128];
+    fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("5,99\n", buffer, "CSV state log with one field");
+}
+
+void test_output_csv_header_one_field(void)
+{
+    ls->csv_field_count = 1;
+    ls->csv_fields = malloc(sizeof(char *));
+    ls->csv_fields[0] = dup_str("energy");
+
+    rewind(temp_log);
+    output_csv_header(temp_log, ls);
+    rewind(temp_log);
+
+    char buffer[128];
+    fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("frame,energy\n", buffer, "CSV header with one field");
+}
+
+void test_log_state_csv_mixed_fields(void)
+{
+    ss->iter = 7;
+    ss->total_internal_energy = -1.23;
+    ss->temperature = 273.15;
+    ls->csv_framenum = 3;
+    ls->csv_field_count = 3;
+    ls->csv_field_funcs = malloc(3 * sizeof(CsvFieldFuncPtr));
+    ls->csv_field_funcs[0] = csv_field_map[0].get_value; // get_iter
+    ls->csv_field_funcs[1] = csv_field_map[2].get_value; // get_energy
+    ls->csv_field_funcs[2] = csv_field_map[3].get_value; // get_temperature
+
+    rewind(temp_log);
+    log_state_csv(temp_log, ss, ls);
+    rewind(temp_log);
+
+    char buffer[256];
+    fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("3,7,-1.230000,273.150000\n", buffer, "CSV state log with mixed fields");
+}
+
+void test_output_csv_header_many_fields(void)
+{
+    size_t n = 10;
+    ls->csv_field_count = n;
+    ls->csv_fields = malloc((size_t)n * sizeof(char *));
+    for (int i = 0; i < n; ++i) {
+        char name[16];
+        sprintf(name, "field%d", i);
+        ls->csv_fields[i] = dup_str(name);
+    }
+
+    rewind(temp_log);
+    output_csv_header(temp_log, ls);
+    rewind(temp_log);
+
+    char buffer[512];
+    fgets(buffer, sizeof(buffer), temp_log);
+    char expected[256] = "frame";
+    for (int i = 0; i < n; ++i) {
+        strcat(expected, ",");
+        char name[16];
+        sprintf(name, "field%d", i);
+        strcat(expected, name);
+    }
+    strcat(expected, "\n");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(expected, buffer, "CSV header with many fields");
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -247,6 +367,13 @@ int main(void)
     RUN_TEST(test_safe_log_writes);
     RUN_TEST(test_safe_log_long_line);
     RUN_TEST(test_safe_log_buffer_overflow);
+    
+    RUN_TEST(test_output_csv_header_success);
+    RUN_TEST(test_log_state_csv_success);
+    RUN_TEST(test_output_csv_header_one_field);
+    RUN_TEST(test_output_csv_header_many_fields);
+    RUN_TEST(test_log_state_csv_one_field);
+    RUN_TEST(test_log_state_csv_mixed_fields);
 
     UNITY_END();
 
