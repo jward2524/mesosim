@@ -211,7 +211,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
             int uvw1[] = {old_x, old_y, old_z};
             // lastxyzt will have old values if it wasn't diffusion
             int uvw2[] = {lastxt, lastyt, lastzt};
-            log_kmc_iter(ls->steps_csv, ss->iter, ss->elapsed_stime, ss->total_internal_energy, uvw1,
+            log_kmc_steps(ls->steps_csv, ss->iter, ss->elapsed_stime, ss->total_internal_energy, uvw1,
                          uvw2, is_evaporation);
         }
 

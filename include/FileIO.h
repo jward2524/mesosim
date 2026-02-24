@@ -43,11 +43,11 @@ void log_state_csv(FILE *csv_file, struct SimulationState *ss, struct LoggingSta
 
 void write_backlog(FILE *, FILE *);
 
-void output_kmc_iter_header(FILE *csv_file);
-void log_kmc_iter(FILE *csv_log_file, const unsigned long int mcss, const double sim_time,
+void output_kmc_steps_header(FILE *csv_file);
+void log_kmc_steps(FILE *csv_log_file, const unsigned long int mcss, const double sim_time,
                   const double sys_energy, const int uvw1[3], const int uvw2[3], int is_evap);
-void output_mc_iter_header(FILE *csv_file);
-void log_mc_iter(FILE *csv_log_file, const unsigned long int mcss, const double sys_energy,
+void output_mc_steps_header(FILE *csv_file);
+void log_mc_steps(FILE *csv_log_file, const unsigned long int mcss, const double sys_energy,
                  const double deltaE, const int performed, const int uvw1[3], const int uvw2[3]);
 
 void write_xyz_suffix(char *suffix, OutputScheduleMode mode, double checkpoint);

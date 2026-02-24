@@ -150,7 +150,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         if (ls->output_steps_csv) {
             int uvw1[] = {old_u, old_v, old_w};
             int uvw2[] = {new_u, new_v, new_w};
-            log_mc_iter(ls->steps_csv, ss->iter, ss->total_internal_energy, deltaE, perform_flag,
+            log_mc_steps(ls->steps_csv, ss->iter, ss->total_internal_energy, deltaE, perform_flag,
                         uvw1, uvw2);
         }
 

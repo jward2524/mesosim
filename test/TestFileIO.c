@@ -357,6 +357,77 @@ void test_output_csv_header_many_fields(void)
     TEST_ASSERT_EQUAL_STRING_MESSAGE(expected, buffer, "CSV header with many fields");
 }
 
+void test_output_mc_iter_header(void)
+{
+    rewind(temp_log);
+    output_mc_steps_header(temp_log);
+    rewind(temp_log);
+    char buffer[128];
+    fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("iter,energy,deltaE,performed,u1,v1,w1,u2,v2,w2\n", buffer, "MC iter header");
+}
+
+void test_log_mc_iter_basic(void)
+{
+    unsigned long int iter = 123;
+    double sys_energy = 4.56;
+    double deltaE = -0.12;
+    int performed = 1;
+    int uvw1[3] = {1, 2, 3};
+    int uvw2[3] = {4, 5, 6};
+
+    rewind(temp_log);
+    log_mc_steps(temp_log, iter, sys_energy, deltaE, performed, uvw1, uvw2);
+    rewind(temp_log);
+    char buffer[128];
+    fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("123,4.560000,-0.120000,1,1,2,3,4,5,6\n", buffer, "MC iter log basic");
+}
+
+void test_output_kmc_iter_header(void)
+{
+    rewind(temp_log);
+    output_kmc_steps_header(temp_log);
+    rewind(temp_log);
+    char buffer[128];
+    fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("iter,sim_time,energy,u1,v1,w1,u2,v2,w2\n", buffer, "KMC iter header");
+}
+
+void test_log_kmc_iter_basic(void)
+{
+    unsigned long int iter = 42;
+    double sim_time = 0.5;
+    double sys_energy = 7.89;
+    int uvw1[3] = {7, 8, 9};
+    int uvw2[3] = {10, 11, 12};
+    int is_evap = 0;
+
+    rewind(temp_log);
+    log_kmc_steps(temp_log, iter, sim_time, sys_energy, uvw1, uvw2, is_evap);
+    rewind(temp_log);
+    char buffer[128];
+    fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("42,5.000000e-01,7.890000,7,8,9,10,11,12\n", buffer, "KMC iter log basic");
+}
+
+void test_log_kmc_iter_evap(void)
+{
+    unsigned long int iter = 99;
+    double sim_time = 1.23;
+    double sys_energy = -2.34;
+    int uvw1[3] = {3, 2, 1};
+    int uvw2[3] = {0, 0, 0};
+    int is_evap = 1;
+
+    rewind(temp_log);
+    log_kmc_steps(temp_log, iter, sim_time, sys_energy, uvw1, uvw2, is_evap);
+    rewind(temp_log);
+    char buffer[128];
+    fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("99,1.230000e+00,-2.340000,3,2,1,,,\n", buffer, "KMC iter log evaporation");
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -374,6 +445,12 @@ int main(void)
     RUN_TEST(test_output_csv_header_many_fields);
     RUN_TEST(test_log_state_csv_one_field);
     RUN_TEST(test_log_state_csv_mixed_fields);
+
+    RUN_TEST(test_output_mc_iter_header);
+    RUN_TEST(test_log_mc_iter_basic);
+    RUN_TEST(test_output_kmc_iter_header);
+    RUN_TEST(test_log_kmc_iter_basic);
+    RUN_TEST(test_log_kmc_iter_evap);
 
     UNITY_END();
 

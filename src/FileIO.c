@@ -85,9 +85,9 @@ static void open_log_files(struct LoggingState *ls, unsigned flavor)
         fopen_error(ls->steps_filename, ls->steps_csv, "Failed to open steps csv file, ");
 
         if (flavor == FLAVOR_KMC) {
-            output_kmc_iter_header(ls->steps_csv);
+            output_kmc_steps_header(ls->steps_csv);
         } else if (flavor == FLAVOR_MC) {
-            output_mc_iter_header(ls->steps_csv);
+            output_mc_steps_header(ls->steps_csv);
         }
     } else {
         ls->steps_csv = NULL;
@@ -558,7 +558,7 @@ void log_state_csv(FILE *csv_file, struct SimulationState *ss, struct LoggingSta
 //     safe_log(csv_file, "\n");
 // }
 
-void output_kmc_iter_header(FILE *csv_file)
+void output_kmc_steps_header(FILE *csv_file)
 {
     safe_log(csv_file, "iter,sim_time,energy,u1,v1,w1,u2,v2,w2\n");
 }
@@ -566,7 +566,7 @@ void output_kmc_iter_header(FILE *csv_file)
 // output to csv:
 // iteration number, simulation time, system energy (per atom?), x1, y1, z1, x2, y2, z2
 // and atom ids at some point
-void log_kmc_iter(FILE *csv_file, const unsigned long int iter, const double sim_time,
+void log_kmc_steps(FILE *csv_file, const unsigned long int iter, const double sim_time,
                   const double sys_energy, const int uvw1[3], const int uvw2[3], int is_evap)
 {
     safe_log(csv_file, "%lu,", iter);
@@ -581,14 +581,14 @@ void log_kmc_iter(FILE *csv_file, const unsigned long int iter, const double sim
     safe_log(csv_file, "\n");
 }
 
-void output_mc_iter_header(FILE *csv_file)
+void output_mc_steps_header(FILE *csv_file)
 {
     safe_log(csv_file, "iter,energy,deltaE,performed,u1,v1,w1,u2,v2,w2\n");
 }
 
 // output to csv:
 // MCSS, system energy (per atom?), uvw1, uvw2
-void log_mc_iter(FILE *csv_file, const unsigned long int iter, const double sys_energy,
+void log_mc_steps(FILE *csv_file, const unsigned long int iter, const double sys_energy,
                  const double deltaE, const int performed, const int uvw1[3], const int uvw2[3])
 {
     safe_log(csv_file, "%lu,", iter);
@@ -647,8 +647,7 @@ bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, struct Simula
     Atom **atoms = ss->atom_arr;
     for (int i = 0; i < ss->atom_cnt; ++i) {
         safe_log(file, "%d %s %lf %lf %lf\n", i, se->atom_names[atoms[i]->type],
-                 atoms[i]->cartesian[0], atoms[i]->cartesian[1],
-                 atoms[i]->cartesian[2]); // name is now element type
+                 atoms[i]->cartesian[0], atoms[i]->cartesian[1], atoms[i]->cartesian[2]);
     }
     // ball and stick or space filling?
     fclose(file);
