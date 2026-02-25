@@ -517,6 +517,12 @@ static InputErrorFlag parse_output_xyz(int argc, char **argv, struct LoggingStat
     ls->output_xyz = true;
     int idx = 2;
 
+    // Check for optional 'stripped' parameter
+    if (idx < argc && strcmp(argv[idx], "stripped") == 0) {
+        ls->xyz_stripped = true;
+        idx++;
+    }
+
     // if prefix is present and not a schedule keyword, use it; else generate default
     if (idx < argc && strcmp(argv[idx], "interval") != 0 && strcmp(argv[idx], "list") != 0) {
         snprintf(ls->xyz_prefix, sizeof(ls->xyz_prefix), "%s", argv[idx]);

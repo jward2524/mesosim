@@ -163,11 +163,12 @@ void test_parse_input_cluster_nns_file_success(void) {
 
     // Output XYZ command
     TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
+    TEST_ASSERT_TRUE_MESSAGE(ls->xyz_stripped, "XYZ stripped flag");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode, "XYZ schedule mode");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->xyz_schedule.interval, "XYZ interval value");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->xyz_schedule.mode, "XYZ schedule mode");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(500, ls->xyz_schedule.interval, "XYZ interval value");
     // Check next_log_checkpoint for interval time mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->next_xyz_checkpoint, "XYZ next_xyz_checkpoint should match first checkpoint");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(500, ls->next_xyz_checkpoint, "XYZ next_xyz_checkpoint should match first checkpoint");
 
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293.0, ss->temperature, "Temperature value");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(12345U, se->rand_seed, "Random seed value");
@@ -537,6 +538,24 @@ void test_output_xyz_interval_time_success(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->next_xyz_checkpoint, "XYZ next_xyz_checkpoint should match first checkpoint");
     TEST_ASSERT_FALSE_MESSAGE(ls->output_state_csv, "CSV output flag when only XYZ output");
     TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
+    TEST_ASSERT_FALSE_MESSAGE(ls->xyz_stripped, "XYZ stripped flag should be false by default");
+}
+
+void test_output_xyz_stripped_success(void) {
+    const char *input = "output xyz stripped test/output/cluster interval time 0.2\n";
+    ParseContext ctx = {0};
+    mock_input_file = open_mem(input);
+
+    parse_input_file(mock_input_file, &ctx, ss, se, ls);
+
+    TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
+    TEST_ASSERT_TRUE_MESSAGE(ls->xyz_stripped, "XYZ stripped flag should be true when 'stripped' is present");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode, "XYZ schedule interval time mode");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, ls->xyz_schedule.interval, "XYZ interval value");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, ls->next_xyz_checkpoint, "XYZ next_xyz_checkpoint should match first checkpoint");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_state_csv, "CSV output flag when only XYZ output");
+    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
 }
 
 void test_output_iter_default_filename_success(void) {
@@ -713,6 +732,7 @@ void test_output_xyz_default_prefix_time_success(void) {
     snprintf(deviation_msg, sizeof(deviation_msg), "XYZ prefix time deviation should be <= %ld second(s)", max_deviation);
     TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
     TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
+    TEST_ASSERT_FALSE_MESSAGE(ls->xyz_stripped, "XYZ stripped flag should be false by default");
 }
 
 void test_output_unrecognized_field_fails(void) {
@@ -1421,6 +1441,7 @@ int main(void) {
     RUN_TEST(test_output_non_numeric_interval_fails);
     RUN_TEST(test_output_csv_default_filename_time_success);
     RUN_TEST(test_output_xyz_default_prefix_time_success);
+    RUN_TEST(test_output_xyz_stripped_success);
 
     // geometry
     RUN_TEST(test_geometry_cluster_success);

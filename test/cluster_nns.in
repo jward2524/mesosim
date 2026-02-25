@@ -13,4 +13,4 @@ seed 12345
 flavor KMC
 run iteration 2000
 output csv test/output/cluster.csv interval iteration 200 fields iter time energy temperature
-output xyz test/output/cluster interval time 0.1
+output xyz stripped test/output/cluster interval iteration 500

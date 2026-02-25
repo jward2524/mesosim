@@ -203,6 +203,7 @@ struct LoggingState {
     char xyz_suffix[256];
     OutputSchedule xyz_schedule;
     int xyz_framenum;
+    bool xyz_stripped; // only output under-coordinated atoms
     double next_xyz_checkpoint;
 };
 

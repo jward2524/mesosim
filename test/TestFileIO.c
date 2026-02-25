@@ -81,12 +81,14 @@ void test_process_in_file_cluster(void)
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ss->run_stime, "simulation max runtime");
     TEST_ASSERT_EQUAL_INT_MESSAGE(2000, ss->final_iteration, "simulation max iteration");
 
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->csv_schedule.interval, "log interval");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_csv_checkpoint, "log checkpoint");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_steps_csv, "output iter csv");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_state_csv, "output state csv");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->csv_schedule.interval, "csv log interval");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_csv_checkpoint, "csv log checkpoint");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_steps_csv, "output steps csv");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode,
+        "logging analysis type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_xyz, "output xyz");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode, "logging analysis type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->xyz_stripped, "stripped xyz");
 }
 
 void test_process_in_file_mc(void)
@@ -331,7 +333,7 @@ void test_log_state_csv_mixed_fields(void)
 
 void test_output_csv_header_many_fields(void)
 {
-    size_t n = 10;
+    int n = 10;
     ls->csv_field_count = n;
     ls->csv_fields = malloc((size_t)n * sizeof(char *));
     for (int i = 0; i < n; ++i) {
@@ -509,7 +511,7 @@ int main(void)
     RUN_TEST(test_safe_log_writes);
     RUN_TEST(test_safe_log_long_line);
     RUN_TEST(test_safe_log_buffer_overflow);
-    
+
     RUN_TEST(test_output_csv_header_success);
     RUN_TEST(test_log_state_csv_success);
     RUN_TEST(test_output_csv_header_one_field);

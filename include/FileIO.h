@@ -28,20 +28,12 @@ void input_logging(struct SimulationState *sim_state, struct SimulationEnv *sim_
 bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, double elapsed_stime,
                      double temperature, double overpotential, long int atom_cnt,
                      double total_internal_energy);
-// void output_kmc_csv_header(FILE *csv_file);
-// void log_kmc_state_csv(FILE *csv_file, int frame_num, unsigned long int iter, double elapsed_stime,
-//                        double temperature, double overpotential, long int atom_cnt,
-//                        double total_internal_energy);
-// void output_mc_csv_header(FILE *csv_file);
-// void log_mc_state_csv(FILE *csv_log_file, const int frame_num, const unsigned long int mmc_steps,
-//                       const unsigned long int iter, const double sys_energy);
-bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, struct SimulationState *ss,
-                    struct SimulationEnv *se);
+
+bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, int stripped,
+                    struct SimulationState *ss, struct SimulationEnv *se);
 
 void output_csv_header(FILE *csv_file, struct LoggingState *ls);
 void log_state_csv(FILE *csv_file, struct SimulationState *ss, struct LoggingState *ls);
-
-void write_backlog(FILE *, FILE *);
 
 void output_kmc_steps_header(FILE *csv_file, const bool output_coord);
 void log_kmc_steps(FILE *csv_file, const unsigned long int iter, const double sim_time,
@@ -56,5 +48,10 @@ void write_xyz_suffix(char *suffix, OutputScheduleMode mode, double checkpoint);
 void write_logs(int output_csv, int output_xyz, struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls);
 void output_if_passed_checkpoint(struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls);
 
+void open_log_files(struct LoggingState *ls, unsigned flavor);
+
+#ifdef TEST
+const char *fstring_to_buffer(const char *fmt, ...);
+#endif
 
 #endif // FILEIO_H

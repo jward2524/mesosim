@@ -61,6 +61,7 @@ void safe_log(FILE *stream, const char *fmt, ...)
         fprintf(stderr,
                 "Failed to write complete log line to stream - wrote %zu of %d characters: %s\n",
                 written, n, strerror(errno));
+        clean_and_error(errno);
     }
 
     int fres = fflush(stream);
@@ -70,7 +71,7 @@ void safe_log(FILE *stream, const char *fmt, ...)
     }
 }
 
-static void open_log_files(struct LoggingState *ls, unsigned flavor)
+void open_log_files(struct LoggingState *ls, unsigned flavor)
 {
     if (ls->output_state_csv) {
         ls->state_csv = fopen(ls->csv_filename, "w+");
@@ -265,7 +266,7 @@ bool process_xyz_file(FILE *input_file, struct SimulationState *ss,
 
 /* === CSV fields mapping === */
 
-static const char *fstring_to_buffer(const char *fmt, ...)
+const char *fstring_to_buffer(const char *fmt, ...)
 {
     va_list vargs;
     va_start(vargs, fmt);
@@ -273,6 +274,7 @@ static const char *fstring_to_buffer(const char *fmt, ...)
     va_end(vargs);
 
     // len is negative when vsnprintf errors
+    // but errors may depend on implementation
     if (len < 0) {
         return NULL;
     }
@@ -341,6 +343,37 @@ const CsvFieldFunc csv_field_map[] = {
 
 const size_t CSV_FIELD_FUNCS_COUNT = sizeof(csv_field_map) / sizeof(CsvFieldFunc);
 
+static char* schedule_list_to_string(OutputSchedule *schedule)
+{
+    char *buf = NULL;
+    // max size of each item in list
+    size_t item_size = 32;
+    if (schedule->list != NULL) {
+        buf = (char *)malloc((size_t)schedule->list_len * item_size * sizeof(char));
+        buf[0] = '\0';
+        int printed_size = snprintf(buf, item_size, "%lf ", schedule->list[0]);
+        // printed_size does not include null terminating character
+        if (printed_size >= (int)item_size) {
+            fprintf(stderr, "Error - Output schedule list item string too long (>%zu chars): %lf\n",
+                    item_size - 2, schedule->list[0]);
+            clean_and_error(EXIT_FAILURE);
+        }
+        for (int i = 1; i < schedule->list_len; i++) {
+            char item[item_size];
+            strcat(buf, ", ");
+            printed_size = snprintf(item, item_size, "%lf ", schedule->list[i]);
+            if (printed_size >= (int)item_size) {
+                fprintf(stderr,
+                        "Error - Output schedule list item string too long (>%zu chars): %lf\n",
+                        item_size - 2, schedule->list[0]);
+                clean_and_error(EXIT_FAILURE);
+            }
+            strcat(buf, item);
+        }
+    }
+    return buf;
+}
+
 // print a lot of information to the log
 void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls)
 {
@@ -401,18 +434,7 @@ void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct 
     if (ls->output_state_csv) {
         safe_log(ls->sim_log, "CSV output to file %s", ls->csv_filename);
 
-        char *buf;
-        if (ls->csv_schedule.list != NULL) {
-            buf = (char *)malloc(32 * (size_t)ls->csv_schedule.list_len * sizeof(char));
-            buf[0] = '\0';
-            sprintf(buf, "%lf ", ls->csv_schedule.list[0]);
-            for (int i = 1; i < ls->csv_schedule.list_len; i++) {
-                char item[32];
-                strcat(buf, ", ");
-                sprintf(item, "%lf ", ls->csv_schedule.list[i]);
-                strcat(buf, item);
-            }
-        }
+        char *buf = schedule_list_to_string(&ls->csv_schedule);
 
         switch (ls->csv_schedule.mode) {
         case OUTPUT_SCHEDULE_INTERVAL_ITERATION:
@@ -441,18 +463,7 @@ void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct 
     if (ls->output_xyz) {
         safe_log(ls->sim_log, "XYZ output to file prefix %s", ls->xyz_prefix);
 
-        char *buf;
-        if (ls->xyz_schedule.list != NULL) {
-            buf = (char *)malloc(32 * (size_t)ls->xyz_schedule.list_len * sizeof(char));
-            buf[0] = '\0';
-            sprintf(buf, "%lf ", ls->xyz_schedule.list[0]);
-            for (int i = 1; i < ls->xyz_schedule.list_len; i++) {
-                char item[32];
-                strcat(buf, ", ");
-                sprintf(item, "%lf ", ls->xyz_schedule.list[i]);
-                strcat(buf, item);
-            }
-        }
+        char *buf = schedule_list_to_string(&ls->xyz_schedule);
 
         switch (ls->xyz_schedule.mode) {
         case OUTPUT_SCHEDULE_INTERVAL_ITERATION:
@@ -591,16 +602,21 @@ void log_mc_steps(FILE *csv_file, const unsigned long int iter, const double sys
     safe_log(csv_file, "\n");
 }
 
-bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, struct SimulationState *ss,
-                    struct SimulationEnv *se)
+bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, int stripped,
+                    struct SimulationState *ss, struct SimulationEnv *se)
 {
     bool is_extended = 1;
 
     char filename_full[BUFFER_SIZE];
-    sprintf(filename_full, "%s_%d_%s.xyz", xyz_prefix, frame_num, suffix);
+    int n = snprintf(filename_full, BUFFER_SIZE, "%s_%d_%s.xyz", xyz_prefix, frame_num, suffix);
+    if ((size_t)n >= BUFFER_SIZE) {
+        fprintf(stderr, "Error - Output filename too long (>%llu): %s_%d_%s.xyz\n", BUFFER_SIZE,
+                xyz_prefix, frame_num, suffix);
+        clean_and_error(EXIT_FAILURE);
+    }
     FILE *file = fopen(filename_full, "w+");
     if (file == NULL) {
-        printf("ERROR! Couldn't open output file %s\n", filename_full);
+        printf("Error - Couldn't open output file %s\n", filename_full);
         fprintf(stderr, "Couldn't open file %s: %s\n", filename_full, strerror(errno));
         clean_and_error(errno);
     }
@@ -611,8 +627,20 @@ bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, struct Simula
             [element] [x] [y] [z]
     */
 
+    // identify atoms to print before writing
+    char *is_undercoord = (char *)malloc((size_t)ss->atom_cnt * sizeof(char));
+    long strip_cnt = 0;
+
+    if (stripped) {
+        for (long i = 0; i < ss->atom_cnt; ++i) {
+            int coord = get_coordination(i, ss, se);
+            is_undercoord[i] = (char)(coord < se->num_transition_vectors);
+            strip_cnt += is_undercoord[i];
+        }
+    }
+
     // start with number of atoms
-    safe_log(file, "%ld\n", ss->atom_cnt);
+    safe_log(file, "%ld\n", stripped ? strip_cnt : ss->atom_cnt);
 
     if (is_extended) {
         // using extended XYZ format
@@ -636,11 +664,16 @@ bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, struct Simula
              ss->total_internal_energy);
 
     Atom **atoms = ss->atom_arr;
-    for (int i = 0; i < ss->atom_cnt; ++i) {
-        safe_log(file, "%d %s %lf %lf %lf\n", i, se->atom_names[atoms[i]->type],
-                 atoms[i]->cartesian[0], atoms[i]->cartesian[1], atoms[i]->cartesian[2]);
+    for (long i = 0; i < ss->atom_cnt; ++i) {
+        // if stripped, only output atoms with < max coordination
+        // what is max coordination?
+        int print = stripped ? is_undercoord[i] : 1;
+        if (print) {
+            safe_log(file, "%d %s %lf %lf %lf\n", i, se->atom_names[atoms[i]->type],
+                     atoms[i]->cartesian[0], atoms[i]->cartesian[1], atoms[i]->cartesian[2]);
+        }
     }
-    // ball and stick or space filling?
+
     fclose(file);
 
 #if (!defined(NDEBUG)) && defined(HAVE_FORK)
@@ -708,11 +741,12 @@ static int check_and_advance_checkpoint(OutputSchedule *sched, double *checkpoin
 }
 
 /**
- * @brief creates suffix for xyz file based on output schedule mode and checkpoint value (iteration or time)
- * 
- * @param suffix 
- * @param mode 
- * @param checkpoint 
+ * @brief creates suffix for xyz file based on output schedule mode and checkpoint value (iteration
+ * or time)
+ *
+ * @param suffix
+ * @param mode
+ * @param checkpoint
  */
 void write_xyz_suffix(char *suffix, OutputScheduleMode mode, double checkpoint)
 {
@@ -733,7 +767,8 @@ void write_xyz_suffix(char *suffix, OutputScheduleMode mode, double checkpoint)
  * @param se 
  * @param ls 
  */
-void write_logs(int output_csv, int output_xyz, struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls)
+void write_logs(int output_csv, int output_xyz, struct SimulationState *ss,
+                struct SimulationEnv *se, struct LoggingState *ls)
 {
     // udpate framenums after, so initial logs (t=0) show frame 0
     output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
@@ -746,7 +781,7 @@ void write_logs(int output_csv, int output_xyz, struct SimulationState *ss, stru
     }
     if (output_xyz) {
         // suffix is expected to be updated by caller
-        write_xyz_file(ls->xyz_prefix, ls->xyz_framenum, ls->xyz_suffix, ss, se);
+        write_xyz_file(ls->xyz_prefix, ls->xyz_framenum, ls->xyz_suffix, ls->xyz_stripped, ss, se);
         ls->xyz_framenum++;
     }
     return;
