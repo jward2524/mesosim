@@ -501,7 +501,238 @@ void test_log_kmc_steps_evap_coord(void)
     TEST_ASSERT_EQUAL_STRING_MESSAGE("99,1.230000e+00,-2.340000,3,2,1,,,,8\n", buffer, "KMC iter log evaporation");
 }
 
-int main(void)
+
+void test_write_xyz_suffix_iteration(void)
+{
+    char suffix[256];
+    write_xyz_suffix(suffix, OUTPUT_SCHEDULE_INTERVAL_ITERATION, 1234);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("i1234", suffix, "Suffix for iteration mode");
+    write_xyz_suffix(suffix, OUTPUT_SCHEDULE_LIST_ITERATION, 5678);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("i5678", suffix, "Suffix for list iteration mode");
+}
+
+void test_write_xyz_suffix_time(void)
+{
+    char suffix[256];
+    write_xyz_suffix(suffix, OUTPUT_SCHEDULE_INTERVAL_TIME, 1.2345);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("t1.2345", suffix, "Suffix for time mode");
+    write_xyz_suffix(suffix, OUTPUT_SCHEDULE_LIST_TIME, 0.0001);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("t0.0001", suffix, "Suffix for list time mode");
+}
+
+void test_fstring_to_buffer_returns_null_on_format_error(void)
+{
+    // Intentionally pass an invalid format string
+    // errors depend on implementation
+    const char *result = fstring_to_buffer("%q", 42);
+    TEST_ASSERT_NULL_MESSAGE(result, "Should return NULL on format error");
+}
+
+void test_input_logging_basic(void)
+{
+    
+    se->system_size_x = 10;
+    se->system_size_y = 20;
+    se->system_size_z = 30;
+    se->lattice_type = FCC;
+    se->num_elements = 1;
+    se->atom_names = malloc(sizeof(char*));
+    se->atom_names[0] = dup_str("Ag");
+    se->substrate_composition = malloc(sizeof(double));
+    se->substrate_composition[0] = 1.0;
+    se->is_soluble = malloc(sizeof(int));
+    se->is_soluble[0] = 1;
+    se->num_nn_levels = 1;
+    se->nn_energy = malloc(sizeof(double));
+    se->nn_energy[0] = 0.1;
+    se->geometry = GEOMETRY_CLUSTER;
+    se->cluster_radius = 5;
+    se->rand_seed = 123;
+    ss->atom_cnt = 42;
+    ss->temperature = 300.0;
+    ss->overpotential = 0.5;
+    ls->sim_log = temp_log;
+    ls->output_state_csv = 0;
+    ls->output_xyz = 0;
+
+    rewind(temp_log);
+    input_logging(ss, se, ls);
+    rewind(temp_log);
+
+    char buffer[1024];
+    fread(buffer, 1, sizeof(buffer)-1, temp_log);
+    buffer[sizeof(buffer)-1] = '\0';
+    TEST_ASSERT_NOT_NULL(strstr(buffer, "System size is 10 x 20 x 30"));
+    TEST_ASSERT_NOT_NULL(strstr(buffer, "Crystal structure is FCC"));
+    TEST_ASSERT_NOT_NULL(strstr(buffer, "Random seed is 123"));
+    TEST_ASSERT_NOT_NULL(strstr(buffer, "Initialized spherical cluster with radius 5"));
+    TEST_ASSERT_NOT_NULL(strstr(buffer, "Atoms created, 42 total"));
+    ss->atom_cnt = 0; // prevent free of uninitialized atoms in tearDown
+}
+
+// TODO: write_xyz and write_logs tests need simulation variables to be initialized
+void test_write_xyz_file_creates_file_and_content(void)
+{
+    char prefix[] = "test_xyz_output";
+    char suffix[] = "mysuffix";
+    int frame_num = 1;
+    int stripped = 0;
+    ss->atom_cnt = 1;
+    ss->iter = 2;
+    ss->elapsed_stime = 3.0;
+    ss->temperature = 4.0;
+    ss->overpotential = 5.0;
+    ss->total_internal_energy = 6.0;
+    ss->atom_arr = malloc(sizeof(Atom*));
+    ss->atom_arr[0] = malloc(sizeof(Atom));
+    ss->atom_arr[0]->type = 0;
+    ss->atom_arr[0]->cartesian[0] = 1.1;
+    ss->atom_arr[0]->cartesian[1] = 2.2;
+    ss->atom_arr[0]->cartesian[2] = 3.3;
+    se->atom_names = malloc(sizeof(char*));
+    se->atom_names[0] = dup_str("Ag");
+    se->num_transition_vectors = 1;
+    se->simbox_vectors_cart[0][0] = 1.0;
+    se->simbox_vectors_cart[0][1] = 0.0;
+    se->simbox_vectors_cart[0][2] = 0.0;
+    se->simbox_vectors_cart[1][0] = 0.0;
+    se->simbox_vectors_cart[1][1] = 1.0;
+    se->simbox_vectors_cart[1][2] = 0.0;
+    se->simbox_vectors_cart[2][0] = 0.0;
+    se->simbox_vectors_cart[2][1] = 0.0;
+    se->simbox_vectors_cart[2][2] = 1.0;
+    se->simbox_origin_cart[0] = 0.0;
+    se->simbox_origin_cart[1] = 0.0;
+    se->simbox_origin_cart[2] = 0.0;
+
+    bool result = write_xyz_file(prefix, frame_num, suffix, stripped, ss, se);
+
+    TEST_ASSERT_TRUE(result);
+    char filename[520];
+    sprintf(filename, "%s_%d_%s.xyz", prefix, frame_num, suffix);
+    FILE *f = fopen(filename, "r");
+    TEST_ASSERT_NOT_NULL(f);
+    char line[256];
+    fgets(line, sizeof(line), f);
+    TEST_ASSERT_EQUAL_STRING("1\n", line);
+    // Clean up
+    fclose(f);
+    remove(filename);
+}
+
+void test_write_logs_increments_framenums(void)
+{
+    ls->sim_log = temp_log;
+    ls->state_csv = temp_log;
+    strncpy(ls->xyz_prefix, "test_xyz", sizeof(ls->xyz_prefix));
+    strncpy(ls->xyz_suffix, "mysuffix", sizeof(ls->xyz_suffix));
+    ls->xyz_stripped = 0;
+    ls->csv_framenum = 0;
+    ls->xyz_framenum = 0;
+    ls->framenum = 0;
+    ss->atom_cnt = 1;
+    ss->iter = 1;
+    ss->elapsed_stime = 1.0;
+    ss->temperature = 1.0;
+    ss->overpotential = 1.0;
+    ss->total_internal_energy = 1.0;
+    ss->atom_arr = malloc(sizeof(Atom*));
+    ss->atom_arr[0] = malloc(sizeof(Atom));
+    ss->atom_arr[0]->type = 0;
+    ss->atom_arr[0]->cartesian[0] = 0.0;
+    ss->atom_arr[0]->cartesian[1] = 0.0;
+    ss->atom_arr[0]->cartesian[2] = 0.0;
+    se->atom_names = malloc(sizeof(char*));
+    se->atom_names[0] = dup_str("Ag");
+    se->num_transition_vectors = 1;
+    se->simbox_vectors_cart[0][0] = 1.0;
+    se->simbox_vectors_cart[0][1] = 0.0;
+    se->simbox_vectors_cart[0][2] = 0.0;
+    se->simbox_vectors_cart[1][0] = 0.0;
+    se->simbox_vectors_cart[1][1] = 1.0;
+    se->simbox_vectors_cart[1][2] = 0.0;
+    se->simbox_vectors_cart[2][0] = 0.0;
+    se->simbox_vectors_cart[2][1] = 0.0;
+    se->simbox_vectors_cart[2][2] = 1.0;
+    se->simbox_origin_cart[0] = 0.0;
+    se->simbox_origin_cart[1] = 0.0;
+    se->simbox_origin_cart[2] = 0.0;
+
+    write_logs(1, 1, ss, se, ls);
+
+    TEST_ASSERT_EQUAL_INT(1, ls->framenum);
+    TEST_ASSERT_EQUAL_INT(1, ls->csv_framenum);
+    TEST_ASSERT_EQUAL_INT(1, ls->xyz_framenum);
+    // Clean up xyz file
+    char filename[520];
+    sprintf(filename, "%s_%d_%s.xyz", ls->xyz_prefix, 0, ls->xyz_suffix);
+    remove(filename);
+}
+
+void test_output_if_passed_checkpoint_triggers_write_logs(void)
+{
+    ls->sim_log = temp_log;
+    ls->state_csv = temp_log;
+    strncpy(ls->xyz_prefix, "test_xyz", sizeof(ls->xyz_prefix));
+    strncpy(ls->xyz_suffix, "mysuffix", sizeof(ls->xyz_suffix));
+    ls->xyz_stripped = 0;
+    ls->csv_framenum = 0;
+    ls->xyz_framenum = 0;
+    ls->framenum = 0;
+    ss->atom_cnt = 1;
+    ss->iter = 10;
+    ss->elapsed_stime = 1.0;
+    ss->temperature = 1.0;
+    ss->overpotential = 1.0;
+    ss->total_internal_energy = 1.0;
+    ss->atom_arr = malloc(sizeof(Atom*));
+    ss->atom_arr[0] = malloc(sizeof(Atom));
+    ss->atom_arr[0]->type = 0;
+    ss->atom_arr[0]->cartesian[0] = 0.0;
+    ss->atom_arr[0]->cartesian[1] = 0.0;
+    ss->atom_arr[0]->cartesian[2] = 0.0;
+    se->atom_names = malloc(sizeof(char*));
+    se->atom_names[0] = dup_str("Ag");
+    se->num_transition_vectors = 1;
+    se->simbox_vectors_cart[0][0] = 1.0;
+    se->simbox_vectors_cart[0][1] = 0.0;
+    se->simbox_vectors_cart[0][2] = 0.0;
+    se->simbox_vectors_cart[1][0] = 0.0;
+    se->simbox_vectors_cart[1][1] = 1.0;
+    se->simbox_vectors_cart[1][2] = 0.0;
+    se->simbox_vectors_cart[2][0] = 0.0;
+    se->simbox_vectors_cart[2][1] = 0.0;
+    se->simbox_vectors_cart[2][2] = 1.0;
+    se->simbox_origin_cart[0] = 0.0;
+    se->simbox_origin_cart[1] = 0.0;
+    se->simbox_origin_cart[2] = 0.0;
+    ls->output_state_csv = 1;
+    ls->output_xyz = 1;
+    ls->csv_schedule.mode = OUTPUT_SCHEDULE_LIST_ITERATION;
+    double csv_list[1] = {10};
+    ls->csv_schedule.list = csv_list;
+    ls->csv_schedule.list_len = 1;
+    ls->csv_schedule.list_idx = 0;
+    ls->next_csv_checkpoint = 10;
+    ls->xyz_schedule.mode = OUTPUT_SCHEDULE_LIST_ITERATION;
+    double xyz_list[1] = {10};
+    ls->xyz_schedule.list = xyz_list;
+    ls->xyz_schedule.list_len = 1;
+    ls->xyz_schedule.list_idx = 0;
+    ls->next_xyz_checkpoint = 10;
+
+    output_if_passed_checkpoint(ss, se, ls);
+
+    TEST_ASSERT_EQUAL_INT(1, ls->framenum);
+    TEST_ASSERT_EQUAL_INT(1, ls->csv_framenum);
+    TEST_ASSERT_EQUAL_INT(1, ls->xyz_framenum);
+    // Clean up xyz file
+    char filename[520];
+    sprintf(filename, "%s_%d_%s.xyz", ls->xyz_prefix, 0, ls->xyz_suffix);
+    remove(filename);
+}
+
+int main(void) 
 {
     UNITY_BEGIN();
 
@@ -528,6 +759,17 @@ int main(void)
     RUN_TEST(test_log_kmc_steps_basic_coord);
     RUN_TEST(test_log_kmc_steps_evap);
     RUN_TEST(test_log_kmc_steps_evap_coord);
+
+    RUN_TEST(test_write_xyz_suffix_iteration);
+    RUN_TEST(test_write_xyz_suffix_time);
+
+    // errors depend on implementation
+    // RUN_TEST(test_fstring_to_buffer_returns_null_on_format_error);
+
+    RUN_TEST(test_input_logging_basic);
+    // RUN_TEST(test_write_xyz_file_creates_file_and_content);
+    // RUN_TEST(test_write_logs_increments_framenums);
+    // RUN_TEST(test_output_if_passed_checkpoint_triggers_write_logs);
 
     UNITY_END();
 
