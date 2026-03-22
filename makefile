@@ -4,7 +4,7 @@
 # test - build with unity tests
 # dbtest - debug build with unity tests
 
-SHELL = /bin/sh
+SHELL := /bin/sh
 # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 .SHELLFLAGS := -eu -c
 .DELETE_ON_ERROR:
@@ -31,10 +31,16 @@ else
 	TARGET_EXTENSION = out
 endif
 
-HAS_FORK := $(shell \
-	echo 'int main(){fork();}' | \
-	$(CC) -x c -o a.$(EXECUTABLE) - >/dev/null 2>&1 && rm a.$(EXECUTABLE) && echo yes)
-FORKFLAG := $(if $(HAS_FORK),-DHAVE_FORK)
+# gcc - : read from stdin
+# no promises that core dumping will work if this test passes
+# gcore may still fail due to security settings (e.g. yama ptrace_scope)
+DUMP_CORE := $(and \
+	$(shell echo 'int main(){fork();}' | \
+	$(CC) -x c -o a.$(EXECUTABLE) - >/dev/null 2>&1 \
+	&& rm a.$(EXECUTABLE) && echo 1), \
+	$(shell gdb -batch-silent && echo 1)\
+)
+DUMPFLAG := $(if $(DUMP_CORE),-DDUMP_CORE)
 # echo 'int main(){fork();}' | gcc -x c -o a.exe - >/dev/null 2>&1 && rm a.exe && echo yes
 
 # --- Toolchain ---
@@ -86,8 +92,8 @@ INCLUDE_CFLAGS = -I$(src_path) -I$(include_path)
 # CFLAGS can be overridden from the command line
 ALL_CFLAGS = \
 	$(BASE_CFLAGS) \
-	$(FORKFLAG) \
 	$($(TYPE)_CFLAGS) \
+	$(DUMPFLAG) \
 	$(INCLUDE_CFLAGS) \
 	$(CFLAGS)
 

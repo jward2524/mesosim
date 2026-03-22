@@ -5,7 +5,6 @@
 #include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #ifdef TEST
 #define INTERNAL
@@ -64,17 +63,45 @@ INTERNAL void free_if_exists(void **pointer)
     return;
 }
 
-#ifdef HAVE_FORK
-// TODO: replace with system call to gcore to create dump of process in subshell
+#ifdef DUMP_CORE
+#include <sys/types.h> // for pid_t
+#include <sys/wait.h> // for waitpid
+#include <unistd.h> // for getpid, fork, execlp
 void create_coredump(void)
 {
-    // pid = zero in child process, child PID in parent process
-    int pid = fork();
+    pid_t parent_pid = getpid();
 
-    // abort the child process
-    if (pid == 0) {
-        fprintf(stderr, "Creating core dump in child process\n");
-        abort();
+    // fork() returns zero in child process, child PID in parent process
+    pid_t child_pid = fork();
+
+    // to avoid issues with yama ptrace_scope, dump core of the child from the parent
+    // child continues, parent ends
+    if (child_pid == 0) {
+        char attach_str[32];
+        char gcore_str[32];
+        snprintf(attach_str, sizeof(attach_str), "attach %d", parent_pid);
+        snprintf(gcore_str, sizeof(gcore_str), "generate-core-file core%d.%d", log_state->xyz_framenum, parent_pid);
+
+        // execute gcore from PATH, with argv[] parameters
+        // execlp(const char *file, const char *arg, ..., NULL);
+        // file will be searched for in PATH if no slash
+        // first `arg` must be filename with file being executed, and last arg must be in NULL
+        // (bc variadic parameters)
+        int ret = execlp("gdb", "gdb", "-batch-silent", "-ex", attach_str, "-ex", gcore_str, "-ex", "detach", "-ex", "quit", NULL);
+        // "No such file or directory" errors are normal for shared libraries that aren't compiled with debug symbols
+        // "target file /proc/1197/cmdline contained unexpected null characters" is normal and can be ignored
+
+        // exec replaces current process image with new process image
+        // only returns if an error occurs, and will set ret = -1
+        perror("execlp failed");
+        call_exit(EXIT_FAILURE);
+    } else {
+        // parent process - wait for child to finish dumping core
+        int status;
+        if (waitpid(child_pid, &status, 0) == -1) {
+            perror("waitpid failed");
+            call_exit(EXIT_FAILURE);
+        }
     }
 }
 #endif

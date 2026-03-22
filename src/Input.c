@@ -3,7 +3,9 @@
 #include "FileIO.h"
 #include "Utils.h"
 #include <ctype.h>
+#include <errno.h>
 #include <math.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

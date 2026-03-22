@@ -27,7 +27,7 @@ void call_exit(int errnum);
 void free_if_exists(void **pointer);
 #endif
 
-#ifdef HAVE_FORK
+#ifdef DUMP_CORE
 void create_coredump(void);
 #endif
 

@@ -432,7 +432,7 @@ void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct 
     }
 
     if (ls->output_state_csv) {
-        safe_log(ls->sim_log, "CSV output to file %s", ls->csv_filename);
+        safe_log(ls->sim_log, "CSV output to file %s\n", ls->csv_filename);
 
         char *buf = schedule_list_to_string(&ls->csv_schedule);
 
@@ -461,7 +461,7 @@ void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct 
     }
 
     if (ls->output_xyz) {
-        safe_log(ls->sim_log, "XYZ output to file prefix %s", ls->xyz_prefix);
+        safe_log(ls->sim_log, "XYZ output to file prefix %s\n", ls->xyz_prefix);
 
         char *buf = schedule_list_to_string(&ls->xyz_schedule);
 
@@ -610,7 +610,7 @@ bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, int stripped,
     char filename_full[BUFFER_SIZE];
     int n = snprintf(filename_full, BUFFER_SIZE, "%s_%d_%s.xyz", xyz_prefix, frame_num, suffix);
     if ((size_t)n >= BUFFER_SIZE) {
-        fprintf(stderr, "Error - Output filename too long (>%llu): %s_%d_%s.xyz\n", BUFFER_SIZE,
+        fprintf(stderr, "Error - Output filename too long (>%zu): %s_%d_%s.xyz\n", BUFFER_SIZE,
                 xyz_prefix, frame_num, suffix);
         clean_and_error(EXIT_FAILURE);
     }
@@ -676,8 +676,9 @@ bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, int stripped,
 
     fclose(file);
 
-#if (!defined(NDEBUG)) && defined(HAVE_FORK)
+#if (!defined(NDEBUG)) && defined(DUMP_CORE)
     fprintf(stderr, "Creating core dump for frame %d\n", frame_num);
+    fflush(stderr);
     create_coredump();
 #endif
 
@@ -771,9 +772,11 @@ void write_logs(int output_csv, int output_xyz, struct SimulationState *ss,
                 struct SimulationEnv *se, struct LoggingState *ls)
 {
     // udpate framenums after, so initial logs (t=0) show frame 0
-    output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
-                    ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-    ls->framenum++;
+    if (output_csv || output_xyz) {
+        output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
+                        ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+        ls->framenum++;
+    }
 
     if (output_csv) {
         log_state_csv(ls->state_csv, ss, ls);
@@ -797,9 +800,6 @@ void write_logs(int output_csv, int output_xyz, struct SimulationState *ss,
 void output_if_passed_checkpoint(struct SimulationState *ss, struct SimulationEnv *se,
                                  struct LoggingState *ls)
 {
-    output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
-                    ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-
     int output_csv = 0;
     int output_xyz = 0;
     if (ls->output_state_csv) {
