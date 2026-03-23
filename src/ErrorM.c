@@ -129,7 +129,7 @@ void clean_and_error(int exit_error)
     if (exit_error != 0) {
         FILE *fp = log_state->sim_log ? log_state->sim_log : stderr;
         fprintf(fp, "Error encountered - check stderr\n");
-        safe_log(fp, "%s\n", strerror(errno));
+        safe_log(fp, "%d: %s\n", errno, strerror(errno));
 
 #if !defined(NDEBUG) && !defined(TEST)
         // if in debug mode, abort to get a core dump

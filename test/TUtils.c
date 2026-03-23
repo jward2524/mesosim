@@ -31,12 +31,11 @@ void init_temp(FILE **temp_log)
 
 void clean_temp(FILE **temp_log)
 {
-    if (*temp_log) {
-        int rc = remove(temp_name);
-        if (rc)
-            perror("Remove of test log file failed");
-        *temp_log = NULL;
+    int rc = remove(temp_name);
+    if (rc) {
+        perror("Remove of test log file failed");
     }
+    *temp_log = NULL;
 }
 
 void close_if_exists(FILE **file)

@@ -27,10 +27,13 @@ void setUp(void)
 
 void tearDown(void)
 {
-    clean_and_error(0);
-
     // fclose needs to be here in case a test fails
+    // set to null to prevent double free from fclose + clean_and_error
+    if (log_state != NULL) {
+        log_state->sim_log = NULL;
+    }
     fclose(temp_log);
+    clean_and_error(0);
     close_if_exists(&atom_file);
     close_if_exists(&input_file);
 }
@@ -143,7 +146,7 @@ void test_process_in_file_mc(void)
 void test_process_xyz_file(void)
 {
     char filename[] = "test/sheet256.xyz";
-    strncpy(se->atoms_filename, filename, strlen(filename));
+    strncpy(se->atoms_filename, filename, strlen(se->atoms_filename));
     // initialize_from_file(ss, se, ls);
 
     atom_file = open_file(filename);
@@ -201,8 +204,9 @@ void test_safe_log_writes(void)
     rewind(temp_log);
 
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
 
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("Hello World 42\n", buffer,
                                      "Simple log should be written correctly");
 }
@@ -220,8 +224,9 @@ void test_safe_log_long_line(void)
     rewind(temp_log);
 
     char buffer[1024];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
 
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(long_str, buffer, "Long log line should be written correctly");
 }
 
@@ -253,7 +258,8 @@ void test_output_csv_header_success(void)
     rewind(temp_log);
 
     char buffer[256];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("frame,iter,energy\n", buffer, "CSV header");
 }
 
@@ -273,7 +279,8 @@ void test_log_state_csv_success(void)
     rewind(temp_log);
 
     char buffer[256];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     // default precision of floats/doubles is 6
     TEST_ASSERT_EQUAL_STRING_MESSAGE("2,42,3.140000\n", buffer, "CSV state log");
 }
@@ -291,7 +298,8 @@ void test_log_state_csv_one_field(void)
     rewind(temp_log);
 
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("5,99\n", buffer, "CSV state log with one field");
 }
 
@@ -306,7 +314,8 @@ void test_output_csv_header_one_field(void)
     rewind(temp_log);
 
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("frame,energy\n", buffer, "CSV header with one field");
 }
 
@@ -327,7 +336,8 @@ void test_log_state_csv_mixed_fields(void)
     rewind(temp_log);
 
     char buffer[256];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("3,7,-1.230000,273.150000\n", buffer, "CSV state log with mixed fields");
 }
 
@@ -347,7 +357,9 @@ void test_output_csv_header_many_fields(void)
     rewind(temp_log);
 
     char buffer[512];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
+
     char expected[256] = "frame";
     for (int i = 0; i < n; ++i) {
         strcat(expected, ",");
@@ -366,7 +378,8 @@ void test_output_mc_steps_header_coord(void)
     output_mc_steps_header(temp_log, output_coord);
     rewind(temp_log);
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
         "iter,energy,deltaE,performed,u1,v1,w1,u2,v2,w2,coordination\n", buffer,
         "MC iter header coord");
@@ -379,7 +392,8 @@ void test_output_mc_steps_header_coordless(void)
     output_mc_steps_header(temp_log, output_coord);
     rewind(temp_log);
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("iter,energy,deltaE,performed,u1,v1,w1,u2,v2,w2\n", buffer,
                                      "MC iter header coordless");
 }
@@ -398,7 +412,8 @@ void test_log_mc_steps_basic_coordless(void)
     log_mc_steps(temp_log, iter, sys_energy, deltaE, performed, uvw1, uvw2, coord);
     rewind(temp_log);
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("123,4.560000,-0.120000,1,1,2,3,4,5,6\n", buffer,
                                      "MC iter log basic coordless");
 }
@@ -417,7 +432,8 @@ void test_log_mc_steps_basic_coord(void)
     log_mc_steps(temp_log, iter, sys_energy, deltaE, performed, uvw1, uvw2, coord);
     rewind(temp_log);
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("123,4.560000,-0.120000,1,1,2,3,4,5,6,9\n", buffer,
                                      "MC iter log basic coord");
 }
@@ -429,7 +445,8 @@ void test_output_kmc_steps_header_coord(void)
     output_kmc_steps_header(temp_log, output_coord);
     rewind(temp_log);
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("iter,sim_time,energy,u1,v1,w1,u2,v2,w2,coordination\n",
                                      buffer, "KMC iter header coord");
 }
@@ -441,7 +458,8 @@ void test_output_kmc_steps_header_coordless(void)
     output_kmc_steps_header(temp_log, output_coord);
     rewind(temp_log);
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("iter,sim_time,energy,u1,v1,w1,u2,v2,w2\n", buffer,
                                      "KMC iter header coordless");
 }
@@ -460,7 +478,8 @@ void test_log_kmc_steps_basic_coord(void)
     log_kmc_steps(temp_log, iter, sim_time, sys_energy, uvw1, uvw2, is_evap, coord);
     rewind(temp_log);
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("42,5.000000e-01,7.890000,7,8,9,10,11,12,2\n", buffer,
                                      "KMC iter log basic coord");
 }
@@ -479,7 +498,8 @@ void test_log_kmc_steps_evap(void)
     log_kmc_steps(temp_log, iter, sim_time, sys_energy, uvw1, uvw2, is_evap, coord);
     rewind(temp_log);
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("99,1.230000e+00,-2.340000,3,2,1,,,\n", buffer, "KMC iter log evaporation");
 }
 
@@ -497,7 +517,8 @@ void test_log_kmc_steps_evap_coord(void)
     log_kmc_steps(temp_log, iter, sim_time, sys_energy, uvw1, uvw2, is_evap, coord);
     rewind(temp_log);
     char buffer[128];
-    fgets(buffer, sizeof(buffer), temp_log);
+    char *ret = fgets(buffer, sizeof(buffer), temp_log);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("99,1.230000e+00,-2.340000,3,2,1,,,,8\n", buffer, "KMC iter log evaporation");
 }
 
@@ -530,7 +551,6 @@ void test_fstring_to_buffer_returns_null_on_format_error(void)
 
 void test_input_logging_basic(void)
 {
-    
     se->system_size_x = 10;
     se->system_size_y = 20;
     se->system_size_z = 30;
@@ -559,15 +579,21 @@ void test_input_logging_basic(void)
     input_logging(ss, se, ls);
     rewind(temp_log);
 
+    ss->atom_cnt = 0;        // prevent free of uninitialized atoms in tearDown
+    free(se->atom_names[0]); // free dup_str malloc'd string
+
     char buffer[1024];
-    fread(buffer, 1, sizeof(buffer)-1, temp_log);
-    buffer[sizeof(buffer)-1] = '\0';
+    size_t bufstr_len = sizeof(buffer) - 1;
+    size_t ret = fread(buffer, 1, bufstr_len, temp_log);
+    TEST_ASSERT_TRUE_MESSAGE(ret > 0, "fread should have read data");
+    buffer[bufstr_len] = '\0';
+
+    // check that info is a substring of log output
     TEST_ASSERT_NOT_NULL(strstr(buffer, "System size is 10 x 20 x 30"));
     TEST_ASSERT_NOT_NULL(strstr(buffer, "Crystal structure is FCC"));
     TEST_ASSERT_NOT_NULL(strstr(buffer, "Random seed is 123"));
     TEST_ASSERT_NOT_NULL(strstr(buffer, "Initialized spherical cluster with radius 5"));
     TEST_ASSERT_NOT_NULL(strstr(buffer, "Atoms created, 42 total"));
-    ss->atom_cnt = 0; // prevent free of uninitialized atoms in tearDown
 }
 
 // TODO: write_xyz and write_logs tests need simulation variables to be initialized
@@ -613,7 +639,8 @@ void test_write_xyz_file_creates_file_and_content(void)
     FILE *f = fopen(filename, "r");
     TEST_ASSERT_NOT_NULL(f);
     char line[256];
-    fgets(line, sizeof(line), f);
+    char *ret = fgets(line, sizeof(line), f);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
     TEST_ASSERT_EQUAL_STRING("1\n", line);
     // Clean up
     fclose(f);
@@ -660,9 +687,9 @@ void test_write_logs_increments_framenums(void)
 
     write_logs(1, 1, ss, se, ls);
 
-    TEST_ASSERT_EQUAL_INT(1, ls->framenum);
-    TEST_ASSERT_EQUAL_INT(1, ls->csv_framenum);
-    TEST_ASSERT_EQUAL_INT(1, ls->xyz_framenum);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->framenum, "frame number");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->csv_framenum, "csv frame number");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->xyz_framenum, "xyz frame number");
     // Clean up xyz file
     char filename[520];
     sprintf(filename, "%s_%d_%s.xyz", ls->xyz_prefix, 0, ls->xyz_suffix);

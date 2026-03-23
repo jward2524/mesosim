@@ -65,31 +65,27 @@ int parse_comment(const char *line, struct KV **outpairs, size_t *outpairs_cnt)
 {
     // if (!line || !out_pairs || !out_count) return -1;
 
-    unsigned char pairs_max_cnt = 64;
+    size_t pairs_max_cnt = 64;
     // array of KVs
     struct KV *pairs = (struct KV *)malloc(sizeof(struct KV) * pairs_max_cnt);
+    size_t pairs_cnt = 0;
     if (!pairs) {
         fprintf(stderr, "Out of memory allocating %zu bytes\n", sizeof(struct KV) * pairs_max_cnt);
+        clean_xyz_structs(pairs, pairs_cnt, NULL);
         return 1;
     }
 
-    unsigned char pairs_cnt = 0;
 
     // loop over characters in line
     int has_eq = 0;
     const char *p = line;
     while (*p) {
         if (pairs_cnt >= pairs_max_cnt) {
-            fprintf(
-                stderr,
-                "There too many key-value pairs in comment line - max %d. Last parsed key was %s\n",
-                pairs_max_cnt, pairs[pairs_cnt].key);
-            // free(pairs);
-            // for (int i = 0; i < pairs_cnt; i++)
-            // {
-            // 	if (pairs[i].key) free(pairs[i].key);
-            // 	if (pairs[i].value) free(pairs[i].value);
-            // }
+            fprintf(stderr,
+                    "There too many key-value pairs in comment line - max %zu. Last parsed key was "
+                    "%s\n",
+                    pairs_max_cnt, pairs[pairs_cnt].key);
+            clean_xyz_structs(pairs, pairs_cnt, NULL);
             return 1;
         }
 
@@ -147,6 +143,7 @@ int parse_comment(const char *line, struct KV **outpairs, size_t *outpairs_cnt)
         size_t len = (size_t)(t_end - t_start);
         char *token = (char *)malloc(len + 1);
         if (!token) {
+            clean_xyz_structs(pairs, pairs_cnt, NULL);
             return -2;
         }
         memcpy(token, t_start, len);
@@ -350,6 +347,7 @@ void clean_xyz_structs(struct KV *kvpairs, size_t kvpairs_cnt, PropertyDesc *pro
             free(kvpairs[j].key);
             free(kvpairs[j].value);
         }
+        free(kvpairs);
     }
     if (properties) {
         free(properties);

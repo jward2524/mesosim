@@ -21,10 +21,11 @@ void setUp(void)
 
 void tearDown(void)
 {
-    clean_and_error(0);
-
     // fclose needs to be here in case a test fails
+    // set to null to prevent double free from fclose + clean_and_error
+    ls->sim_log = NULL;
     fclose(temp_log);
+    clean_and_error(0);
 }
 
 void test_simulation(void)
