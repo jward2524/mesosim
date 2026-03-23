@@ -191,13 +191,13 @@ do-test: $(results) | $(build_paths)
 # build binary using object files
 # depends on object files and the headers that don't have corresponding objects
 $(bin_path)/$(EXECUTABLE).$(TARGET_EXTENSION): $(objs) $(xs_hpath) | $(bin_path)
-	$(CC) $(ALL_CFLAGS) -o $@ $(objs) $(ALL_LDFLAGS)
+	$(LINK) $(ALL_CFLAGS) -o $@ $(objs) $(ALL_LDFLAGS)
 
 $(results_path)/%.txt: $(bin_path)/%.$(TARGET_EXTENSION) | $(results_path)
 	./$< > $@ 2>&1
 
 $(bin_path)/Test%.$(TARGET_EXTENSION): $(objs_mmain) $(obj_path)/Test%.o $(obj_path)/%.o $(obj_path)/unity.o $(obj_path)/TUtils.o | $(bin_path)
-	$(LINK) -o $@ $^ $(ALL_LDFLAGS)
+	$(LINK) $(ALL_CFLAGS) -o $@ $^ $(ALL_LDFLAGS)
 
 # :: (double-colon) rules are independent from each other
 # test_path/TestSomething.c
