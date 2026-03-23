@@ -3,6 +3,7 @@ tmp/
 build/
 bin/
 .vscode/
+.github/
 
 input/
 output/
