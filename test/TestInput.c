@@ -1,9 +1,9 @@
-#include "unity.h"
-#include "Input.h"
-#include "FileIO.h"
-#include "Utils.h"
 #include "ErrorM.h"
+#include "FileIO.h"
+#include "Input.h"
 #include "TUtils.h"
+#include "Utils.h"
+#include "unity.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +18,8 @@ static FILE *mock_input_file = NULL;
 
 /* ================= Helpers ================= */
 
-static FILE *open_mem(const char *text) {
+static FILE *open_mem(const char *text)
+{
     FILE *tmpf = fopen(mock_name, "w+");
     fopen_error(mock_name, tmpf);
     if (!tmpf) {
@@ -40,14 +41,17 @@ void tearDown(void)
     if (mock_input_file) {
         fclose(mock_input_file);
     };
-    clean_and_error(0);
+    if (ss != NULL || se != NULL || ls != NULL) {
+        clean_and_error(0);
+    }
 }
 
 /* ================= Tests ================= */
 
 /* === End to end tests === */
 
-void test_parse_input_two_atomtypes_one_shell_success(void) {
+void test_parse_input_two_atomtypes_one_shell_success(void)
+{
     const char *input = "atomtype Ag Au\n"
                         "composition 0.75 0.25\n"
                         "dissolution true false\n"
@@ -64,8 +68,10 @@ void test_parse_input_two_atomtypes_one_shell_success(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(2, se->atom_names_cnt, "Number of atom types");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, se->num_nn_levels, "Number of nn levels");
 
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.75, se->substrate_composition[0], "Composition for atom type 0");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE( 0.25, se->substrate_composition[1], "Composition for atom type 1");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.75, se->substrate_composition[0],
+                                     "Composition for atom type 0");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.25, se->substrate_composition[1],
+                                     "Composition for atom type 1");
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, se->is_soluble[0], "Solubility for atom type 0");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, se->is_soluble[1], "Solubility for atom type 1");
@@ -75,7 +81,8 @@ void test_parse_input_two_atomtypes_one_shell_success(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.3, se->nn_energy[2], "1nne energy for atom type 1-1");
 }
 
-void test_parse_input_three_atomtypes_two_shells_success(void) {
+void test_parse_input_three_atomtypes_two_shells_success(void)
+{
     const char *input = "atomtype A B C\n"
                         "nnlevels 2\n"
                         "1nne 1 2 3 4 5 6\n"
@@ -108,14 +115,14 @@ void test_parse_input_three_atomtypes_two_shells_success(void) {
                                      "2nd shell nne energy for atom type 2-2");
 }
 
-void test_parse_input_cluster_nns_file_success(void) {
+void test_parse_input_cluster_nns_file_success(void)
+{
     ParseContext ctx = {0};
     mock_input_file = open_file("test/cluster_nns.in");
     TEST_ASSERT_NOT_NULL_MESSAGE(mock_input_file, "Failed to open test/cluster_nns.in");
 
     parse_input_file(mock_input_file, &ctx, ss, se, ls);
     finalize_config(&ctx, ss, se, ls);
-    check_required_inputs(&ctx, se->flavor);
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_x, "System size x");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, se->system_size_y, "System size y");
@@ -129,8 +136,10 @@ void test_parse_input_cluster_nns_file_success(void) {
     TEST_ASSERT_EQUAL_STRING_MESSAGE("Ag", se->atom_names[0], "Atom type name at index 0");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("Au", se->atom_names[1], "Atom type name at index 1");
 
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.75, se->substrate_composition[0], "Composition for atom type 0");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.25, se->substrate_composition[1], "Composition for atom type 1");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.75, se->substrate_composition[0],
+                                     "Composition for atom type 0");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.25, se->substrate_composition[1],
+                                     "Composition for atom type 1");
     TEST_ASSERT_TRUE_MESSAGE(se->is_soluble[0], "Solubility for atom type 0");
     TEST_ASSERT_FALSE_MESSAGE(se->is_soluble[1], "Solubility for atom type 1");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, se->dissolution, "Dissolution flag");
@@ -151,10 +160,12 @@ void test_parse_input_cluster_nns_file_success(void) {
     // Output CSV command
     TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "State CSV output flag");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", ls->csv_filename, "CSV filename");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode, "CSV schedule mode");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode,
+                                  "CSV schedule mode");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->csv_schedule.interval, "CSV interval value");
     // Check next_log_checkpoint for interval iteration mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_csv_checkpoint, "CSV next_csv_checkpoint should match first checkpoint");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_csv_checkpoint,
+                                     "CSV next_csv_checkpoint should match first checkpoint");
     TEST_ASSERT_EQUAL_INT_MESSAGE(4, ls->csv_field_count, "CSV field count");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
@@ -165,21 +176,25 @@ void test_parse_input_cluster_nns_file_success(void) {
     TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
     TEST_ASSERT_TRUE_MESSAGE(ls->xyz_stripped, "XYZ stripped flag");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->xyz_schedule.mode, "XYZ schedule mode");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->xyz_schedule.mode,
+                                  "XYZ schedule mode");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(500, ls->xyz_schedule.interval, "XYZ interval value");
     // Check next_log_checkpoint for interval time mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(500, ls->next_xyz_checkpoint, "XYZ next_xyz_checkpoint should match first checkpoint");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(500, ls->next_xyz_checkpoint,
+                                     "XYZ next_xyz_checkpoint should match first checkpoint");
 
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293.0, ss->temperature, "Temperature value");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(12345U, se->rand_seed, "Random seed value");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_KMC, se->flavor, "Simulation flavor");
     TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, ss->sim_end_type, "Simulation end type");
-    TEST_ASSERT_EQUAL_UINT_MESSAGE(2000U, (unsigned int)ss->final_iteration, "Final iteration value");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(2000U, (unsigned int)ss->final_iteration,
+                                   "Final iteration value");
 
     TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when not set");
 }
 
-void test_parse_input_multi_command_unknown_mid_file_fails(void) {
+void test_parse_input_multi_command_unknown_mid_file_fails(void)
+{
     const char *input = "systemsize 16 16 16\n"
                         "geometry cluster 4\n"
                         "atomtype A B\n"
@@ -198,7 +213,8 @@ void test_parse_input_multi_command_unknown_mid_file_fails(void) {
 
 /* === Dependency checks === */
 
-void test_parse_input_multi_command_finalize_composition_sum_fails(void) {
+void test_parse_input_multi_command_finalize_composition_sum_fails(void)
+{
     const char *input = "systemsize 16 16 16\n"
                         "geometry cluster 4\n"
                         "atomtype A B\n"
@@ -217,7 +233,8 @@ void test_parse_input_multi_command_finalize_composition_sum_fails(void) {
     });
 }
 
-void test_parse_input_missing_atomtype_fails(void) {
+void test_parse_input_missing_atomtype_fails(void)
+{
     const char *input = "composition 1.0\n"
                         "nnlevels 1\n"
                         "1nne 0.1\n";
@@ -232,7 +249,8 @@ void test_parse_input_missing_atomtype_fails(void) {
     });
 }
 
-void test_parse_input_missing_nne_shell_fails(void) {
+void test_parse_input_missing_nne_shell_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "nnlevels 2\n"
                         "1nne 0.1 0.2 0.3\n";
@@ -249,7 +267,8 @@ void test_parse_input_missing_nne_shell_fails(void) {
 
 /* === Individual command checks === */
 
-void test_parse_input_unknown_command_fails(void) {
+void test_parse_input_unknown_command_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "foobar 123\n";
 
@@ -262,7 +281,8 @@ void test_parse_input_unknown_command_fails(void) {
     });
 }
 
-void test_nnlevels_wrong_argcount_fails(void) {
+void test_nnlevels_wrong_argcount_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "nnlevels 1 2\n";
 
@@ -275,7 +295,8 @@ void test_nnlevels_wrong_argcount_fails(void) {
     });
 }
 
-void test_composition_non_numeric_fails(void) {
+void test_composition_non_numeric_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "composition 0.5 foo\n";
 
@@ -288,7 +309,8 @@ void test_composition_non_numeric_fails(void) {
     });
 }
 
-void test_dissolution_invalid_boolean_fails(void) {
+void test_dissolution_invalid_boolean_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "dissolution true maybe\n";
 
@@ -301,7 +323,8 @@ void test_dissolution_invalid_boolean_fails(void) {
     });
 }
 
-void test_nne_level_exceeds_nnlevels_fails(void) {
+void test_nne_level_exceeds_nnlevels_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "nnlevels 1\n"
                         "2nne 0.1 0.2 0.3\n";
@@ -316,7 +339,8 @@ void test_nne_level_exceeds_nnlevels_fails(void) {
     });
 }
 
-void test_nne_duplicate_definition_fails(void) {
+void test_nne_duplicate_definition_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "nnlevels 1\n"
                         "1nne 0.1 0.2 0.3\n"
@@ -332,7 +356,8 @@ void test_nne_duplicate_definition_fails(void) {
     });
 }
 
-void test_nne_too_few_values_fails(void) {
+void test_nne_too_few_values_fails(void)
+{
     const char *input = "atomtype A B C\n"
                         "nnlevels 1\n"
                         "1nne 1 2 3\n";
@@ -347,7 +372,8 @@ void test_nne_too_few_values_fails(void) {
     });
 }
 
-void test_composition_count_mismatch_fails(void) {
+void test_composition_count_mismatch_fails(void)
+{
     const char *input = "atomtype A B C\n"
                         "composition 0.5 0.5\n";
 
@@ -361,7 +387,8 @@ void test_composition_count_mismatch_fails(void) {
     });
 }
 
-void test_systemsize_valid_values_success(void) {
+void test_systemsize_valid_values_success(void)
+{
     const char *input = "systemsize 10 11 12\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -374,7 +401,8 @@ void test_systemsize_valid_values_success(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(1320, se->max_atoms, "Maximum atom count from system size");
 }
 
-void test_systemsize_non_numeric_fails(void) {
+void test_systemsize_non_numeric_fails(void)
+{
     const char *input = "systemsize 10 a 12\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -385,7 +413,8 @@ void test_systemsize_non_numeric_fails(void) {
     });
 }
 
-void test_temp_valid_value_success(void) {
+void test_temp_valid_value_success(void)
+{
     const char *input = "temp 293.5\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -395,7 +424,8 @@ void test_temp_valid_value_success(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293.5, ss->temperature, "Temperature value");
 }
 
-void test_temp_non_numeric_fails(void) {
+void test_temp_non_numeric_fails(void)
+{
     const char *input = "temp abc\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -406,7 +436,8 @@ void test_temp_non_numeric_fails(void) {
     });
 }
 
-void test_seed_default_keyword_success(void) {
+void test_seed_default_keyword_success(void)
+{
     const char *input = "seed default\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -416,18 +447,20 @@ void test_seed_default_keyword_success(void) {
     TEST_ASSERT_EQUAL_UINT_MESSAGE(DEFAULT_SEED, se->rand_seed, "Default random seed");
 }
 
-void test_seed_non_numeric_fails(void) {
+void test_seed_non_numeric_fails(void)
+{
     const char *input = "seed notanumber\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
-        parse_input_file (mock_input_file, &ctx, ss, se, ls);
+        parse_input_file(mock_input_file, &ctx, ss, se, ls);
         TEST_FAIL_MESSAGE("Expected seed parse failure");
     });
 }
 
-void test_potential_sweep_values_success(void) {
+void test_potential_sweep_values_success(void)
+{
     const char *input = "potential 0.9 0.03 1.2\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -435,12 +468,12 @@ void test_potential_sweep_values_success(void) {
     parse_input_file(mock_input_file, &ctx, ss, se, ls);
 
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.9, se->initial_overpotential, "Initial overpotential");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.03, se->overpotential_ramp_rate,
-                                     "Overpotential ramp rate");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.03, se->overpotential_ramp_rate, "Overpotential ramp rate");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.2, se->max_overpotential, "Maximum overpotential");
 }
 
-void test_potential_bad_argcount_fails(void) {
+void test_potential_bad_argcount_fails(void)
+{
     const char *input = "potential 0.9 0.03\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -451,7 +484,8 @@ void test_potential_bad_argcount_fails(void) {
     });
 }
 
-void test_struct_fcc_success(void) {
+void test_struct_fcc_success(void)
+{
     const char *input = "struct FCC\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -463,7 +497,8 @@ void test_struct_fcc_success(void) {
                                   "Transition vector count");
 }
 
-void test_struct_invalid_value_fails(void) {
+void test_struct_invalid_value_fails(void)
+{
     const char *input = "struct HCP\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -474,8 +509,10 @@ void test_struct_invalid_value_fails(void) {
     });
 }
 
-void test_output_csv_interval_iteration_success(void) {
-    const char *input = "output csv test/output/cluster.csv interval iteration 200 fields iter time energy temperature\n";
+void test_output_csv_interval_iteration_success(void)
+{
+    const char *input = "output csv test/output/cluster.csv interval iteration 200 fields iter "
+                        "time energy temperature\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
@@ -487,7 +524,8 @@ void test_output_csv_interval_iteration_success(void) {
                                   "CSV schedule iteration interval mode");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->csv_schedule.interval, "CSV interval value");
     // Check next_log_checkpoint for interval iteration mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_csv_checkpoint, "CSV next_csv_checkpoint should match first checkpoint");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_csv_checkpoint,
+                                     "CSV next_csv_checkpoint should match first checkpoint");
     TEST_ASSERT_NULL_MESSAGE(ls->csv_schedule.list, "CSV list value in interval mode");
     TEST_ASSERT_EQUAL_INT_MESSAGE(4, ls->csv_field_count, "CSV field count");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
@@ -498,8 +536,10 @@ void test_output_csv_interval_iteration_success(void) {
     TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when not set");
 }
 
-void test_output_csv_list_time_success(void) {
-    const char *input = "output csv test/output/cluster.csv list time 0.1 0.2 0.3 fields iter time energy\n";
+void test_output_csv_list_time_success(void)
+{
+    const char *input =
+        "output csv test/output/cluster.csv list time 0.1 0.2 0.3 fields iter time energy\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
@@ -507,14 +547,17 @@ void test_output_csv_list_time_success(void) {
 
     TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "CSV output flag");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", ls->csv_filename, "CSV filename");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_LIST_TIME, ls->csv_schedule.mode, "CSV list time schedule mode");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_LIST_TIME, ls->csv_schedule.mode,
+                                  "CSV list time schedule mode");
     TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls->csv_schedule.list_len, "CSV schedule list length");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ls->csv_schedule.interval, "CSV interval value in list mode");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ls->csv_schedule.interval,
+                                     "CSV interval value in list mode");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->csv_schedule.list[0], "CSV schedule list value 0");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, ls->csv_schedule.list[1], "CSV schedule list value 1");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.3, ls->csv_schedule.list[2], "CSV schedule list value 2");
     // Check next_log_checkpoint for list time mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->next_csv_checkpoint, "CSV next_checkpoint should match first checkpoint in list");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->next_csv_checkpoint,
+                                     "CSV next_checkpoint should match first checkpoint in list");
     TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls->csv_field_count, "CSV field count");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
@@ -523,7 +566,8 @@ void test_output_csv_list_time_success(void) {
     TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
 }
 
-void test_output_xyz_interval_time_success(void) {
+void test_output_xyz_interval_time_success(void)
+{
     const char *input = "output xyz test/output/cluster interval time 0.5\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -532,16 +576,19 @@ void test_output_xyz_interval_time_success(void) {
 
     TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode, "XYZ schedule interval time mode");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode,
+                                  "XYZ schedule interval time mode");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->xyz_schedule.interval, "XYZ interval value");
     // Check next_log_checkpoint for interval time mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->next_xyz_checkpoint, "XYZ next_xyz_checkpoint should match first checkpoint");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->next_xyz_checkpoint,
+                                     "XYZ next_xyz_checkpoint should match first checkpoint");
     TEST_ASSERT_FALSE_MESSAGE(ls->output_state_csv, "CSV output flag when only XYZ output");
     TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
     TEST_ASSERT_FALSE_MESSAGE(ls->xyz_stripped, "XYZ stripped flag should be false by default");
 }
 
-void test_output_xyz_stripped_success(void) {
+void test_output_xyz_stripped_success(void)
+{
     const char *input = "output xyz stripped test/output/cluster interval time 0.2\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -549,68 +596,88 @@ void test_output_xyz_stripped_success(void) {
     parse_input_file(mock_input_file, &ctx, ss, se, ls);
 
     TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
-    TEST_ASSERT_TRUE_MESSAGE(ls->xyz_stripped, "XYZ stripped flag should be true when 'stripped' is present");
+    TEST_ASSERT_TRUE_MESSAGE(ls->xyz_stripped,
+                             "XYZ stripped flag should be true when 'stripped' is present");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode, "XYZ schedule interval time mode");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode,
+                                  "XYZ schedule interval time mode");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, ls->xyz_schedule.interval, "XYZ interval value");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, ls->next_xyz_checkpoint, "XYZ next_xyz_checkpoint should match first checkpoint");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, ls->next_xyz_checkpoint,
+                                     "XYZ next_xyz_checkpoint should match first checkpoint");
     TEST_ASSERT_FALSE_MESSAGE(ls->output_state_csv, "CSV output flag when only XYZ output");
     TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
 }
 
-void test_output_iter_default_filename_success(void) {
+void test_output_iter_default_filename_success(void)
+{
     const char *input = "output steps\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, ss, se, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag should be set for 'output iter'");
-    TEST_ASSERT_TRUE_MESSAGE(strlen(ls->steps_filename) > 0, "Default steps filename should be set");
+    TEST_ASSERT_TRUE_MESSAGE(ls->output_steps_csv,
+                             "Iteration CSV output flag should be set for 'output iter'");
+    TEST_ASSERT_TRUE_MESSAGE(strlen(ls->steps_filename) > 0,
+                             "Default steps filename should be set");
     // Should end with _steps.csv
     size_t len = strlen(ls->steps_filename);
-    TEST_ASSERT_TRUE_MESSAGE(len > 10 && strcmp(ls->steps_filename + len - 10, "_steps.csv") == 0, "Default steps filename should end with _steps.csv");
+    TEST_ASSERT_TRUE_MESSAGE(len > 10 && strcmp(ls->steps_filename + len - 10, "_steps.csv") == 0,
+                             "Default steps filename should end with _steps.csv");
 }
 
-void test_output_iter_default_filename_coord_success(void) {
+void test_output_iter_default_filename_coord_success(void)
+{
     const char *input = "output steps coord\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, ss, se, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag should be set for 'output iter'");
-    TEST_ASSERT_TRUE_MESSAGE(strlen(ls->steps_filename) > 0, "Default steps filename should be set");
+    TEST_ASSERT_TRUE_MESSAGE(ls->output_steps_csv,
+                             "Iteration CSV output flag should be set for 'output iter'");
+    TEST_ASSERT_TRUE_MESSAGE(strlen(ls->steps_filename) > 0,
+                             "Default steps filename should be set");
     TEST_ASSERT_TRUE_MESSAGE(ls->steps_coord, "Steps CSV coordination");
     // Should end with _steps.csv
     size_t len = strlen(ls->steps_filename);
-    TEST_ASSERT_TRUE_MESSAGE(len > 10 && strcmp(ls->steps_filename + len - 10, "_steps.csv") == 0, "Default steps filename should end with _steps.csv");
+    TEST_ASSERT_TRUE_MESSAGE(len > 10 && strcmp(ls->steps_filename + len - 10, "_steps.csv") == 0,
+                             "Default steps filename should end with _steps.csv");
 }
 
-void test_output_iter_with_filename_success(void) {
+void test_output_iter_with_filename_success(void)
+{
     const char *input = "output steps my_steps.csv\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, ss, se, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag should be set for 'output iter' with filename");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("my_steps.csv", ls->steps_filename, "Steps filename should match provided filename");
+    TEST_ASSERT_TRUE_MESSAGE(
+        ls->output_steps_csv,
+        "Iteration CSV output flag should be set for 'output iter' with filename");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("my_steps.csv", ls->steps_filename,
+                                     "Steps filename should match provided filename");
 }
 
-void test_output_iter_with_filename_coord_success(void) {
+void test_output_iter_with_filename_coord_success(void)
+{
     const char *input = "output steps my_steps.csv coord\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, ss, se, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag should be set for 'output iter' with filename");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("my_steps.csv", ls->steps_filename, "Steps filename should match provided filename");
+    TEST_ASSERT_TRUE_MESSAGE(
+        ls->output_steps_csv,
+        "Iteration CSV output flag should be set for 'output iter' with filename");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("my_steps.csv", ls->steps_filename,
+                                     "Steps filename should match provided filename");
     TEST_ASSERT_TRUE_MESSAGE(ls->steps_coord, "Steps csv coord flag");
 }
 
-void test_output_iter_with_filename_and_extra_args_fails(void) {
+void test_output_iter_with_filename_and_extra_args_fails(void)
+{
     const char *input = "output steps my_steps.csv extra\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -621,8 +688,10 @@ void test_output_iter_with_filename_and_extra_args_fails(void) {
     });
 }
 
-void test_output_invalid_mode_fails(void) {
-    const char *input = "output csv test/output/cluster.csv cadence iteration 200 fields iter time\n";
+void test_output_invalid_mode_fails(void)
+{
+    const char *input =
+        "output csv test/output/cluster.csv cadence iteration 200 fields iter time\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
@@ -632,8 +701,10 @@ void test_output_invalid_mode_fails(void) {
     });
 }
 
-void test_output_missing_fields_keyword_fails(void) {
-    const char *input = "output csv test/output/cluster.csv interval iteration 200 iter time energy\n";
+void test_output_missing_fields_keyword_fails(void)
+{
+    const char *input =
+        "output csv test/output/cluster.csv interval iteration 200 iter time energy\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
@@ -643,7 +714,8 @@ void test_output_missing_fields_keyword_fails(void) {
     });
 }
 
-void test_output_fields_empty_fails(void) {
+void test_output_fields_empty_fails(void)
+{
     const char *input = "output csv test/output/cluster.csv interval iteration 200 fields\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -654,8 +726,10 @@ void test_output_fields_empty_fails(void) {
     });
 }
 
-void test_output_xyz_with_fields_fails(void) {
-    const char *input = "output xyz test/output/cluster.xyz interval iteration 200 fields iter time\n";
+void test_output_xyz_with_fields_fails(void)
+{
+    const char *input =
+        "output xyz test/output/cluster.xyz interval iteration 200 fields iter time\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
@@ -665,7 +739,8 @@ void test_output_xyz_with_fields_fails(void) {
     });
 }
 
-void test_output_csv_default_filename_time_success(void) {
+void test_output_csv_default_filename_time_success(void)
+{
     const char *input = "output csv interval iteration 100 fields iter time\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -693,7 +768,8 @@ void test_output_csv_default_filename_time_success(void) {
     }
     long max_deviation = 1;
     char deviation_msg[64];
-    snprintf(deviation_msg, sizeof(deviation_msg), "CSV filename time deviation should be <= %ld second(s)", max_deviation);
+    snprintf(deviation_msg, sizeof(deviation_msg),
+             "CSV filename time deviation should be <= %ld second(s)", max_deviation);
     TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
 
     TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "CSV output flag");
@@ -701,10 +777,11 @@ void test_output_csv_default_filename_time_success(void) {
     TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
 }
 
-void test_output_xyz_default_prefix_time_success(void) {
+void test_output_xyz_default_prefix_time_success(void)
+{
     const char *input = "output xyz interval iteration 100\n";
     ParseContext ctx = {0};
-    mock_input_file = open_mem(input);    
+    mock_input_file = open_mem(input);
     time_t now = time(NULL);
 
     parse_input_file(mock_input_file, &ctx, ss, se, ls);
@@ -729,14 +806,17 @@ void test_output_xyz_default_prefix_time_success(void) {
     }
     long max_deviation = 1;
     char deviation_msg[64];
-    snprintf(deviation_msg, sizeof(deviation_msg), "XYZ prefix time deviation should be <= %ld second(s)", max_deviation);
+    snprintf(deviation_msg, sizeof(deviation_msg),
+             "XYZ prefix time deviation should be <= %ld second(s)", max_deviation);
     TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
     TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
     TEST_ASSERT_FALSE_MESSAGE(ls->xyz_stripped, "XYZ stripped flag should be false by default");
 }
 
-void test_output_unrecognized_field_fails(void) {
-    const char *input = "output csv test/output/cluster.csv interval iteration 200 fields iter time notafield\n";
+void test_output_unrecognized_field_fails(void)
+{
+    const char *input =
+        "output csv test/output/cluster.csv interval iteration 200 fields iter time notafield\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
@@ -746,7 +826,8 @@ void test_output_unrecognized_field_fails(void) {
     });
 }
 
-void test_output_unsupported_field_for_flavor_fails(void) {
+void test_output_unsupported_field_for_flavor_fails(void)
+{
     const char *input =
         "flavor KMC\n"
         "output csv test/output/cluster.csv interval iteration 200 fields iter time notafield\n";
@@ -760,8 +841,10 @@ void test_output_unsupported_field_for_flavor_fails(void) {
     });
 }
 
-void test_output_non_numeric_interval_fails(void) {
-    const char *input = "output csv test/output/cluster.csv interval iteration notanumber fields iter time\n";
+void test_output_non_numeric_interval_fails(void)
+{
+    const char *input =
+        "output csv test/output/cluster.csv interval iteration notanumber fields iter time\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
 
@@ -771,7 +854,8 @@ void test_output_non_numeric_interval_fails(void) {
     });
 }
 
-void test_geometry_cluster_success(void) {
+void test_geometry_cluster_success(void)
+{
     const char *input = "geometry cluster 32\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -782,7 +866,8 @@ void test_geometry_cluster_success(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(32, se->cluster_radius, "Cluster radius");
 }
 
-void test_geometry_invalid_type_fails(void) {
+void test_geometry_invalid_type_fails(void)
+{
     const char *input = "geometry cube 4\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -793,7 +878,8 @@ void test_geometry_invalid_type_fails(void) {
     });
 }
 
-void test_run_iteration_mode_success(void) {
+void test_run_iteration_mode_success(void)
+{
     const char *input = "run iteration 2000\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -805,7 +891,8 @@ void test_run_iteration_mode_success(void) {
                                    "Final iteration value");
 }
 
-void test_run_unknown_mode_fails(void) {
+void test_run_unknown_mode_fails(void)
+{
     const char *input = "run steps 100\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -816,7 +903,8 @@ void test_run_unknown_mode_fails(void) {
     });
 }
 
-void test_flavor_kmc_success(void) {
+void test_flavor_kmc_success(void)
+{
     const char *input = "flavor KMC\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -826,7 +914,8 @@ void test_flavor_kmc_success(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_KMC, se->flavor, "Simulation flavor");
 }
 
-void test_flavor_invalid_value_fails(void) {
+void test_flavor_invalid_value_fails(void)
+{
     const char *input = "flavor BAD\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -837,7 +926,8 @@ void test_flavor_invalid_value_fails(void) {
     });
 }
 
-void test_systemsize_wrong_argcount_fails(void) {
+void test_systemsize_wrong_argcount_fails(void)
+{
     const char *input = "systemsize 10 11\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -848,7 +938,8 @@ void test_systemsize_wrong_argcount_fails(void) {
     });
 }
 
-void test_temp_extra_arg_fails(void) {
+void test_temp_extra_arg_fails(void)
+{
     const char *input = "temp 300 301\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -859,7 +950,8 @@ void test_temp_extra_arg_fails(void) {
     });
 }
 
-void test_seed_missing_arg_fails(void) {
+void test_seed_missing_arg_fails(void)
+{
     const char *input = "seed\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -870,7 +962,8 @@ void test_seed_missing_arg_fails(void) {
     });
 }
 
-void test_potential_non_numeric_sweep_fails(void) {
+void test_potential_non_numeric_sweep_fails(void)
+{
     const char *input = "potential 0.9 foo 1.2\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -881,7 +974,8 @@ void test_potential_non_numeric_sweep_fails(void) {
     });
 }
 
-void test_geometry_cluster_non_numeric_fails(void) {
+void test_geometry_cluster_non_numeric_fails(void)
+{
     const char *input = "geometry cluster radius\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -892,7 +986,8 @@ void test_geometry_cluster_non_numeric_fails(void) {
     });
 }
 
-void test_geometry_file_missing_name_fails(void) {
+void test_geometry_file_missing_name_fails(void)
+{
     const char *input = "geometry file\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -903,7 +998,8 @@ void test_geometry_file_missing_name_fails(void) {
     });
 }
 
-void test_run_iteration_non_numeric_fails(void) {
+void test_run_iteration_non_numeric_fails(void)
+{
     const char *input = "run iteration ten\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -914,7 +1010,8 @@ void test_run_iteration_non_numeric_fails(void) {
     });
 }
 
-void test_run_bad_argcount_fails(void) {
+void test_run_bad_argcount_fails(void)
+{
     const char *input = "run time\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -925,7 +1022,8 @@ void test_run_bad_argcount_fails(void) {
     });
 }
 
-void test_nne_non_numeric_value_fails(void) {
+void test_nne_non_numeric_value_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "nnlevels 1\n"
                         "1nne 0.1 x 0.3\n";
@@ -939,7 +1037,8 @@ void test_nne_non_numeric_value_fails(void) {
     });
 }
 
-void test_composition_sum_not_one_fails(void) {
+void test_composition_sum_not_one_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "composition 0.6 0.5\n";
 
@@ -953,7 +1052,8 @@ void test_composition_sum_not_one_fails(void) {
     });
 }
 
-void test_dissolution_count_mismatch_additional_fails(void) {
+void test_dissolution_count_mismatch_additional_fails(void)
+{
     const char *input = "atomtype A B C\n"
                         "dissolution true false\n";
 
@@ -967,7 +1067,8 @@ void test_dissolution_count_mismatch_additional_fails(void) {
     });
 }
 
-void test_atomtype_three_types_success(void) {
+void test_atomtype_three_types_success(void)
+{
     const char *input = "atomtype Ag Au Cu\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -982,7 +1083,8 @@ void test_atomtype_three_types_success(void) {
     TEST_ASSERT_EQUAL_STRING_MESSAGE("Cu", se->atom_names[2], "Atom type name at index 2");
 }
 
-void test_atomtype_missing_args_fails(void) {
+void test_atomtype_missing_args_fails(void)
+{
     const char *input = "atomtype\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -993,7 +1095,8 @@ void test_atomtype_missing_args_fails(void) {
     });
 }
 
-void test_composition_two_types_finalize_success(void) {
+void test_composition_two_types_finalize_success(void)
+{
     const char *input = "atomtype A B\n"
                         "composition 0.25 0.75\n";
     ParseContext ctx = {0};
@@ -1006,7 +1109,8 @@ void test_composition_two_types_finalize_success(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.75, se->substrate_composition[1], "Composition at index 1");
 }
 
-void test_composition_missing_values_fails(void) {
+void test_composition_missing_values_fails(void)
+{
     const char *input = "composition\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -1017,7 +1121,8 @@ void test_composition_missing_values_fails(void) {
     });
 }
 
-void test_dissolution_all_true_sets_flag_success(void) {
+void test_dissolution_all_true_sets_flag_success(void)
+{
     const char *input = "atomtype A B C\n"
                         "dissolution true true true\n";
     ParseContext ctx = {0};
@@ -1032,7 +1137,8 @@ void test_dissolution_all_true_sets_flag_success(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, se->dissolution, "Dissolution flag");
 }
 
-void test_dissolution_missing_values_fails(void) {
+void test_dissolution_missing_values_fails(void)
+{
     const char *input = "dissolution\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -1043,7 +1149,8 @@ void test_dissolution_missing_values_fails(void) {
     });
 }
 
-void test_nnlevels_single_value_success(void) {
+void test_nnlevels_single_value_success(void)
+{
     const char *input = "nnlevels 3\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -1053,7 +1160,8 @@ void test_nnlevels_single_value_success(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(3, se->num_nn_levels, "NN levels value");
 }
 
-void test_nnlevels_non_numeric_fails(void) {
+void test_nnlevels_non_numeric_fails(void)
+{
     const char *input = "nnlevels abc\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -1064,7 +1172,8 @@ void test_nnlevels_non_numeric_fails(void) {
     });
 }
 
-void test_nne_missing_values_fails(void) {
+void test_nne_missing_values_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "nnlevels 1\n"
                         "1nne\n";
@@ -1079,7 +1188,8 @@ void test_nne_missing_values_fails(void) {
 
 /* === Finalization checks === */
 
-void test_finalize_nne_missing_nnlevels_fails(void) {
+void test_finalize_nne_missing_nnlevels_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "1nne 0.1 0.2 0.3\n";
     ParseContext ctx = {0};
@@ -1092,7 +1202,8 @@ void test_finalize_nne_missing_nnlevels_fails(void) {
     });
 }
 
-void test_finalize_atom_dependent_direct_success(void) {
+void test_finalize_atom_dependent_direct_success(void)
+{
     const char *input = "atomtype A B\n"
                         "composition 0.4 0.6\n"
                         "dissolution false true\n";
@@ -1111,7 +1222,8 @@ void test_finalize_atom_dependent_direct_success(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, se->dissolution, "Finalized dissolution flag");
 }
 
-void test_finalize_atom_dependent_missing_atomtype_fails(void) {
+void test_finalize_atom_dependent_missing_atomtype_fails(void)
+{
     const char *input = "composition 1.0\n";
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -1123,7 +1235,8 @@ void test_finalize_atom_dependent_missing_atomtype_fails(void) {
     });
 }
 
-void test_finalize_nne_direct_single_shell_success(void) {
+void test_finalize_nne_direct_single_shell_success(void)
+{
     const char *input = "atomtype A B\n"
                         "nnlevels 1\n"
                         "1nne 0.11 0.22 0.33\n";
@@ -1139,7 +1252,8 @@ void test_finalize_nne_direct_single_shell_success(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.33, se->nn_energy[2], "NN energy at index 2");
 }
 
-void test_finalize_nne_direct_duplicate_shell_fails(void) {
+void test_finalize_nne_direct_duplicate_shell_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "nnlevels 1\n"
                         "1nne 0.1 0.2 0.3\n"
@@ -1154,7 +1268,8 @@ void test_finalize_nne_direct_duplicate_shell_fails(void) {
     });
 }
 
-void test_finalize_nne_direct_level_exceeds_nnlevels_fails(void) {
+void test_finalize_nne_direct_level_exceeds_nnlevels_fails(void)
+{
     const char *input = "atomtype A B\n"
                         "nnlevels 1\n"
                         "2nne 0.1 0.2 0.3\n";
@@ -1169,19 +1284,19 @@ void test_finalize_nne_direct_level_exceeds_nnlevels_fails(void) {
 }
 
 /* === Required commands checks === */
-void test_required_commands_all_present_success(void) {
-    const char *input =
-        "systemsize 8 8 8\n"
-        "struct FCC\n"
-        "geometry cluster 4\n"
-        "atomtype Ag Au\n"
-        "composition 0.5 0.5\n"
-        "dissolution true false\n"
-        "nnlevels 1\n"
-        "1nne 0.1 0.2 0.3\n"
-        "run iteration 10\n"
-        "flavor KMC\n"
-        "temp 300\n";
+void test_required_commands_all_present_success(void)
+{
+    const char *input = "systemsize 8 8 8\n"
+                        "struct FCC\n"
+                        "geometry cluster 4\n"
+                        "atomtype Ag Au\n"
+                        "composition 0.5 0.5\n"
+                        "dissolution true false\n"
+                        "nnlevels 1\n"
+                        "1nne 0.1 0.2 0.3\n"
+                        "run iteration 10\n"
+                        "flavor KMC\n"
+                        "temp 300\n";
 
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -1207,7 +1322,8 @@ void test_required_commands_all_present_success(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(300.0, ss->temperature, "Temperature");
 }
 
-void test_missing_required_systemsize_fails(void) {
+void test_missing_required_systemsize_fails(void)
+{
     const char *input =
         /* "systemsize 8 8 8\n" intentionally omitted */
         "struct FCC\n"
@@ -1232,19 +1348,19 @@ void test_missing_required_systemsize_fails(void) {
     });
 }
 
-void test_missing_required_struct_fails(void) {
-    const char *input =
-        "systemsize 8 8 8\n"
-        /* "struct FCC\n" intentionally omitted */
-        "geometry cluster 4\n"
-        "atomtype Ag Au\n"
-        "composition 0.5 0.5\n"
-        "dissolution true false\n"
-        "nnlevels 1\n"
-        "1nne 0.1 0.2 0.3\n"
-        "run iteration 10\n"
-        "flavor KMC\n"
-        "temp 300\n";
+void test_missing_required_struct_fails(void)
+{
+    const char *input = "systemsize 8 8 8\n"
+                        /* "struct FCC\n" intentionally omitted */
+                        "geometry cluster 4\n"
+                        "atomtype Ag Au\n"
+                        "composition 0.5 0.5\n"
+                        "dissolution true false\n"
+                        "nnlevels 1\n"
+                        "1nne 0.1 0.2 0.3\n"
+                        "run iteration 10\n"
+                        "flavor KMC\n"
+                        "temp 300\n";
 
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -1257,7 +1373,8 @@ void test_missing_required_struct_fails(void) {
     });
 }
 
-void test_missing_multiple_required_commands_fails(void) {
+void test_missing_multiple_required_commands_fails(void)
+{
     const char *input =
         /* "systemsize 8 8 8\n" intentionally omitted */
         /* "struct FCC\n" intentionally omitted */
@@ -1278,11 +1395,13 @@ void test_missing_multiple_required_commands_fails(void) {
         parse_input_file(mock_input_file, &ctx, ss, se, ls);
         finalize_config(&ctx, ss, se, ls);
         check_required_inputs(&ctx, se->flavor);
-        TEST_FAIL_MESSAGE("Expected failure due to multiple missing required commands: systemsize, struct");
+        TEST_FAIL_MESSAGE(
+            "Expected failure due to multiple missing required commands: systemsize, struct");
     });
 }
 
-void test_missing_all_required_commands_fails(void) {
+void test_missing_all_required_commands_fails(void)
+{
     const char *input = "# No required commands present\n";
 
     ParseContext ctx = {0};
@@ -1296,19 +1415,19 @@ void test_missing_all_required_commands_fails(void) {
     });
 }
 
-void test_required_commands_invalid_args_fail_for_argument(void) {
-    const char *input =
-        "systemsize 8 X 8\n" // 'X' is invalid
-        "struct FCC\n"
-        "geometry cluster 4\n"
-        "atomtype Ag Au\n"
-        "composition 0.5 0.5\n"
-        "dissolution true false\n"
-        "nnlevels 1\n"
-        "1nne 0.1 0.2 0.3\n"
-        "run iteration 10\n"
-        "flavor KMC\n"
-        "temp 300\n";
+void test_required_commands_invalid_args_fail_for_argument(void)
+{
+    const char *input = "systemsize 8 X 8\n" // 'X' is invalid
+                        "struct FCC\n"
+                        "geometry cluster 4\n"
+                        "atomtype Ag Au\n"
+                        "composition 0.5 0.5\n"
+                        "dissolution true false\n"
+                        "nnlevels 1\n"
+                        "1nne 0.1 0.2 0.3\n"
+                        "run iteration 10\n"
+                        "flavor KMC\n"
+                        "temp 300\n";
 
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -1321,19 +1440,19 @@ void test_required_commands_invalid_args_fail_for_argument(void) {
     });
 }
 
-void test_required_commands_commented_out_treated_as_missing(void) {
-    const char *input =
-        "# systemsize 8 8 8\n" // commented out
-        "struct FCC\n"
-        "geometry cluster 4\n"
-        "atomtype Ag Au\n"
-        "composition 0.5 0.5\n"
-        "dissolution true false\n"
-        "nnlevels 1\n"
-        "1nne 0.1 0.2 0.3\n"
-        "run iteration 10\n"
-        "flavor KMC\n"
-        "temp 300\n";
+void test_required_commands_commented_out_treated_as_missing(void)
+{
+    const char *input = "# systemsize 8 8 8\n" // commented out
+                        "struct FCC\n"
+                        "geometry cluster 4\n"
+                        "atomtype Ag Au\n"
+                        "composition 0.5 0.5\n"
+                        "dissolution true false\n"
+                        "nnlevels 1\n"
+                        "1nne 0.1 0.2 0.3\n"
+                        "run iteration 10\n"
+                        "flavor KMC\n"
+                        "temp 300\n";
 
     ParseContext ctx = {0};
     mock_input_file = open_mem(input);
@@ -1348,7 +1467,8 @@ void test_required_commands_commented_out_treated_as_missing(void) {
 
 /* ================= Runner ================= */
 
-int main(void) {
+int main(void)
+{
     UNITY_BEGIN();
 
     // End-to-end parser baselines

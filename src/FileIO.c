@@ -112,13 +112,7 @@ void process_in_file(FILE *input_file, struct SimulationState *ss, struct Simula
     ParseContext ctx = {0};
     parse_input_file(input_file, &ctx, ss, se, ls);
     finalize_config(&ctx, ss, se, ls);
-    for (int i = 0; i < ctx.nne_cmd_count; i++) {
-        free_if_exists((void **)&ctx.nne_cmds[i].values);
-    }
-    free_if_exists((void **)&ctx.nne_cmds);
-    free_if_exists((void **)&ctx.composition_raw);
-    free_if_exists((void **)&ctx.dissolution_raw);
-    free_if_exists((void **)&ctx.cmd_present);
+    clean_ctx(&ctx);
     return;
 }
 

@@ -34,7 +34,7 @@ void test_simulation(void)
     ls->sim_log = temp_log;
     char filename[] = "test/cluster_nns.in";
     simulation_parameters_from_file(filename, ss, se, ls);
-    open_log_files(log_state, sim_env->flavor);
+    open_log_files(ls, se->flavor);
 
     initialize_simulation(ss, se, ls);
 

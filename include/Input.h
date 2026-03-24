@@ -44,6 +44,7 @@ struct NNECmd {
     int line;
 };
 
+// needs to be cleaned after use - [some] functions clean only after error
 typedef struct {
     struct NNECmd *nne_cmds;
     int nne_cmd_count;
@@ -96,6 +97,7 @@ extern const Command commands[];
 
 void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
                       struct SimulationEnv *se, struct LoggingState *ls);
+void clean_ctx(ParseContext *ctx);
 void finalize_atom_dependent(const ParseContext *ctx, struct SimulationEnv *se);
 void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se);
 void finalize_csv_fields(struct LoggingState *ls, unsigned int flavor);

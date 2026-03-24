@@ -3,9 +3,9 @@
 
 #include <stdio.h>
 
-#define EXPECT_EXIT(code, block)                       \
+#define EXPECT_EXIT(exit_code, block)                       \
     do {                                               \
-        expected_exit_errno = (code);                  \
+        expected_exit_errno = (exit_code);                  \
         if (setjmp(test_exit_jmp) == 0) {              \
             jmp_set = 1;                               \
             block                                      \

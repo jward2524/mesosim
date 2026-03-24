@@ -11,12 +11,13 @@ extern volatile int jmp_set;
 extern int expected_exit_errno;
 extern jmp_buf test_exit_jmp;
 // expose to check whether they are correctly set in tests
-extern struct SimulationState *sim_state;
-extern struct SimulationEnv *sim_env;
-extern struct LoggingState *log_state;
+extern struct SimulationState **gp_sim_state;
+extern struct SimulationEnv **gp_sim_env;
+extern struct LoggingState **gp_log_state;
 #endif
 
-void set_state(struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls);
+void set_state(struct SimulationState **p_ss, struct SimulationEnv **p_se,
+               struct LoggingState **p_ls);
 void initialize_states(struct SimulationState **ss, struct SimulationEnv **se,
                        struct LoggingState **ls);
 void clean_and_error(int error);

@@ -29,8 +29,8 @@ void tearDown(void)
 {
     // fclose needs to be here in case a test fails
     // set to null to prevent double free from fclose + clean_and_error
-    if (log_state != NULL) {
-        log_state->sim_log = NULL;
+    if (gp_log_state && (*gp_log_state)->sim_log) {
+        (*gp_log_state)->sim_log = NULL;
     }
     fclose(temp_log);
     clean_and_error(0);
@@ -89,7 +89,7 @@ void test_process_in_file_cluster(void)
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_csv_checkpoint, "csv log checkpoint");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_steps_csv, "output steps csv");
     TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode,
-        "logging analysis type");
+                                  "logging analysis type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_xyz, "output xyz");
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->xyz_stripped, "stripped xyz");
 }
@@ -114,7 +114,8 @@ void test_process_in_file_mc(void)
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[0], "nn energy shell 1 idx 0");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[1], "nn energy shell 1 idx 1");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, se->nn_energy[2], "nn energy shell 1 idx 2");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode, "logging analysis type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode,
+                                  "logging analysis type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->csv_framenum, "frame number");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, se->lattice_type, "lattice type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(MAXIMUM_NUMBER_OF_NEIGHBORS, se->num_transition_vectors,
@@ -267,7 +268,7 @@ void test_log_state_csv_success(void)
 {
     ss->iter = 42;
     ss->total_internal_energy = 3.14;
-    
+
     ls->csv_framenum = 2;
     ls->csv_field_count = 2;
     ls->csv_field_funcs = malloc(2 * sizeof(CsvFieldFuncPtr));
@@ -338,7 +339,8 @@ void test_log_state_csv_mixed_fields(void)
     char buffer[256];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
     TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("3,7,-1.230000,273.150000\n", buffer, "CSV state log with mixed fields");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("3,7,-1.230000,273.150000\n", buffer,
+                                     "CSV state log with mixed fields");
 }
 
 void test_output_csv_header_many_fields(void)
@@ -500,7 +502,8 @@ void test_log_kmc_steps_evap(void)
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
     TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("99,1.230000e+00,-2.340000,3,2,1,,,\n", buffer, "KMC iter log evaporation");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("99,1.230000e+00,-2.340000,3,2,1,,,\n", buffer,
+                                     "KMC iter log evaporation");
 }
 
 void test_log_kmc_steps_evap_coord(void)
@@ -519,9 +522,9 @@ void test_log_kmc_steps_evap_coord(void)
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
     TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("99,1.230000e+00,-2.340000,3,2,1,,,,8\n", buffer, "KMC iter log evaporation");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("99,1.230000e+00,-2.340000,3,2,1,,,,8\n", buffer,
+                                     "KMC iter log evaporation");
 }
-
 
 void test_write_xyz_suffix_iteration(void)
 {
@@ -556,7 +559,7 @@ void test_input_logging_basic(void)
     se->system_size_z = 30;
     se->lattice_type = FCC;
     se->num_elements = 1;
-    se->atom_names = malloc(sizeof(char*));
+    se->atom_names = malloc(sizeof(char *));
     se->atom_names[0] = dup_str("Ag");
     se->substrate_composition = malloc(sizeof(double));
     se->substrate_composition[0] = 1.0;
@@ -609,13 +612,13 @@ void test_write_xyz_file_creates_file_and_content(void)
     ss->temperature = 4.0;
     ss->overpotential = 5.0;
     ss->total_internal_energy = 6.0;
-    ss->atom_arr = malloc(sizeof(Atom*));
+    ss->atom_arr = malloc(sizeof(Atom *));
     ss->atom_arr[0] = malloc(sizeof(Atom));
     ss->atom_arr[0]->type = 0;
     ss->atom_arr[0]->cartesian[0] = 1.1;
     ss->atom_arr[0]->cartesian[1] = 2.2;
     ss->atom_arr[0]->cartesian[2] = 3.3;
-    se->atom_names = malloc(sizeof(char*));
+    se->atom_names = malloc(sizeof(char *));
     se->atom_names[0] = dup_str("Ag");
     se->num_transition_vectors = 1;
     se->simbox_vectors_cart[0][0] = 1.0;
@@ -663,13 +666,13 @@ void test_write_logs_increments_framenums(void)
     ss->temperature = 1.0;
     ss->overpotential = 1.0;
     ss->total_internal_energy = 1.0;
-    ss->atom_arr = malloc(sizeof(Atom*));
+    ss->atom_arr = malloc(sizeof(Atom *));
     ss->atom_arr[0] = malloc(sizeof(Atom));
     ss->atom_arr[0]->type = 0;
     ss->atom_arr[0]->cartesian[0] = 0.0;
     ss->atom_arr[0]->cartesian[1] = 0.0;
     ss->atom_arr[0]->cartesian[2] = 0.0;
-    se->atom_names = malloc(sizeof(char*));
+    se->atom_names = malloc(sizeof(char *));
     se->atom_names[0] = dup_str("Ag");
     se->num_transition_vectors = 1;
     se->simbox_vectors_cart[0][0] = 1.0;
@@ -712,13 +715,13 @@ void test_output_if_passed_checkpoint_triggers_write_logs(void)
     ss->temperature = 1.0;
     ss->overpotential = 1.0;
     ss->total_internal_energy = 1.0;
-    ss->atom_arr = malloc(sizeof(Atom*));
+    ss->atom_arr = malloc(sizeof(Atom *));
     ss->atom_arr[0] = malloc(sizeof(Atom));
     ss->atom_arr[0]->type = 0;
     ss->atom_arr[0]->cartesian[0] = 0.0;
     ss->atom_arr[0]->cartesian[1] = 0.0;
     ss->atom_arr[0]->cartesian[2] = 0.0;
-    se->atom_names = malloc(sizeof(char*));
+    se->atom_names = malloc(sizeof(char *));
     se->atom_names[0] = dup_str("Ag");
     se->num_transition_vectors = 1;
     se->simbox_vectors_cart[0][0] = 1.0;
@@ -759,7 +762,7 @@ void test_output_if_passed_checkpoint_triggers_write_logs(void)
     remove(filename);
 }
 
-int main(void) 
+int main(void)
 {
     UNITY_BEGIN();
 
