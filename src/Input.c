@@ -871,7 +871,6 @@ void finalize_atom_dependent(const ParseContext *p_ctx, struct SimulationEnv *se
         if (p_ctx->composition_count != se->atom_names_cnt) {
             fprintf(stderr, "composition count mismatch at line %d\n", p_ctx->composition_line);
             clean_ctx((ParseContext *)p_ctx);
-            ;
             clean_and_error(INPUT_ERR_COUNT_MISMATCH);
         }
         double total = 0.0;
@@ -881,7 +880,6 @@ void finalize_atom_dependent(const ParseContext *p_ctx, struct SimulationEnv *se
         if (fabs(total - 1.0) > 1e-10) {
             fprintf(stderr, "composition values must sum to 1.0, got %.17g\n", total);
             clean_ctx((ParseContext *)p_ctx);
-            ;
             clean_and_error(INPUT_ERR_MISSING_DEPENDENCY);
         }
         se->substrate_composition = (double *)malloc((size_t)se->atom_names_cnt * sizeof(double));
@@ -889,7 +887,6 @@ void finalize_atom_dependent(const ParseContext *p_ctx, struct SimulationEnv *se
             fprintf(stderr, "Couldn't allocate memory for substrate composition: %s",
                     strerror(errno));
             clean_ctx((ParseContext *)p_ctx);
-            ;
             clean_and_error(INPUT_ERR_ALLOC);
         }
         memcpy(se->substrate_composition, p_ctx->composition_raw,
@@ -900,7 +897,6 @@ void finalize_atom_dependent(const ParseContext *p_ctx, struct SimulationEnv *se
         if (p_ctx->dissolution_count != se->atom_names_cnt) {
             fprintf(stderr, "dissolution count mismatch at line %d\n", p_ctx->dissolution_line);
             clean_ctx((ParseContext *)p_ctx);
-            ;
             clean_and_error(INPUT_ERR_COUNT_MISMATCH);
         }
         se->is_soluble = (bool *)malloc((size_t)se->atom_names_cnt * sizeof(bool));
@@ -908,7 +904,6 @@ void finalize_atom_dependent(const ParseContext *p_ctx, struct SimulationEnv *se
             fprintf(stderr, "Couldn't allocate memory for dissolution flags, is_soluble: %s",
                     strerror(errno));
             clean_ctx((ParseContext *)p_ctx);
-            ;
             clean_and_error(INPUT_ERR_ALLOC);
         }
         memcpy(se->is_soluble, p_ctx->dissolution_raw, (size_t)se->atom_names_cnt * sizeof(bool));

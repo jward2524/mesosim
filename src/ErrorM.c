@@ -53,7 +53,7 @@ void initialize_states(struct SimulationState **p_ss, struct SimulationEnv **p_s
 }
 
 // frees pointer only if it isn't NULL and sets pointer to NULL after free
-INTERNAL void free_if_exists(void **pointer)
+void free_if_exists(void **pointer)
 {
     if (*pointer == NULL) {
         return;

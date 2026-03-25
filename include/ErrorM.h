@@ -23,10 +23,8 @@ void initialize_states(struct SimulationState **ss, struct SimulationEnv **se,
 void clean_and_error(int error);
 void call_exit(int errnum);
 
-#ifdef TEST
-// expose for testing
+// utility function for heap cleanup
 void free_if_exists(void **pointer);
-#endif
 
 #ifdef DUMP_CORE
 void create_coredump(void);
