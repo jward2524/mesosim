@@ -79,7 +79,7 @@ void create_coredump(void)
     // child continues, parent ends
     if (child_pid == 0) {
         char attach_str[32];
-        char gcore_str[32];
+        char gcore_str[64];
         snprintf(attach_str, sizeof(attach_str), "attach %d", parent_pid);
         snprintf(gcore_str, sizeof(gcore_str), "generate-core-file core%d.%d",
                  (*gp_log_state)->xyz_framenum, parent_pid);
