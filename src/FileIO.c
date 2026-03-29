@@ -426,7 +426,7 @@ void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct 
     safe_log(ls->sim_log, "Temperature is %lf K\n", ss->temperature);
 
     if (se->overpotential_ramp_rate > 0.) {
-        safe_log(ls->sim_log, "Potential sweep [eV/s] from %lf to %lf at %lf\n", ss->overpotential,
+        safe_log(ls->sim_log, "Potential sweep from %lfeV to %lfeV at %lfeV/s\n", ss->overpotential,
                  se->overpotential_ramp_rate, se->max_overpotential);
     } else {
         safe_log(ls->sim_log, "Potential constant [eV] at %lf\n", ss->overpotential);
@@ -440,13 +440,13 @@ void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct 
         switch (ls->csv_schedule.mode) {
         case OUTPUT_SCHEDULE_INTERVAL_ITERATION:
             safe_log(ls->sim_log,
-                     "Recording data at linear intervals [iterations] from %lf to %lf at %lf increments\n",
-                     ls->next_csv_checkpoint, ss->run_stime, ls->csv_schedule.interval);
+                     "Recording data at linear intervals [iterations] from at %.2lf increments\n",
+                     ls->csv_schedule.interval);
             break;
         case OUTPUT_SCHEDULE_INTERVAL_TIME:
             safe_log(ls->sim_log,
-                     "Recording data at linear intervals [s] from %lf to %lf at %lf multiples\n",
-                     ls->next_csv_checkpoint, ss->run_stime, ls->csv_schedule.interval);
+                     "Recording data at linear intervals [s] from at %.2lg multiples\n",
+                     ls->csv_schedule.interval);
             break;
         case OUTPUT_SCHEDULE_LIST_ITERATION:
             safe_log(ls->sim_log, "Recording data at iterations %s\n", buf);
