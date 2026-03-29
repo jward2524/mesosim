@@ -1,428 +1,103 @@
-# Simulation Input File Format
+# Mesosim
 
-## 1. Example Input File
+Mesosim is a Monte Carlo simulation tool for mesoscale modeling of atomic systems governed by bond-breaking physics, inspired by LAMMPS and SPPARKS. It supports flexible input scripts, various crystal structures, and multiple simulation flavors (KMC, MC). Mesosim is designed for research and educational use in computational materials science.
 
-```text
-systemsize NX NY NZ
-temp T
-struct FCC|BCC|SC
-geometry (sheet N|cluster R|file path)
-atomtype A B C ...
-composition xA xB xC ...
-dissolution true|false ...
-nnlevels N
-1nne eAA eAB ...
-run time|iteration value
-flavor KMC|MC
+## Features
+- Flexible input script format (similar to LAMMPS/SPPARKS)
+- Supports FCC, BCC, and SC crystal structures
+- Sheet, cluster, and file-based geometry initialization
+- N-ary atomic systems
+- System evolution via diffusion and evaporation/dissolution governed by a broken-bond model
+- M-nearest neighbor shell energy specification
+- CSV and XYZ data recording formats
+- Multiple simulation flavors: Kinetic Monte Carlo (KMC), Monte Carlo (MC)
+
+## Input File Format
+Input scripts are read line-by-line. Repeated commands are overwritten by the most recent instance. Simulation starts after the full input file is read. For a full list of commands and details, see `docs/Commands.md`.
+
+Example input:
+```
+systemsize 20 20 20
+struct FCC
+geometry cluster 8
+atomtype A B
+composition 0.5 0.5
+dissolution true false
+nnlevels 1
+nne 0.1 0.2 0.3 0.1 0.2 0.3
+run time 1000
+flavor KMC
 ```
 
-## 2. Conceptual Organization
+### Key Commands
+- `systemsize NX NY NZ` — Set system size
+- `struct FCC|BCC|SC` — Crystal structure
+- `geometry (sheet N|cluster R|file path)` — Geometry initialization
+- `atomtype A B C ...` — Atom types
+- `composition xA xB xC ...` — Atomic fractions
+- `dissolution true|false ...` — Atom dissolution flags
+- `nnlevels N` — Number of neighbor shells
+- `nne eAA eAB ...` — Neighbor energies
+- `run time|iteration value` — Simulation end condition
+- `flavor KMC|MC` — Simulation algorithm
+- `potential initial [ramp max]` — Electric potential sweep
+- `seed default|random|int` — Random seed
+- `output [type] filename ...` — Output file name
 
-### Geometry
+## Building Mesosim
 
-| Command | Required | Description |
-|----------|----------|-------------|
-| `temp` | Yes | Simulation temperature in K. |
-| `potential` | No | Constant or swept electric potential. Default: 0 |
-| `nnlevels` | Yes | Number of nearest-neighbor shells. |
-| `nne` | Yes | Nearest-neighbor energies for shell n (flattened upper-triangle). For a three-component system: AA AB AC BB BC CC |
+Mesosim uses a flexible Makefile supporting multiple build types and traditional Make variables to control compilation.
 
-### Output and Logging
+### Build Types
+- **release** (default): Optimized build for production
+- **debug**: Debug build with symbols and no optimization
+- **test**: Build with unit tests
+- **dbtest**: Debug build with unit tests
+- **docs**: Build documentation tools
 
-| Command | Required | Description |
-|----------|----------|-------------|
-| `seed` | No | Selection of the random seed value. Default: default |
-| `run` | Yes | Simulation end condition. |
-| `flavor` | Yes | Simulation algorithm flavor. |
-
-### Thermodynamics
-
-| Command | Required | Description |
-|----------|----------|-------------|
-| `datalog` | No | Logging schedule configuration. |
-| `output` | No | Output log filename. |
-| `logtype` | No | Enable output formats. |
-| `help` | No | Show documentation for commands. |
-
-## 3. Detailed Command Reference
-
-### `systemsize`
-
-**Category:** Geometry  
-**Required:** Yes
-
-**Syntax**
-
-```text
-systemsize NX NY NZ
+### Building
+To build a specific type, use:
+```
+make [release|debug|test|dbtest|docs]
+```
+For example, to build the release version (default):
+```
+make release
+```
+Or simply:
+```
+make
 ```
 
-**Parameters**
+### Overriding Compilation Variables
+You can override compile variables by passing them on the command line:
+```
+make CC=clang CFLAGS="-O2 -Wall" SHELL=/bin/bash
+```
+This will use `clang` as the compiler, set `CFLAGS` to `-O2 -Wall`, and use `/bin/bash` as the shell.
 
-- `NX` — required
-- `NY` — required
-- `NZ` — required
-
-**Description**
-
-Simulation box size in lattice units.
-
----
-
-### `temp`
-
-**Category:** Thermodynamics  
-**Required:** Yes
-
-**Syntax**
-
-```text
-temp T
+### Clean
+To remove all build outputs:
+```
+make clean
 ```
 
-**Parameters**
-
-- `T` — required
-
-**Description**
-
-Simulation temperature in K.
-
----
-
-### `seed`
-
-**Category:** Run Control  
-**Required:** No
-
-**Syntax**
-
-```text
-seed random|default|N
+## Running Simulations
+After building, run Mesosim with your input file:
 ```
-
-**Parameters**
-
-- `random|default|N` — required
-
-**Description**
-
-Selection of the random seed value. Default: default
-
----
-
-### `potential`
-
-**Category:** Thermodynamics  
-**Required:** No
-
-**Syntax**
-
-```text
-potential U0 [dUdt Umax]
+./build/release/mesosim input/your_input.in
 ```
-
-**Parameters**
-
-- `U0` — required
-- `dUdt` — optional
-- `Umax` — optional
-
-**Description**
-
-Constant or swept electric potential. Default: 0
-
----
-
-### `datalog`
-
-**Category:** Output and Logging  
-**Required:** No
-
-**Syntax**
-
-```text
-datalog (linear|ln|iteration) (interval a [b]|list ...)
-```
-
-**Parameters**
-
-- `(linear|ln|iteration)` — required
-- `(interval` — required
-- `a` — required
-- `b|list` — optional
-- `...)` — required
-
-**Description**
-
-Logging schedule configuration.
-
----
-
-### `struct`
-
-**Category:** Geometry  
-**Required:** Yes
-
-**Syntax**
-
-```text
-struct FCC|BCC|SC
-```
-
-**Parameters**
-
-- `FCC|BCC|SC` — required
-
-**Description**
-
-Crystal structure type.
-
----
-
-### `output`
-
-**Category:** Output and Logging  
-**Required:** No
-
-**Syntax**
-
-```text
-output path/outfile.out
-```
-
-**Parameters**
-
-- `path/outfile.out` — required
-
-**Description**
-
-Output log filename.
-
----
-
-### `geometry`
-
-**Category:** Geometry  
-**Required:** Yes
-
-**Syntax**
-
-```text
-geometry (sheet N|cluster R|file path)
-```
-
-**Parameters**
-
-- `(sheet` — required
-- `N|cluster` — required
-- `R|file` — required
-- `path)` — required
-
-**Description**
-
-Initial geometry configuration.
-
----
-
-### `atomtype`
-
-**Category:** Geometry  
-**Required:** Yes
-
-**Syntax**
-
-```text
-atomtype A B [C ...]
-```
-
-**Parameters**
-
-- `A` — required
-- `B` — required
-- `C` — optional
-- `...` — optional
-
-**Description**
-
-Define atom types and their order.
-
----
-
-### `composition`
-
-**Category:** Geometry  
-**Required:** Yes
-
-**Syntax**
-
-```text
-composition xA xB [xC ...]
-```
-
-**Parameters**
-
-- `xA` — required
-- `xB` — required
-- `xC` — optional
-- `...` — optional
-
-**Description**
-
-Atomic composition fractions; order follows atomtype.
-
----
-
-### `dissolution`
-
-**Category:** Geometry  
-**Required:** Yes
-
-**Syntax**
-
-```text
-dissolution true|false ...
-```
-
-**Parameters**
-
-- `true|false` — required
-- `...` — required
-
-**Description**
-
-Dissolution flags per atom type; order follows atomtype.
-
----
-
-### `nnlevels`
-
-**Category:** Thermodynamics  
-**Required:** Yes
-
-**Syntax**
-
-```text
-nnlevels N
-```
-
-**Parameters**
-
-- `N` — required
-
-**Description**
-
-Number of nearest-neighbor shells.
-
----
-
-### `nne`
-
-**Category:** Thermodynamics  
-**Required:** Yes
-
-**Syntax**
-
-```text
-1nne eAA eAB ...
-```
-
-**Parameters**
-
-- `eAA` — required
-- `eAB` — required
-- `...` — required
-
-**Description**
-
-Nearest-neighbor energies for shell n (flattened upper-triangle). For a three-component system: AA AB AC BB BC CC
-
----
-
-### `run`
-
-**Category:** Run Control  
-**Required:** Yes
-
-**Syntax**
-
-```text
-run time|iteration value
-```
-
-**Parameters**
-
-- `time|iteration` — required
-- `value` — required
-
-**Description**
-
-Simulation end condition.
-
----
-
-### `flavor`
-
-**Category:** Run Control  
-**Required:** Yes
-
-**Syntax**
-
-```text
-flavor KMC|MC
-```
-
-**Parameters**
-
-- `KMC|MC` — required
-
-**Description**
-
-Simulation algorithm flavor.
-
----
-
-### `logtype`
-
-**Category:** Output and Logging  
-**Required:** No
-
-**Syntax**
-
-```text
-logtype [iter] [csv] [xyz]
-```
-
-**Parameters**
-
-- `iter` — optional
-- `csv` — optional
-- `xyz` — optional
-
-**Description**
-
-Enable output formats.
-
----
-
-### `help`
-
-**Category:** Output and Logging  
-**Required:** No
-
-**Syntax**
-
-```text
-help [command]
-```
-
-**Parameters**
-
-- `command` — optional
-
-**Description**
-
-Show documentation for commands.
-
----
-
+(Output location and executable name may vary by build type and platform.)
+
+## Directory Structure
+- src/ — Source code
+- include/ — Header files
+- build/ — Build outputs (debug, release, test, etc.)
+- docs/ — Documentation
+- test/ — Unit and integration test files
+
+## Documentation
+- docs/Commands.md — Input file format and command details
+
+## License
+[MIT](https://choosealicense.com/licenses/mit/)

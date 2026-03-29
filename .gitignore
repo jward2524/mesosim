@@ -8,6 +8,8 @@ bin/
 input/
 output/
 temp.log
+docs/
+!docs/*.c
 
 # timestamp tracker for make print
 print*

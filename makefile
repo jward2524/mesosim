@@ -165,8 +165,7 @@ do-build: $(do_build_deps) | $(build_paths)
 	@touch print-$(TYPE)
 
 do-docs: $(bin_path)/InputMrk.$(TARGET_EXTENSION) | $(build_paths)
-	@./$< > docs/Commands.md
-	@echo "Documentation generated at docs/Commands.md"
+	@./$<
 
 # --- Test results ---
 results = $(patsubst $(test_path)/Test%.c,$(results_path)/Test%.txt,$(test_src) )

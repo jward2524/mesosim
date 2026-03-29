@@ -194,11 +194,13 @@ void generate_input_markdown(FILE *fp, const Command *cmds)
 }
 
 int main() {
-    FILE *fp = fopen("README.md", "w");
+    char* filename = "docs/Commands.md";
+    FILE *fp = fopen(filename, "w");
     if (!fp) {
         perror("Failed to open markdown file");
         return 1;
     }
     generate_input_markdown(fp, commands);
+    printf("Documentation generated at %s\n", filename);
     return 0;
 }
