@@ -738,7 +738,7 @@ const Command commands[] = {
      CMDREQ_OPTIONAL},
 
     {"potential", cmd_potential, "potential U0 [dUdt Umax]",
-     "Constant or swept electric potential. Default: 0", CMDCAT_THERMODYNAMICS, CMDREQ_OPTIONAL,
+     "Constant or swept electric potential in eV and eV/s. Default: 0", CMDCAT_THERMODYNAMICS, CMDREQ_OPTIONAL,
      CMDREQ_FORBIDDEN},
 
     {"struct", cmd_struct, "struct FCC|BCC|SC", "Crystal structure type.", CMDCAT_GEOMETRY,
@@ -774,7 +774,7 @@ const Command commands[] = {
      "system: AA AB AC BB BC CC",
      CMDCAT_THERMODYNAMICS, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
-    {"run", cmd_run, "run time|iteration value", "Simulation end condition.", CMDCAT_RUN,
+    {"run", cmd_run, "run time|iteration value", "Simulation end condition, time in seconds.", CMDCAT_RUN,
      CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
     {"flavor", cmd_flavor, "flavor KMC|MC", "Simulation algorithm flavor.", CMDCAT_RUN,
