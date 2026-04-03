@@ -84,8 +84,9 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 
         // binary search to select transition
         while (!transition_found) {
+            // use >=/<= because transition_type_probability can be 0 or 1
             if ((transition_type_probability >= ss->transition_probability.lbound[j]) &&
-                (transition_type_probability < ss->transition_probability.ubound[j])) {
+                (transition_type_probability <= ss->transition_probability.ubound[j])) {
                 long selected_rate = ss->transition_probability.rate_arr_index[j];
 
                 // pick the lucky atom
@@ -153,7 +154,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 if (rate_skip == 0)
                     rate_skip = 1;
                 j -= rate_skip;
-            } else if (transition_type_probability >= (ss->transition_probability.ubound[j])) {
+            } else if (transition_type_probability > (ss->transition_probability.ubound[j])) {
                 // search to the right
                 rate_skip = rate_skip / 2;
                 if (rate_skip == 0)
@@ -256,10 +257,13 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
 {
 
     int nonzero_rate_cnt = 0;
-    // double sum_of_rate_populations = 0.0;
     ss->frequency_sum = 0.0;
 
     double rate_const;
+    // cumulative frequency sum, for computing transition probabilities and float imprecision from
+    // adding small probabilities
+    double *cum_frequency_sum = (double *)malloc(((size_t)ss->rate_cnt + 1) * sizeof(double));
+    cum_frequency_sum[0] = 0.0;
     Rate *r;
     // ENHANCE: parallelize
     for (int rate_idx = 0; rate_idx < ss->rate_cnt; ++rate_idx) {
@@ -279,28 +283,29 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
             r->k = rate_const;
             r->frequency = r->k * (double)r->transition_count;
             ss->frequency_sum += r->frequency;
+            cum_frequency_sum[nonzero_rate_cnt + 1] = ss->frequency_sum;
             // sum_of_rate_populations += r->transition_count;
 
             ss->transition_probability.rate_arr_index[nonzero_rate_cnt] = rate_idx;
-            ++nonzero_rate_cnt;
+            nonzero_rate_cnt++;
         }
     }
 
     // now compute bounds for jump probabilities
-
-    long rate_idx;
-    double current_probability = 0.0;
-
     for (int i = 0; i < nonzero_rate_cnt; ++i) {
-        ss->transition_probability.lbound[i] = current_probability;
-        rate_idx = ss->transition_probability.rate_arr_index[i];
-        current_probability += ss->rate_arr[rate_idx].frequency / ss->frequency_sum;
-        if (isnan(current_probability)) {
+        double lbound = cum_frequency_sum[i] / ss->frequency_sum;
+        ss->transition_probability.lbound[i] = lbound;
+
+        double ubound = cum_frequency_sum[i + 1] / ss->frequency_sum;
+        ss->transition_probability.ubound[i] = ubound;
+
+        if (isnan(lbound) || isnan(ubound)) {
             fprintf(stderr, "Probability is nan\n");
             clean_and_error(EXIT_FAILURE);
         }
-        ss->transition_probability.ubound[i] = current_probability;
     }
+
+    free(cum_frequency_sum);
 
     return;
 }

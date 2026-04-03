@@ -29,7 +29,7 @@ static int int_check(double fvalue, int ireference, double epsilon)
 }
 
 /**
- * @brief returns a random decimal on the interval [0,1)
+ * @brief returns a random decimal on the interval [0,1]
  *
  * @return double random value
  */
