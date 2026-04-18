@@ -506,6 +506,7 @@ void set_primitive_basis(struct SimulationEnv *se) // lattice_type = crystal str
     return;
 }
 
+// TODO: this doesn't respect the simulation box limits
 void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se)
 {
     double rand;
@@ -684,6 +685,9 @@ void initialize_from_file(struct SimulationState *ss, struct SimulationEnv *se,
 
 // int simbox_limits_lat[3][2]; // lattice limits of simulation box in each dimension - for zones
 // double system_size_x, double system_size_y, double system_size_z)
+// TODO: this is a mess. Units are inconsistent between input file, initialization functions, and
+// output. System size xyz inputs are used to make a primitive cell fits the sim box, so its larger
+// than the sim box
 void initialize_simulation_box(struct SimulationEnv *se)
 {
     // assuming simulation box/prism

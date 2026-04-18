@@ -1,35 +1,39 @@
 #include "Input.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
 #define MAX_PARAMS 64
-#define MAX_TOKEN  128
+#define MAX_TOKEN 128
 
 typedef struct {
     char name[MAX_TOKEN];
     int optional;
 } ParsedParam;
 
+// clang-format off
 const char *cmd_category_names[] = {
-    "Uncategorized",
-    "Geometry",
+    "Uncategorized", // -1
+    "Geometry", // 0
     "Thermodynamics",
     "Output and Logging",
     "Run Control",
 };
+// clang-format on
 
 /**
- * @brief Parse parameters from a command usage string, identifying parameter names and whether they are optional (enclosed in brackets)
- * 
- * @param usage 
- * @param params 
- * @return int 
+ * @brief Parse parameters from a command usage string, identifying parameter names and whether they
+ * are optional (enclosed in brackets)
+ *
+ * @param usage
+ * @param params
+ * @return int
  */
 static int parse_usage_params(const char *usage, ParsedParam *params)
 {
-    if (!usage) return 0;
+    if (!usage)
+        return 0;
 
     int count = 0;
     int optional_mode = 0;
@@ -133,15 +137,14 @@ void generate_input_markdown(FILE *fp, const Command *cmds)
 
         if (!printed && cat) {
 
-            fprintf(fp, "### %s\n\n", cmd_category_names[cat]);
+            fprintf(fp, "### %s\n\n", cmd_category_names[cat + 1]);
             fprintf(fp, "| Command | Required | Description |\n");
             fprintf(fp, "|----------|----------|-------------|\n");
 
             for (int k = 0; cmds[k].name != NULL; ++k) {
                 if ((cmds[k].category >= 0) && (cmds[k].category == cat)) {
 
-                    fprintf(fp, "| `%s` | %s | %s |\n",
-                            cmds[k].name,
+                    fprintf(fp, "| `%s` | %s | %s |\n", cmds[k].name,
                             cmds[k].required_kmc ? "Yes" : "No",
                             cmds[k].description ? cmds[k].description : "");
                 }
@@ -175,16 +178,14 @@ void generate_input_markdown(FILE *fp, const Command *cmds)
         if (pcount > 0) {
             fprintf(fp, "**Parameters**\n\n");
             for (int p = 0; p < pcount; ++p) {
-                fprintf(fp, "- `%s` — %s\n",
-                        params[p].name,
+                fprintf(fp, "- `%s` — %s\n", params[p].name,
                         params[p].optional ? "optional" : "required");
             }
             fprintf(fp, "\n");
         }
 
         if (cmds[i].description) {
-            fprintf(fp, "**Description**\n\n%s\n\n",
-                    cmds[i].description);
+            fprintf(fp, "**Description**\n\n%s\n\n", cmds[i].description);
         }
 
         fprintf(fp, "---\n\n");
@@ -193,8 +194,9 @@ void generate_input_markdown(FILE *fp, const Command *cmds)
     fclose(fp);
 }
 
-int main() {
-    char* filename = "docs/Commands.md";
+int main()
+{
+    char *filename = "docs/Commands.md";
     FILE *fp = fopen(filename, "w");
     if (!fp) {
         perror("Failed to open markdown file");

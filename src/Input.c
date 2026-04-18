@@ -725,10 +725,12 @@ static InputErrorFlag cmd_help(int argc, char **argv, int line, ParseContext *p_
 }
 
 /* ================= Command table ================= */
+// TODO: need to add a way to associate lattice dimensions with cartesian dimensions
 // requriements: 1 = required, 0 = optional, -1 = forbidden
 const Command commands[] = {
-    {"systemsize", cmd_systemsize, "systemsize NX NY NZ", "Simulation box size in lattice units.",
-     CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
+    {"systemsize", cmd_systemsize, "systemsize NX NY NZ",
+     "Simulation box size (x,y,z) in cartesian units.", CMDCAT_GEOMETRY, CMDREQ_REQUIRED,
+     CMDREQ_REQUIRED},
 
     {"temp", cmd_temp, "temp T", "Simulation temperature in K.", CMDCAT_THERMODYNAMICS,
      CMDREQ_REQUIRED, CMDREQ_REQUIRED},
@@ -738,8 +740,8 @@ const Command commands[] = {
      CMDREQ_OPTIONAL},
 
     {"potential", cmd_potential, "potential U0 [dUdt Umax]",
-     "Constant or swept electric potential in eV and eV/s. Default: 0", CMDCAT_THERMODYNAMICS, CMDREQ_OPTIONAL,
-     CMDREQ_FORBIDDEN},
+     "Constant or swept electric potential in eV and eV/s. Default: 0", CMDCAT_THERMODYNAMICS,
+     CMDREQ_OPTIONAL, CMDREQ_FORBIDDEN},
 
     {"struct", cmd_struct, "struct FCC|BCC|SC", "Crystal structure type.", CMDCAT_GEOMETRY,
      CMDREQ_REQUIRED, CMDREQ_REQUIRED},
@@ -753,7 +755,10 @@ const Command commands[] = {
      CMDCAT_OUTPUT, CMDREQ_OPTIONAL, CMDREQ_OPTIONAL},
 
     {"geometry", cmd_geometry, "geometry (sheet N|cluster R|file path)",
-     "Initial geometry configuration.", CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_OPTIONAL},
+     "Initial geometry configuration. `sheet` parameter is thickness in the third lattice "
+     "dimension, `cluster` parameter is the cluster radius in lattice units, and `file` parameter "
+     "is a path to an input file with atomic coordinates.",
+     CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_OPTIONAL},
 
     {"atomtype", cmd_atomtype, "atomtype A B [C ...]", "Define atom types and their order.",
      CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
@@ -774,8 +779,8 @@ const Command commands[] = {
      "system: AA AB AC BB BC CC",
      CMDCAT_THERMODYNAMICS, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
-    {"run", cmd_run, "run time|iteration value", "Simulation end condition, time in seconds.", CMDCAT_RUN,
-     CMDREQ_REQUIRED, CMDREQ_REQUIRED},
+    {"run", cmd_run, "run time|iteration value", "Simulation end condition, time in seconds.",
+     CMDCAT_RUN, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
     {"flavor", cmd_flavor, "flavor KMC|MC", "Simulation algorithm flavor.", CMDCAT_RUN,
      CMDREQ_REQUIRED, CMDREQ_REQUIRED},
