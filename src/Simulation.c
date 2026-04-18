@@ -53,9 +53,6 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     int old_x, old_y, old_z;
     // int neighbor_x, neighbor_y, neighbor_z, neighbor_idx;
 
-    if (ls->verbose)
-        printf("Setup complete, iteration start\n");
-
     while (!simulation_end) {
         ss->iter++;
 
@@ -208,8 +205,9 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         // end of updating rates
 
         // after iteration, log if necessary
-        if (ls->verbose && (ss->iter % 200 == 0))
+        if (ls->verbose && (ss->iter % ls->verbose_interval == 0)) {
             printf("Iteration %ld, time %le\n", ss->iter, ss->elapsed_stime);
+        }
 
         if (ls->output_steps_csv) {
             int uvw1[] = {old_x, old_y, old_z};

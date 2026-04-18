@@ -174,6 +174,7 @@ struct LoggingState {
     FILE *sim_log;
     int framenum; // counter/id for number of outputs / output files
     int verbose;
+    unsigned long verbose_interval; // interval for printing verbose output to console
 
     // TODO: switch to a unified output format struct that can be used for both csv and xyz and iter
     // use a base struct for shared fields and then extended structs for csv and xyz specific fields

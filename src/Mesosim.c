@@ -24,11 +24,10 @@ static struct LoggingState *log_state;
 
 static void usage(int help_type)
 {
-    if (help_type == 2){
+    if (help_type == 2) {
         printf("\nInput file commands:\n\n");
         print_help(NULL);
-    }
-    else {
+    } else {
         printf("Usage: mesosim [OPTIONS] [FILE]\n"
                "Execute the mesosim KMC simulation program, with FILE as the input file\n"
                "\n"
@@ -40,7 +39,8 @@ static void usage(int help_type)
     call_exit(EXIT_SUCCESS);
 }
 
-static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbose_flag, int *help_type)
+static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbose_flag,
+                            unsigned long *verbose_interval, int *help_type)
 {
     if (argc <= 1) {
         pfilename = NULL;
@@ -63,6 +63,12 @@ static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbo
             return;
         } else if ((strcmp(arg, "-v") == 0) || (strcmp(arg, "--verbose") == 0)) {
             *verbose_flag = 1;
+            *verbose_interval = strtoul(argv[i + 1], NULL, 10);
+            if (*verbose_interval == 0) {
+                *verbose_interval = 1000;
+            } else {
+                i++;
+            }
         } else if (arg[0] == '-') {
             // if it starts with a tack, assume it is an option that can't be parsed
             fprintf(stderr, "Unrecognized option: %s\n\n", arg);
@@ -86,8 +92,9 @@ int main(int argc, char *argv[])
 
     char *input_filename = NULL;
     int verbose_flag = 0;
+    unsigned long verbose_interval = 0;
     int help_type = 0;
-    parse_arguments(argc, argv, &input_filename, &verbose_flag, &help_type);
+    parse_arguments(argc, argv, &input_filename, &verbose_flag, &verbose_interval, &help_type);
     if (!input_filename) {
         usage(help_type);
     }
@@ -98,6 +105,7 @@ int main(int argc, char *argv[])
     initialize_states(&sim_state, &sim_env, &log_state);
 
     log_state->verbose = verbose_flag;
+    log_state->verbose_interval = verbose_interval;
     log_state->sim_log = stdout;
 
     safe_log(log_state->sim_log, "Start time: %s\n", ctime(&starttime));
