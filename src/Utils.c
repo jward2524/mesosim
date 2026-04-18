@@ -95,8 +95,8 @@ int get_bond_index(int a, int b, int num_elements)
 // calculate the number of bond types
 int get_num_bond_types(int num_elements)
 {
-    // number of bond types is number of combinations with replacement of num_elements things taken 2 at a time
-    // fact(num_elements + 2 - 1) / (fact(2) * fact(num_elements - 1));
+    // number of bond types is number of combinations with replacement of num_elements things taken
+    // 2 at a time fact(num_elements + 2 - 1) / (fact(2) * fact(num_elements - 1));
     return (num_elements * (num_elements + 1)) / 2;
 }
 
@@ -354,8 +354,10 @@ int get_type_from_name(char *atom_name, char **atom_names, int atom_names_cnt,
  * null characters
  *
  * @param line input line to tokenize - will be modified by inserting null characters
- * @param tokens output array of char* pointers to tokens in line - should be pre-allocated with size >= number of expected tokens for the line being parsed
- * @param maxtok maximum number of tokens to parse - should be >= number of expected tokens for the line being parsed
+ * @param tokens output array of char* pointers to tokens in line - should be pre-allocated with
+ * size >= number of expected tokens for the line being parsed
+ * @param maxtok maximum number of tokens to parse - should be >= number of expected tokens for the
+ * line being parsed
  * @return int number of tokens
  */
 int tokenize_line(char *line, char **tokens, int maxtok)
@@ -385,8 +387,9 @@ int tokenize_line(char *line, char **tokens, int maxtok)
 }
 
 /**
- * @brief Duplicate a string. Replicates the behavior of strdup, which isn't part of the C library until C23.
- * 
+ * @brief Duplicate a string. Replicates the behavior of strdup, which isn't part of the C library
+ * until C23.
+ *
  * @param s input string to duplicate
  * @return malloc'd char pointer to the duplicated string, or NULL if allocation fails
  */

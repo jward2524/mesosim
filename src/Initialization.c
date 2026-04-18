@@ -515,6 +515,7 @@ void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se)
                 ((se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0]) / 2);
     int half_thickness = se->sheet_thickness / 2;
 
+    // ENHANCE: parallelize and collapse
     for (int k = mid_w - half_thickness; k < mid_w + half_thickness; ++k) {
         for (int i = se->simbox_limits_lat[0][0]; i < se->simbox_limits_lat[0][1]; ++i) {
             // loop through x and y (two lattice directions)
@@ -621,6 +622,7 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
 
     // iterates through the bounding box of the sphere to identify positions in cluster
     // ENHANCE: only 52% of loops will be successful - make it more efficient
+    // ENHANCE: or parallelize and collapse
     for (int u = bblimits_lattice[0][0]; u <= bblimits_lattice[0][1]; u++) {
         for (int v = bblimits_lattice[1][0]; v <= bblimits_lattice[1][1]; v++) {
             for (int w = bblimits_lattice[2][0]; w <= bblimits_lattice[2][1]; w++) {

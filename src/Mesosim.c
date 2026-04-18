@@ -1,10 +1,10 @@
 ﻿#include "ErrorM.h"
 #include "FileIO.h"
 #include "Initialization.h"
+#include "Input.h"
 #include "MC.h"
 #include "Simulation.h"
 #include "State.h"
-#include "Input.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,9 +14,6 @@
 #ifndef TEST
 #define TEST 0
 #endif
-
-static time_t starttime = 0;
-static time_t endtime = 0;
 
 static struct SimulationState *sim_state;
 static struct SimulationEnv *sim_env;
@@ -89,7 +86,7 @@ static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbo
 
 int main(int argc, char *argv[])
 {
-
+    clock_t presim_start = clock();
     char *input_filename = NULL;
     int verbose_flag = 0;
     unsigned long verbose_interval = 0;
@@ -100,6 +97,7 @@ int main(int argc, char *argv[])
     }
 
     // start the time
+    time_t starttime = 0;
     time(&starttime);
 
     initialize_states(&sim_state, &sim_env, &log_state);
@@ -134,8 +132,13 @@ int main(int argc, char *argv[])
 
     initialize_simulation(sim_state, sim_env, log_state);
 
+    double presim_time = (double)(clock() - presim_start) / CLOCKS_PER_SEC;
+    safe_log(log_state->sim_log, "Pre-simulation setup time: %lg seconds\n", presim_time);
+
     if (log_state->verbose)
         printf("Beginning simulation\n");
+
+    clock_t sim_start = clock();
 
     // perform simulations
     unsigned long sim_error;
@@ -156,12 +159,10 @@ int main(int argc, char *argv[])
         fprintf(stderr, "ERROR! Something went wrong in the simulation\n");
         clean_and_error(EXIT_FAILURE);
     }
-
-    // finalize everything
-
-    time(&endtime);
-    safe_log(log_state->sim_log, "Finished! Total time taken: %d seconds\n",
-             (int)(endtime - starttime));
+    double sim_time = (double)(clock() - sim_start) / CLOCKS_PER_SEC;
+    safe_log(log_state->sim_log, "Simulation time: %lg seconds\n", sim_time);
+    safe_log(log_state->sim_log, "Average iteration time: %lg seconds\n",
+             sim_time / (double)sim_state->iter);
 
     clean_and_error(EXIT_SUCCESS);
 
