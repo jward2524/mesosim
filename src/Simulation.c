@@ -9,10 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-int adatom_before; // XXX: never used?
-
-int lastxt, lastyt, lastzt; // containers for coordinates of a next step
-
 // static const double FABS_TOL = 1e-6;
 
 // ENHANCE: pass struct with all simulation parameters as argument
@@ -50,6 +46,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     // update rates
     // next iteration
 
+    // containers for coordinates
+    int lastxt, lastyt, lastzt;
     int old_x, old_y, old_z;
     // int neighbor_x, neighbor_y, neighbor_z, neighbor_idx;
 
@@ -93,7 +91,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 double rand2 = drand();
                 selected_transition_idx =
                     ss->rate_arr[selected_rate].transition_start_idx +
-                    (int)(rand2 * (double)ss->rate_arr[selected_rate].transition_count);
+                    (long)(rand2 * (double)(ss->rate_arr[selected_rate].transition_count - 1));
 
                 // selected_transition_idx gives the location of the transition_arr, which gives
                 // the info about the specific atom
@@ -102,8 +100,6 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 
                 // if jump_vector == se->num_transition_vectors then the atom is going to evaporate
                 transition_found = 1;
-
-                adatom_before = 0;
 
                 old_x = ss->atom_arr[transitioning_atom_idx]->lattice[0];
                 old_y = ss->atom_arr[transitioning_atom_idx]->lattice[1];
@@ -137,8 +133,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 
                     // if not soluble, then there was an issue somewhere
                     if (!(se->is_soluble[ss->atom_arr[transitioning_atom_idx]->type])) {
-                        fprintf(stderr, "Attempting to dissolve an insoluble atom - Terminatin\n");
-                        clean_and_error(errno);
+                        fprintf(stderr, "Attempting to dissolve an insoluble atom - Terminating\n");
+                        clean_and_error(EXIT_FAILURE);
                     }
                     ++ss->total_atoms_dissolved;
                     remove_atom(transitioning_atom_idx, ss, se); // evaporate the atom
@@ -211,7 +207,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 
         if (ls->output_steps_csv) {
             int uvw1[] = {old_x, old_y, old_z};
-            // lastxyzt will have old values if it wasn't diffusion
+            // lastxyzt will have wrong values if current step was evaporation
             int uvw2[] = {lastxt, lastyt, lastzt};
             log_kmc_steps(ls->steps_csv, ss->iter, ss->elapsed_stime, ss->total_internal_energy,
                           uvw1, uvw2, is_evaporation, coord);
@@ -263,7 +259,7 @@ void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *
     double *cum_frequency_sum = (double *)malloc(((size_t)ss->rate_cnt + 1) * sizeof(double));
     cum_frequency_sum[0] = 0.0;
     Rate *r;
-    // ENHANCE: parallelize
+    // TODO: only calculate if overpoential changed or if k=-1
     for (int rate_idx = 0; rate_idx < ss->rate_cnt; ++rate_idx) {
         r = &ss->rate_arr[rate_idx];
         if (r->transition_count != 0) {
@@ -339,8 +335,6 @@ void update_outdated_transitions(int old_x, int old_y, int old_z, long transitio
     }
 }
 
-/******************************************************************************/
-/******************************************************************************/
 // updates [atom_arr[atom_idx], neighbor_atom_idxs, transition_arr[i],
 // rate_arr[i].transition_start_idx], initializes rate_arr
 int refresh_transitions(long atom_idx, struct SimulationState *ss,
@@ -409,7 +403,7 @@ int refresh_transitions(long atom_idx, struct SimulationState *ss,
     for (int i = 0; i < indices; ++i) {
         // transition can happen in the "i" direction
         if (ss->atom_arr[atom_idx]->transition_indices[i] != -1)
-            take_off_transition_list(atom_idx, i, ss);
+            remove_from_transition_list(atom_idx, i, ss);
     }
 
     // cycle through the neighbor sites
@@ -523,8 +517,17 @@ long create_new_rate(unsigned char *atom_env, int final_config_neighbor_cnt,
     return (ss->rate_cnt - 1);
 }
 
-/******************************************************************************/
-/******************************************************************************/
+/**
+ * @brief Set the transition indices index of the atom corresponding to the provided transition
+ *
+ * @param t
+ * @param transition_idx
+ * @param atom_arr
+ */
+static void set_atom_transition_indices(Transition *t, long transition_idx, Atom **atom_arr)
+{
+    atom_arr[t->atom_idx]->transition_indices[t->offset_idx] = transition_idx;
+}
 
 // add to rate_arr[rate_idx] the atom atom_idx going in direction offset_idx
 // updates transition_arr, rate_arr[rate_idx].transition_count,
@@ -533,60 +536,47 @@ void add_to_transition_list(long rate_idx, long atom_idx, unsigned char offset_i
                             struct SimulationState *ss, struct SimulationEnv *se)
 {
     // initial and final transition_arr index
-    long initial_transition_index, final_transition_index;
+    long initial_trans_idx, final_trans_idx;
+    Transition **t_arr = ss->transition_arr;
 
     // make room for the new arrival
     // adds entry to the end of the list
-    ss->transition_arr[ss->transition_cnt] = (Transition *)malloc(sizeof(Transition));
-
-    if (ss->transition_arr[ss->transition_cnt] == NULL) {
+    Transition *new_transition = (Transition *)malloc(sizeof(Transition));
+    if (new_transition == NULL) {
         fprintf(stderr, "Couldn't allocate memory for transition %ld: %s\n", ss->transition_cnt,
                 strerror(errno));
         clean_and_error(errno);
     }
-    if (ss->transition_cnt > se->max_transitions) {
-        fprintf(stderr, "More transitions (%ld) than allocated in transition array (%lu)\n",
-                ss->transition_cnt, se->max_transitions);
-        clean_and_error(errno);
-    }
+    new_transition->atom_idx = atom_idx;
+    new_transition->offset_idx = offset_idx;
 
-    // what is this
-    // final_transition_index = rate_arr[rate_cnt-1].transition_start_idx +
-    // rate_arr[rate_cnt-1].number; transition_arr[final_transition_index] =
-    // (Transition*)malloc(sizeof(Transition));
+    // make space for new transition in its rate group
+    // move transitions further down the array by taking the first transition in a rate group and
+    // moving it after its last transition, which will be open as we work backwards through the
+    // array
+    Rate *r_arr = ss->rate_arr;
+    long r_cnt = ss->rate_cnt;
+    for (long i = r_cnt - 1; i > rate_idx; --i) {
+        initial_trans_idx = r_arr[i].transition_start_idx;
+        final_trans_idx = initial_trans_idx + r_arr[i].transition_count;
 
-    // [ ]: what does this do? is this the same as in remove_transition?
-    // new transition needs to put into transition_arr with other transitions with rate rate_idx
-    // transitions with higher indices need to be moved down to make space
-    // so for each rate in rate_arr, the first transition (lowest index) is being copied into the
-    // (initial_transition_index + transition_count) index, which was just created by the above
-    // malloc or a duplicate after the initial transition from the rate above was copied
-    for (long i = ss->rate_cnt - 1; i > rate_idx; --i) {
-        initial_transition_index = ss->rate_arr[i].transition_start_idx;
-        final_transition_index = initial_transition_index + ss->rate_arr[i].transition_count;
+        t_arr[final_trans_idx] = t_arr[initial_trans_idx];
+        t_arr[initial_trans_idx] = NULL;
 
-        ss->transition_arr[final_transition_index]->atom_idx =
-            ss->transition_arr[initial_transition_index]->atom_idx;
-        ss->transition_arr[final_transition_index]->offset_idx =
-            ss->transition_arr[initial_transition_index]->offset_idx;
-
-        if (initial_transition_index != final_transition_index)
-            ss->atom_arr[ss->transition_arr[final_transition_index]->atom_idx]
-                ->transition_indices[ss->transition_arr[final_transition_index]->offset_idx] =
-                final_transition_index;
-        ++ss->rate_arr[i].transition_start_idx;
+        // avoid like two lines
+        if (initial_trans_idx != final_trans_idx) {
+            set_atom_transition_indices(t_arr[final_trans_idx], final_trans_idx, ss->atom_arr);
+        }
+        ++r_arr[i].transition_start_idx;
     }
 
     // add new arrival
+    long new_trans_idx = r_arr[rate_idx].transition_start_idx + r_arr[rate_idx].transition_count;
 
-    long n = ss->rate_arr[rate_idx].transition_start_idx + ss->rate_arr[rate_idx].transition_count;
-
-    ++ss->rate_arr[rate_idx].transition_count;
-
-    ss->transition_arr[n]->atom_idx = atom_idx;
-    ss->transition_arr[n]->offset_idx = offset_idx;
-
-    ss->atom_arr[atom_idx]->transition_indices[offset_idx] = n;
+    ss->transition_arr[new_trans_idx] = new_transition;
+    // manual set_atom_transition_indices to avoid two pointer derefernces
+    ss->atom_arr[atom_idx]->transition_indices[offset_idx] = new_trans_idx;
+    ++r_arr[rate_idx].transition_count;
 
     ++ss->transition_cnt;
     if (ss->transition_cnt > se->max_transitions) {
@@ -598,126 +588,93 @@ void add_to_transition_list(long rate_idx, long atom_idx, unsigned char offset_i
     return;
 }
 
-/******************************************************************************/
-/******************************************************************************/
 // updates atom_arr[atom_idx], transition_arr[i], rate_arr[i].transition_start_idx
 // removes atom jumping in the se->transition_vectors[offset_idx] direction
-void take_off_transition_list(long atom_idx, int offset_idx, struct SimulationState *ss)
+void remove_from_transition_list(long atom_idx, int offset_idx, struct SimulationState *ss)
 {
+    // old position on transition list, to be removed
+    long removed_t_idx = ss->atom_arr[atom_idx]->transition_indices[offset_idx];
+
+    Rate *r_arr = ss->rate_arr;
+    // find out what Rate in rate_arr this is to update it
+    // rate_idx points to the current rate list it's on
     long rate_idx = 0;
-    long transition_idx, transition_end_idx;
-
-    // find out what Rate in rate_arr this is
-
-    transition_idx =
-        ss->atom_arr[atom_idx]
-            ->transition_indices[offset_idx]; // old position on transition list, to be removed
-
-    for (long i = 0; i < ss->rate_cnt; ++i)
-        if (transition_idx <
-            (ss->rate_arr[i].transition_start_idx + ss->rate_arr[i].transition_count)) {
+    // copy of rate_cnt to avoid multiple dereferences in loop
+    long r_cnt = ss->rate_cnt;
+    for (long i = 0; i < r_cnt; ++i) {
+        if (removed_t_idx < (r_arr[i].transition_start_idx + r_arr[i].transition_count)) {
             rate_idx = i;
             break;
         }
-
-    // remind atom it can no longer jump
-
-    ss->atom_arr[atom_idx]->transition_indices[offset_idx] = -1;
-    // TODO: do these later, after it's been removed and transition_arr has been rearranged
-    --ss->transition_cnt;
-    if (ss->atom_cnt < 0) {
-        fprintf(stderr, "Number of transitions (%ld) has dropped below zero", ss->transition_cnt);
-        clean_and_error(errno);
     }
 
-    // rate_idx points to the current rate list it's on.  decrement the number of atoms in that list
-    // and clean up.  If the list is empty, remove it.
+    // remind atom it can no longer jump
+    // manual set_atom_transition_indices
+    ss->atom_arr[atom_idx]->transition_indices[offset_idx] = -1;
 
-    --ss->rate_arr[rate_idx].transition_count;
-    // [ ]: wtf is going on here
-    if (ss->rate_arr[rate_idx].transition_count == 0) // if list is empty
-    {
-        for (long i = rate_idx + 1; i < ss->rate_cnt; ++i) {
-            // move rate_arr offsets of larger indicies down one
-            --ss->rate_arr[i].transition_start_idx;
+    Transition **t_arr = ss->transition_arr;
 
-            // make transition at new start index (which is of different Rate than old start index)
-            // have same atom and offset as new end index (which is of same Rate as old end index)
-            transition_idx = ss->rate_arr[i].transition_start_idx;
-            transition_end_idx =
-                ss->rate_arr[i].transition_start_idx + ss->rate_arr[i].transition_count;
-            // count is always at least 1
+    // free the transition
+    free(t_arr[removed_t_idx]);
+    t_arr[removed_t_idx] = NULL;
 
-            ss->transition_arr[transition_idx]->atom_idx =
-                ss->transition_arr[transition_end_idx]->atom_idx;
-            ss->transition_arr[transition_idx]->offset_idx =
-                ss->transition_arr[transition_end_idx]->offset_idx;
+    // decrement the number of transitions in its rate list
+    // if there are still transitions in that rate, move the last one to the removed spot
+    --r_arr[rate_idx].transition_count;
+    if (r_arr[rate_idx].transition_count != 0) {
+        long transition_end_idx =
+            r_arr[rate_idx].transition_start_idx + r_arr[rate_idx].transition_count;
 
-            // update the transition index in the corresponding atom in atom_arr to have the new
-            // (lower) transition index
-            ss->atom_arr[ss->transition_arr[transition_idx]->atom_idx]
-                ->transition_indices[ss->transition_arr[transition_idx]->offset_idx] =
-                transition_idx;
+        // if they are the same, no movement is necessary (and doing movement will break things)
+        if (removed_t_idx != transition_end_idx) {
+            t_arr[removed_t_idx] = t_arr[transition_end_idx];
+            t_arr[transition_end_idx] = NULL;
+            set_atom_transition_indices(t_arr[removed_t_idx], removed_t_idx, ss->atom_arr);
         }
+    }
 
-        // free up the very last member of the last transition_arr
-        free(ss->transition_arr[ss->transition_cnt]);
-        ss->transition_arr[ss->transition_cnt] = NULL;
+    // move transitions of rates higher on transition list up one spot
+    for (long i = rate_idx + 1; i < r_cnt; ++i) {
+        // move rate_arr offsets of larger indicies up one
+        --r_arr[i].transition_start_idx;
 
-        // TODO: use pointers for rate array to eliminate manual copying of attributes
-        free(ss->rate_arr[rate_idx].atom_env);
-        long i;
-        for (i = rate_idx + 1; i < ss->rate_cnt; ++i) {
-            memcpy(&ss->rate_arr[i - 1], &ss->rate_arr[i], sizeof(Rate));
+        long transition_start_idx = r_arr[i].transition_start_idx;
+        long transition_end_idx = r_arr[i].transition_start_idx + r_arr[i].transition_count;
+        // count is always at least 1
+
+        t_arr[transition_start_idx] = t_arr[transition_end_idx];
+        t_arr[transition_end_idx] = NULL;
+
+        // update the transition index in the corresponding atom in atom_arr to have the new
+        // (lower) transition index
+        set_atom_transition_indices(t_arr[transition_start_idx], transition_start_idx,
+                                    ss->atom_arr);
+    }
+
+    // if the rate's count is zero, remove it and move rates up one spot
+    if (r_arr[rate_idx].transition_count == 0) {
+        // free atom_env, everything else will be overwritten
+        free(r_arr[rate_idx].atom_env);
+
+        for (long i = rate_idx + 1; i < r_cnt; ++i) {
+            // TODO: use pointers for rate array? to make this more logical
+            memcpy(&r_arr[i - 1], &r_arr[i], sizeof(Rate));
         }
-        memset(&ss->rate_arr[i - 1], 0, sizeof(Rate));
-        ss->rate_arr[i - 1].is_evaporation = (unsigned char)-1;
+        // zero last rate (don't free atom_env bc still being used by rate_cnt-2)
+        memset(&r_arr[r_cnt - 1], 0, sizeof(Rate));
 
         --ss->rate_cnt;
         if (ss->rate_cnt < 0) {
             fprintf(stderr, "Number of rates (%ld) has dropped below zero", ss->rate_cnt);
             clean_and_error(errno);
         }
-
-        return;
     }
 
-    transition_end_idx =
-        ss->rate_arr[rate_idx].transition_start_idx +
-        ss->rate_arr[rate_idx].transition_count; // last transition of same rate type
-
-    // swap transition_end_idx into the position atom_idx:offset_idx occupied
-    // ENHANCE: this is the same shit that happens when count==0
-    ss->transition_arr[transition_idx]->atom_idx = ss->transition_arr[transition_end_idx]->atom_idx;
-    ss->transition_arr[transition_idx]->offset_idx =
-        ss->transition_arr[transition_end_idx]->offset_idx;
-
-    if (transition_idx != transition_end_idx)
-        ss->atom_arr[ss->transition_arr[transition_idx]->atom_idx]
-            ->transition_indices[ss->transition_arr[transition_idx]->offset_idx] = transition_idx;
-
-    // shift all other transition lists
-
-    // ENHANCE: again, looks like the same shit that happens when count==0
-    for (long i = rate_idx + 1; i < ss->rate_cnt; ++i) {
-        --ss->rate_arr[i].transition_start_idx;
-
-        transition_idx = ss->rate_arr[i].transition_start_idx;
-        transition_end_idx =
-            ss->rate_arr[i].transition_start_idx + ss->rate_arr[i].transition_count;
-
-        ss->transition_arr[transition_idx]->atom_idx =
-            ss->transition_arr[transition_end_idx]->atom_idx;
-        ss->transition_arr[transition_idx]->offset_idx =
-            ss->transition_arr[transition_end_idx]->offset_idx;
-
-        ss->atom_arr[ss->transition_arr[transition_idx]->atom_idx]
-            ->transition_indices[ss->transition_arr[transition_idx]->offset_idx] = transition_idx;
+    --ss->transition_cnt;
+    if (ss->transition_cnt < 0) {
+        fprintf(stderr, "Number of transitions (%ld) has dropped below zero", ss->transition_cnt);
+        clean_and_error(errno);
     }
-
-    // free up the very last member of the last transition_arr
-    free(ss->transition_arr[ss->transition_cnt]);
-    ss->transition_arr[ss->transition_cnt] = NULL;
 
     return;
 }
@@ -736,8 +693,8 @@ double calculate_surf_diffusion_rate(unsigned char *atom_env, int final_config_n
     int neighbor_cnt_initial = 0;
     for (int i = 0; i < se->num_nn_types; i++) {
         energy += se->nn_energy[i] * atom_env[i];
-        // TODO: anisotropy factor would require storing directions in Rate (probably as sum, to be
-        // multiplied with energy)
+        // TODO: anisotropy factor would require storing directions in Rate (probably as sum, to
+        // be multiplied with energy)
         neighbor_cnt_initial++;
     }
 
@@ -773,8 +730,8 @@ double calculate_evaporation_rate(unsigned char *atom_env, double temperature, d
 
     for (int i = 0; i < se->num_nn_types; i++) {
         energy += se->nn_energy[i] * atom_env[i];
-        // TODO: anisotropy factor would require storing directions in Rate (probably as sum, to be
-        // multiplied with energy)
+        // TODO: anisotropy factor would require storing directions in Rate (probably as sum, to
+        // be multiplied with energy)
     }
 
     // dissolution/evaporation equation

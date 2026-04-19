@@ -264,9 +264,6 @@ void move_atom(long int initial_idx, long int final_idx, Atom **atom_arr,
     return;
 }
 
-/******************************************************************************/
-/******************************************************************************/
-
 void remove_atom(long int atom_idx, struct SimulationState *ss, struct SimulationEnv *se)
 {
 
@@ -350,7 +347,7 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
         case -1:
             if (ss->atom_arr[atom_idx]->transition_indices[i] != -1)
                 // an open site to jump to
-                take_off_transition_list(atom_idx, i, ss);
+                remove_from_transition_list(atom_idx, i, ss);
             break;
 
         default: // make other atom see this spot as empty
@@ -364,7 +361,7 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
     // dissolution - if not soluble, won't have dissolution transition
     if (se->is_soluble[ss->atom_arr[atom_idx]->type]) {
         if (ss->atom_arr[atom_idx]->transition_indices[se->num_transition_vectors] != -1)
-            take_off_transition_list(atom_idx, se->num_transition_vectors, ss);
+            remove_from_transition_list(atom_idx, se->num_transition_vectors, ss);
     }
 
     ss->total_internal_energy -= ss->atom_arr[atom_idx]->energy;
@@ -545,7 +542,6 @@ int get_final_configuration(long at, int offset_idx, struct SimulationState *ss,
 
     return nn_cnt;
 }
-
 
 int get_coordination(long int atom_idx, struct SimulationState *ss, struct SimulationEnv *se)
 {

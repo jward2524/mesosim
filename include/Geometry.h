@@ -107,6 +107,7 @@ typedef struct {
     int dz;
 } LatticeVector;
 
+// TODO: simplify this into one array, where index = rate index
 typedef struct {
     long *rate_arr_index; // contains the index in rate_arr that gives the upper bound after adding
                           // frequency/frequency_sum
