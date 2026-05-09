@@ -2,8 +2,8 @@
 #include "Atoms.h"
 #include "ErrorM.h"
 #include "Input.h"
-#include "Utils.h"
 #include "InputXYZ.h"
+#include "Utils.h"
 #include <ctype.h>
 #include <errno.h>
 #include <math.h>
@@ -118,16 +118,16 @@ void process_in_file(FILE *input_file, struct SimulationState *ss, struct Simula
 
 /**
  * @brief parses an .xyz file to populate the simulation state and environment
- * 
- * @param input_file 
- * @param ss 
- * @param se 
- * @param ls 
+ *
+ * @param input_file
+ * @param ss
+ * @param se
+ * @param ls
  * @return true successfully parsed xyz file and populated simulation state and env
  * @return false failed to parse xyz file
  */
-bool process_xyz_file(FILE *input_file, struct SimulationState *ss,
-                      struct SimulationEnv *se, struct LoggingState *ls)
+bool process_xyz_file(FILE *input_file, struct SimulationState *ss, struct SimulationEnv *se,
+                      struct LoggingState *ls)
 {
     // processes file with .xyz format (number of atoms / comment / type x y z)
 
@@ -292,59 +292,64 @@ const char *fstring_to_buffer(const char *fmt, ...)
     return buf;
 }
 
-static const char *get_iteration(const struct SimulationState *ss)
+static const char *get_iteration(const struct SimulationState *ss, const struct CsvLsView *view)
 {
+    (void)view;
     return fstring_to_buffer("%lu", ss->iter);
 }
 
-const char* get_time(const struct SimulationState *ss) {
-    return fstring_to_buffer("%le", ss->elapsed_stime);
+const char *get_time(const struct SimulationState *ss, const struct CsvLsView *view)
+{
+    return fstring_to_buffer("%.*le", view->precision, ss->elapsed_stime);
 }
 
-const char *get_energy(const struct SimulationState *ss)
+const char *get_energy(const struct SimulationState *ss, const struct CsvLsView *view)
 {
+    (void)view;
     return fstring_to_buffer("%lf", ss->total_internal_energy);
 }
 
-const char *get_temperature(const struct SimulationState *ss)
+const char *get_temperature(const struct SimulationState *ss, const struct CsvLsView *view)
 {
+    (void)view;
     return fstring_to_buffer("%lf", ss->temperature);
 }
 
-const char *get_overpotential(const struct SimulationState *ss)
+const char *get_overpotential(const struct SimulationState *ss, const struct CsvLsView *view)
 {
-    return fstring_to_buffer("%lf", ss->overpotential);
+    return fstring_to_buffer("%.*le", view->precision, ss->overpotential);
 }
 
-const char *get_atoms(const struct SimulationState *ss)
+const char *get_atoms(const struct SimulationState *ss, const struct CsvLsView *view)
 {
+    (void)view;
     return fstring_to_buffer("%ld", ss->atom_cnt);
 }
 
-const char *get_atoms_dissolved(const struct SimulationState *ss)
+const char *get_atoms_dissolved(const struct SimulationState *ss, const struct CsvLsView *view)
 {
+    (void)view;
     return fstring_to_buffer("%d", ss->total_atoms_dissolved);
 }
 
-const char *get_mmc_steps(const struct SimulationState *ss)
+const char *get_mmc_steps(const struct SimulationState *ss, const struct CsvLsView *view)
 {
+    (void)view;
     return fstring_to_buffer("%lu", ss->mmc_steps);
 }
 
-const CsvFieldFunc csv_field_map[] = {
-    {"iter", get_iteration, FLAVOR_UNDEFINED},
-    {"time", get_time, FLAVOR_UNDEFINED},
-    {"energy", get_energy, FLAVOR_UNDEFINED},
-    {"temperature", get_temperature, FLAVOR_UNDEFINED},
-    {"overpotential", get_overpotential, FLAVOR_KMC},
-    {"atoms", get_atoms, FLAVOR_UNDEFINED},
-    {"atoms_dissolved", get_atoms_dissolved, FLAVOR_KMC},
-    {"mmc_steps", get_mmc_steps, FLAVOR_MC}
-};
+const CsvFieldFunc csv_field_map[] = {{"iter", get_iteration, FLAVOR_UNDEFINED},
+                                      {"time", get_time, FLAVOR_UNDEFINED},
+                                      {"energy", get_energy, FLAVOR_UNDEFINED},
+                                      {"temperature", get_temperature, FLAVOR_UNDEFINED},
+                                      {"overpotential", get_overpotential, FLAVOR_KMC},
+                                      {"atoms", get_atoms, FLAVOR_UNDEFINED},
+                                      {"atoms_dissolved", get_atoms_dissolved, FLAVOR_KMC},
+                                      {"mmc_steps", get_mmc_steps, FLAVOR_MC}};
 
 const size_t CSV_FIELD_FUNCS_COUNT = sizeof(csv_field_map) / sizeof(CsvFieldFunc);
 
-static char* schedule_list_to_string(OutputSchedule *schedule)
+static char *schedule_list_to_string(OutputSchedule *schedule)
 {
     char *buf = NULL;
     // max size of each item in list
@@ -469,7 +474,8 @@ void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct 
         switch (ls->xyz_schedule.mode) {
         case OUTPUT_SCHEDULE_INTERVAL_ITERATION:
             safe_log(ls->sim_log,
-                     "Recording data at linear intervals [iterations] from %lf to %lf at %lf increments\n",
+                     "Recording data at linear intervals [iterations] from %lf to %lf at %lf "
+                     "increments\n",
                      ls->next_xyz_checkpoint, ss->run_stime, ls->xyz_schedule.interval);
             break;
         case OUTPUT_SCHEDULE_INTERVAL_TIME:
@@ -511,6 +517,34 @@ void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct 
 
 /* === Data output === */
 
+/**
+ * @brief Get the precision that should be used for printing @p total with @c e formatting to
+ * resolve the @p increment plus increment precision @p incr_precision. Assumes the increment
+ * has already been added to the total.
+ *
+ * @param total
+ * @param increment
+ * @param incr_precision
+ * @return int Resolving precision. Returns -1 if an error occurs.
+ */
+int get_precision(double total, double increment, int incr_precision)
+{
+    // precision is the number of digits to appear after the decimal point
+    // cast truncates value
+    if ((total == 0) || (increment == 0)) {
+        return incr_precision;
+    }
+    double ltotal = log10(fabs(total));
+    double linc = log10(fabs(increment));
+    if (isnan(ltotal) || isnan(linc)) {
+        return -1;
+    }
+    int log_diff = (int)fmax((int)ltotal - (int)linc, 0);
+    // subtract one for the digit in front of the decimal
+    int precision = log_diff + incr_precision;
+    return precision;
+}
+
 bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, double elapsed_stime,
                      double temperature, double overpotential, long int atom_cnt,
                      double total_internal_energy)
@@ -535,10 +569,17 @@ void log_state_csv(FILE *csv_file, struct SimulationState *ss, struct LoggingSta
 {
     safe_log(csv_file, "%d,", ls->csv_framenum);
     for (int i = 0; i < ls->csv_field_count; ++i) {
-        // malloc'd string
-        const char *value_str = ls->csv_field_funcs[i](ss);
+        // malloc'd string, needs to be free'd when done
+        struct CsvLsView *view = malloc(sizeof(struct CsvLsView));
+        if (strcmp(ls->csv_fields[i], "time") == 0) {
+            view->precision = ls->stime_precision;
+        } else if (strcmp(ls->csv_fields[i], "overpotential") == 0) {
+            view->precision = ls->overpot_precision;
+        }
+        const char *value_str = ls->csv_field_funcs[i](ss, view);
         if (!value_str) {
-            fprintf(stderr, "Error formatting csv field %s: %s\n", ls->csv_fields[i], strerror(errno));
+            fprintf(stderr, "Error formatting csv field %s: %s\n", ls->csv_fields[i],
+                    strerror(errno));
             free((void *)value_str);
             clean_and_error(EXIT_FAILURE);
         }
@@ -560,10 +601,11 @@ void output_kmc_steps_header(FILE *csv_file, const bool output_coord)
 // iteration number, simulation time, system energy (per atom?), x1, y1, z1, x2, y2, z2
 // and atom ids at some point
 void log_kmc_steps(FILE *csv_file, const unsigned long int iter, const double sim_time,
-                  const double sys_energy, const int uvw1[3], const int uvw2[3], const int is_evap, const int coordination)
+                   const int sim_time_precision, const double sys_energy, const int uvw1[3],
+                   const int uvw2[3], const int is_evap, const int coordination)
 {
     safe_log(csv_file, "%lu,", iter);
-    safe_log(csv_file, "%le,", sim_time);
+    safe_log(csv_file, "%.*le,", sim_time_precision, sim_time);
     safe_log(csv_file, "%lf,", sys_energy);
     safe_log(csv_file, "%d,%d,%d,", uvw1[0], uvw1[1], uvw1[2]);
     if (!is_evap) {
@@ -589,7 +631,8 @@ void output_mc_steps_header(FILE *csv_file, bool output_coord)
 // output to csv:
 // MCSS, system energy (per atom?), uvw1, uvw2
 void log_mc_steps(FILE *csv_file, const unsigned long int iter, const double sys_energy,
-                 const double deltaE, const int performed, const int uvw1[3], const int uvw2[3], const int coordination)
+                  const double deltaE, const int performed, const int uvw1[3], const int uvw2[3],
+                  const int coordination)
 {
     safe_log(csv_file, "%lu,", iter);
     safe_log(csv_file, "%lf,", sys_energy);
@@ -686,7 +729,8 @@ bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, int stripped,
     return true;
 }
 
-static int check_and_advance_checkpoint(OutputSchedule *sched, double *checkpoint, bool *state, struct SimulationState *ss)
+static int check_and_advance_checkpoint(OutputSchedule *sched, double *checkpoint, bool *state,
+                                        struct SimulationState *ss)
 {
     OutputScheduleMode mode = sched->mode;
     int iter_reached = fabs(*checkpoint - (double)ss->iter) < FABS_TOL;
@@ -762,12 +806,12 @@ void write_xyz_suffix(char *suffix, OutputScheduleMode mode, double checkpoint)
 
 /**
  * @brief writes to log files and increments framenums
- * 
+ *
  * @param output_csv whether to output to csv
  * @param output_xyz whether to output to xyz
- * @param ss 
- * @param se 
- * @param ls 
+ * @param ss
+ * @param se
+ * @param ls
  */
 void write_logs(int output_csv, int output_xyz, struct SimulationState *ss,
                 struct SimulationEnv *se, struct LoggingState *ls)
@@ -792,11 +836,12 @@ void write_logs(int output_csv, int output_xyz, struct SimulationState *ss,
 }
 
 /**
- * @brief outputs to log file, csv, and xyz if checkpoints are reached; updates checkpoints for next output; updates framenums for next output
- * 
- * @param ss 
- * @param se 
- * @param ls 
+ * @brief outputs to log file, csv, and xyz if checkpoints are reached; updates checkpoints for next
+ * output; updates framenums for next output
+ *
+ * @param ss
+ * @param se
+ * @param ls
  */
 void output_if_passed_checkpoint(struct SimulationState *ss, struct SimulationEnv *se,
                                  struct LoggingState *ls)

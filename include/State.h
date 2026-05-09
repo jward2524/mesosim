@@ -65,7 +65,8 @@ struct SimulationEnv {
     double simbox_vectors_cart[3][3]; // [[u1 u2 u3], [v1 v2 v3], [w1 w2 w3]]
     double simbox_origin_cart[3];
 
-    // TODO: change this (and get_env_index) to be a 3D array nne[shell][i][j] where i and j are atom types
+    // TODO: change this (and get_env_index) to be a 3D array nne[shell][i][j] where i and j are
+    // atom types
     double *nn_energy; // nnE[env_idx]
 
     bool *is_soluble; // [num_elements] (implemented as always [8])
@@ -158,15 +159,19 @@ typedef enum {
 } OutputScheduleMode;
 
 typedef struct {
-    OutputScheduleMode mode;           // schedule mode
-    double interval;                   // interval value (if mode is interval)
-    double *list;                      // list of output points (if mode is list)
-    int list_len;                      // number of entries in list
-    int list_idx;                      // current index in list
+    OutputScheduleMode mode; // schedule mode
+    double interval;         // interval value (if mode is interval)
+    double *list;            // list of output points (if mode is list)
+    int list_len;            // number of entries in list
+    int list_idx;            // current index in list
 } OutputSchedule;
 
+struct CsvLsView {
+    int precision;
+};
 // returns malloced pointer to string
-typedef const char *(*CsvFieldFuncPtr)(const struct SimulationState *ss);
+typedef const char *(*CsvFieldFuncPtr)(const struct SimulationState *ss,
+                                       const struct CsvLsView *view);
 
 // variables that describe state of logging
 // files and when to log
@@ -175,6 +180,11 @@ struct LoggingState {
     int framenum; // counter/id for number of outputs / output files
     int verbose;
     unsigned long verbose_interval; // interval for printing verbose output to console
+
+    // precision of incremented doubles
+    int increment_precision;
+    int stime_precision;
+    int overpot_precision;
 
     // TODO: switch to a unified output format struct that can be used for both csv and xyz and iter
     // use a base struct for shared fields and then extended structs for csv and xyz specific fields

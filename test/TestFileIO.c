@@ -247,6 +247,63 @@ void test_safe_log_buffer_overflow(void)
 // fflush failure (needs mocking, optional)
 // Not trivial in standard C; usually requires dependency injection or linking fakes
 
+// get_precision tests - core functionality
+void test_get_precision_positive_numbers(void)
+{
+    // total=100, increment=1, incr_precision=2 -> log10(100)=2, log10(1)=0, diff=2, result=4
+    int result = get_precision(100.0, 1.0, 2);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(4, result, "positive numbers");
+}
+
+void test_get_precision_large_difference(void)
+{
+    // total=1000000, increment=1, incr_precision=1 -> log10(1e6)=6, log10(1)=0, diff=6, result=7
+    int result = get_precision(1000000.0, 1.0, 1);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(7, result, "large magnitude difference");
+}
+
+void test_get_precision_negative_total(void)
+{
+    // total=-100, increment=1, incr_precision=2 -> uses abs value, result=4
+    int result = get_precision(-100.0, 1.0, 2);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(4, result, "negative total");
+}
+
+void test_get_precision_negative_increment(void)
+{
+    // total=100, increment=-1, incr_precision=2 -> uses abs value, result=4
+    int result = get_precision(100.0, -1.0, 2);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(4, result, "negative increment");
+}
+
+void test_get_precision_both_negative(void)
+{
+    // total=-50, increment=-0.5, incr_precision=1 -> log10(50)=1, log10(0.5)=-0, diff=1, result=2
+    int result = get_precision(-50.0, -0.5, 1);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, result, "both negative");
+}
+
+void test_get_precision_total_zero(void)
+{
+    // When total is zero, should return incr_precision without computing logs
+    int result = get_precision(0.0, 5.0, 3);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, result, "total is zero");
+}
+
+void test_get_precision_increment_zero(void)
+{
+    // When increment is zero, should return incr_precision without computing logs
+    int result = get_precision(100.0, 0.0, 4);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(4, result, "increment is zero");
+}
+
+void test_get_precision_zero_incr_precision(void)
+{
+    // total=100, increment=1, incr_precision=0 -> log diff=2, result=2
+    int result = get_precision(100.0, 1.0, 0);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, result, "incr_precision is zero");
+}
+
 void test_output_csv_header_success(void)
 {
     ls->csv_field_count = 2;
@@ -274,6 +331,9 @@ void test_log_state_csv_success(void)
     ls->csv_field_funcs = malloc(2 * sizeof(CsvFieldFuncPtr));
     ls->csv_field_funcs[0] = csv_field_map[0].get_value; // get_iter
     ls->csv_field_funcs[1] = csv_field_map[2].get_value; // get_energy
+    ls->csv_fields = malloc(2 * sizeof(char *));
+    ls->csv_fields[0] = dup_str("iter");
+    ls->csv_fields[1] = dup_str("energy");
 
     rewind(temp_log);
     log_state_csv(temp_log, ss, ls);
@@ -293,6 +353,8 @@ void test_log_state_csv_one_field(void)
     ls->csv_field_count = 1;
     ls->csv_field_funcs = malloc(sizeof(CsvFieldFuncPtr));
     ls->csv_field_funcs[0] = csv_field_map[0].get_value; // get_iter
+    ls->csv_fields = malloc(1 * sizeof(char *));
+    ls->csv_fields[0] = dup_str("iter");
 
     rewind(temp_log);
     log_state_csv(temp_log, ss, ls);
@@ -324,13 +386,18 @@ void test_log_state_csv_mixed_fields(void)
 {
     ss->iter = 7;
     ss->total_internal_energy = -1.23;
-    ss->temperature = 273.15;
+    ss->overpotential = 0.9;
+    ls->overpot_precision = 4;
     ls->csv_framenum = 3;
     ls->csv_field_count = 3;
     ls->csv_field_funcs = malloc(3 * sizeof(CsvFieldFuncPtr));
     ls->csv_field_funcs[0] = csv_field_map[0].get_value; // get_iter
     ls->csv_field_funcs[1] = csv_field_map[2].get_value; // get_energy
-    ls->csv_field_funcs[2] = csv_field_map[3].get_value; // get_temperature
+    ls->csv_field_funcs[2] = csv_field_map[4].get_value; // get_overpotential
+    ls->csv_fields = malloc(3 * sizeof(char *));
+    ls->csv_fields[0] = dup_str("iter");
+    ls->csv_fields[1] = dup_str("energy");
+    ls->csv_fields[2] = dup_str("overpotential");
 
     rewind(temp_log);
     log_state_csv(temp_log, ss, ls);
@@ -339,7 +406,7 @@ void test_log_state_csv_mixed_fields(void)
     char buffer[256];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
     TEST_ASSERT_NOT_NULL_MESSAGE(ret, "fgets should read a line");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("3,7,-1.230000,273.150000\n", buffer,
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("3,7,-1.230000,9.0000e-01\n", buffer,
                                      "CSV state log with mixed fields");
 }
 
@@ -477,7 +544,7 @@ void test_log_kmc_steps_basic_coord(void)
     int coord = 2;
 
     rewind(temp_log);
-    log_kmc_steps(temp_log, iter, sim_time, sys_energy, uvw1, uvw2, is_evap, coord);
+    log_kmc_steps(temp_log, iter, sim_time, 6, sys_energy, uvw1, uvw2, is_evap, coord);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -497,7 +564,7 @@ void test_log_kmc_steps_evap(void)
     int coord = -1;
 
     rewind(temp_log);
-    log_kmc_steps(temp_log, iter, sim_time, sys_energy, uvw1, uvw2, is_evap, coord);
+    log_kmc_steps(temp_log, iter, sim_time, 6, sys_energy, uvw1, uvw2, is_evap, coord);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -517,7 +584,7 @@ void test_log_kmc_steps_evap_coord(void)
     int coord = 8;
 
     rewind(temp_log);
-    log_kmc_steps(temp_log, iter, sim_time, sys_energy, uvw1, uvw2, is_evap, coord);
+    log_kmc_steps(temp_log, iter, sim_time, 6, sys_energy, uvw1, uvw2, is_evap, coord);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -772,6 +839,15 @@ int main(void)
     RUN_TEST(test_safe_log_writes);
     RUN_TEST(test_safe_log_long_line);
     RUN_TEST(test_safe_log_buffer_overflow);
+
+    RUN_TEST(test_get_precision_positive_numbers);
+    RUN_TEST(test_get_precision_large_difference);
+    RUN_TEST(test_get_precision_negative_total);
+    RUN_TEST(test_get_precision_negative_increment);
+    RUN_TEST(test_get_precision_both_negative);
+    RUN_TEST(test_get_precision_total_zero);
+    RUN_TEST(test_get_precision_increment_zero);
+    RUN_TEST(test_get_precision_zero_incr_precision);
 
     RUN_TEST(test_output_csv_header_success);
     RUN_TEST(test_log_state_csv_success);

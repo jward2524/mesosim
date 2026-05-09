@@ -176,6 +176,15 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         double rand3 = ((double)rand() + 1) / ((double)RAND_MAX + 1);
         double stime_increment = -log(rand3) / ss->frequency_sum;
         ss->elapsed_stime += stime_increment;
+        ls->stime_precision =
+            get_precision(ss->elapsed_stime, stime_increment, ls->increment_precision);
+        if (ls->stime_precision < 0) {
+            fprintf(
+                stderr,
+                "Simulation time precision calculation encountered an error: tot %le, inc %le\n",
+                ss->elapsed_stime, stime_increment);
+            clean_and_error(EXIT_FAILURE);
+        }
         if (isinf((float)ss->elapsed_stime)) {
             fprintf(stderr, "Simulation time went infinite\n");
             clean_and_error(EXIT_FAILURE);
@@ -184,9 +193,23 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         if (se->overpotential_ramp_rate > 0.0) {
             cur_stime = ss->elapsed_stime;
             if (ss->overpotential < se->max_overpotential) {
-                ss->overpotential += (cur_stime - prev_stime) * se->overpotential_ramp_rate;
-                if (ss->overpotential > se->max_overpotential)
+                double overpot_increment = (cur_stime - prev_stime) * se->overpotential_ramp_rate;
+                ss->overpotential += overpot_increment;
+                if (ss->overpotential > se->max_overpotential) {
+                    // TODO : standardize double - equality checks
+                    overpot_increment =
+                        round((se->max_overpotential - ss->overpotential) * 1e10) / 1e10;
                     ss->overpotential = se->max_overpotential;
+                }
+                ls->overpot_precision =
+                    get_precision(ss->overpotential, overpot_increment, ls->increment_precision);
+                if (ls->overpot_precision < 0) {
+                    fprintf(stderr,
+                            "Overpotential precision calculation encountered an error: tot "
+                            "%le, inc %le\n",
+                            ss->overpotential, overpot_increment);
+                    clean_and_error(EXIT_FAILURE);
+                }
             } else if (ss->overpotential > se->max_overpotential) {
                 fprintf(stderr, "Overpotential exceeded maximum\n");
             }
@@ -209,8 +232,8 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
             int uvw1[] = {old_x, old_y, old_z};
             // lastxyzt will have wrong values if current step was evaporation
             int uvw2[] = {lastxt, lastyt, lastzt};
-            log_kmc_steps(ls->steps_csv, ss->iter, ss->elapsed_stime, ss->total_internal_energy,
-                          uvw1, uvw2, is_evaporation, coord);
+            log_kmc_steps(ls->steps_csv, ss->iter, ss->elapsed_stime, ls->stime_precision,
+                          ss->total_internal_energy, uvw1, uvw2, is_evaporation, coord);
         }
 
         output_if_passed_checkpoint(ss, se, ls);
