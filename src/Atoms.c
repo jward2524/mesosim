@@ -191,9 +191,8 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
 // copies atom from initial_idx of atom_arr to final_idx
 // atom does not change position within simulation, only position in atom_arr
 // used only within the simulation routines, things like bonds, etc. are not copied.
-void move_atom(long int initial_idx, long int final_idx, Atom **atom_arr,
-               Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], Transition **transition_arr,
-               struct SimulationEnv *se)
+void move_atom(long int initial_idx, long int final_idx, Atom **atom_arr, Zone ***zone_arr,
+               Transition **transition_arr, struct SimulationEnv *se)
 {
     int zone_u, zone_v, zone_w;
 
@@ -441,8 +440,7 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
 
 // checks if there is an atom at point (u, v, w) in lattice coordinates.
 // If so, it returns the index to that atom.  If not, return -1.
-long atom_at(int u, int v, int w, Atom **atom_arr,
-             Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se)
+long atom_at(int u, int v, int w, Atom **atom_arr, Zone ***zone_arr, struct SimulationEnv *se)
 {
     // lattice coordinates uvw
     long i;
@@ -466,8 +464,8 @@ long atom_at(int u, int v, int w, Atom **atom_arr,
     return -1; // no atom
 }
 
-long atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr,
-                    Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se)
+long atom_at_offset(int u, int v, int w, int offset, Atom **atom_arr, Zone ***zone_arr,
+                    struct SimulationEnv *se)
 {
     int neighbor_x, neighbor_y, neighbor_z;
 

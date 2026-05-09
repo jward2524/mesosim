@@ -34,7 +34,7 @@ struct SimulationEnv {
     // [ ]: cartesian, units of nearest-neighbor spacing?
     int system_size_x, system_size_y, system_size_z; // system size x, y, z
     double ssr;
-    int zone_count_u, zone_count_v, zone_count_w;
+    size_t zone_count_u, zone_count_v, zone_count_w;
 
     int lattice_type;
 
@@ -104,8 +104,6 @@ struct SimulationEnv {
 // variables that describe the simulation state
 // change on every iteration
 struct SimulationState {
-    Bond bond[MAXIMUM_NUMBER_OF_BONDS];
-
     // array of Atom structs, initialized in ____
     // contains all atoms in the simulation, in the first atom_cnt indices
     Atom **atom_arr;
@@ -124,7 +122,7 @@ struct SimulationState {
     long int transition_cnt;
 
     // array of zones, to help find atoms based on position
-    Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z]; // TODO: change to malloc
+    Zone ***zone_arr;
     TransProb transition_probability;
 
     unsigned long iter;

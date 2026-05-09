@@ -204,7 +204,7 @@ void initialize_initial_structure(struct SimulationState *ss, struct SimulationE
 // lattice coordinate corresponds to?
 void get_shifts(struct SimulationEnv *se)
 { // updates zi*, zi*shift, *sh
-    int temp1;
+    size_t temp1;
     se->zone_count_u = TTS;
     se->zone_count_v = TTS;
     se->zone_count_w = TTS;
@@ -230,25 +230,26 @@ void get_shifts(struct SimulationEnv *se)
         temp1 = temp1 / 2;
     }
 
-    temp1 = se->system_size_x;
+    int temp2;
+    temp2 = se->system_size_x;
     se->ssxshift = 0;
-    while (temp1 > 1) {
+    while (temp2 > 1) {
         ++se->ssxshift;
-        temp1 = temp1 / 2;
+        temp2 = temp2 / 2;
     }
 
-    temp1 = se->system_size_y;
+    temp2 = se->system_size_y;
     se->ssyshift = 0;
-    while (temp1 > 1) {
+    while (temp2 > 1) {
         ++se->ssyshift;
-        temp1 = temp1 / 2;
+        temp2 = temp2 / 2;
     }
 
-    temp1 = se->system_size_z;
+    temp2 = se->system_size_z;
     se->sszshift = 0;
-    while (temp1 > 1) {
+    while (temp2 > 1) {
         ++se->sszshift;
-        temp1 = temp1 / 2;
+        temp2 = temp2 / 2;
     }
     // never used, just left and right shift with se->zixshift and se->ssxshift in findzone()
     se->xsh = se->zixshift - se->ssxshift;
@@ -323,14 +324,19 @@ void set_default_orientation(int lattice_type, double rmat[3][3])
 }
 
 // updates zone (array) based on zi* (zone sizes?), initializes offset to -1
-void initialize_zones(Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se)
+void initialize_zones(Zone ****zone_arr, struct SimulationEnv *se)
 {
-    int i, j, k;
-
-    for (i = 0; i < se->zone_count_u; ++i)
-        for (j = 0; j < se->zone_count_v; ++j)
-            for (k = 0; k < se->zone_count_w; ++k)
-                zone_arr[i][j][k].offset = -1;
+    Zone ***za = (Zone ***)malloc((size_t)se->zone_count_u * sizeof(Zone **));
+    for (size_t i = 0; i < se->zone_count_u; ++i) {
+        za[i] = (Zone **)malloc((size_t)se->zone_count_u * sizeof(Zone *));
+        for (size_t j = 0; j < se->zone_count_v; ++j) {
+            za[i][j] = (Zone *)malloc((size_t)se->zone_count_u * sizeof(Zone));
+            for (size_t k = 0; k < se->zone_count_w; ++k) {
+                za[i][j][k].offset = -1;
+            }
+        }
+    }
+    *zone_arr = za;
     return;
 }
 
@@ -841,7 +847,7 @@ void initialize_simulation(struct SimulationState *ss, struct SimulationEnv *se,
     // initialize zones - help figure out which atoms are next to which other atoms
     // requires: zone_count_uvw
     // updates: zone_arr
-    initialize_zones(ss->zone_arr, se);
+    initialize_zones(&ss->zone_arr, se);
 
     // requires: lattice_type
     // updates: primitive_basis, invert_primitive_basis, ucell_params

@@ -3,7 +3,7 @@
 #include "State.h"
 
 void initialize_neighbor_offsets(struct SimulationEnv *se);
-void initialize_zones(Zone zone_arr[ZONES_IN_X][ZONES_IN_Y][ZONES_IN_Z], struct SimulationEnv *se);
+void initialize_zones(Zone ****zone_arr, struct SimulationEnv *se);
 void set_primitive_basis(struct SimulationEnv *se);
 void initialize_lattice_geometry(struct SimulationEnv *sim_env);
 void initialize_initial_structure(struct SimulationState *ss, struct SimulationEnv *se,

@@ -165,7 +165,7 @@ void test_process_xyz_file(void)
     get_shifts(se);
     set_primitive_basis(se);
     initialize_simulation_box(se);
-    initialize_zones(ss->zone_arr, se);
+    initialize_zones(&ss->zone_arr, se);
     initialize_simulation_variables(ss, se);
 
     process_xyz_file(atom_file, ss, se, ls);
