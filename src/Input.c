@@ -730,7 +730,7 @@ const Command commands[] = {
      "Initial geometry configuration. `sheet` parameter is thickness in the third lattice "
      "dimension, `cluster` parameter is the cluster radius in lattice units, and `file` parameter "
      "is a path to an input file with atomic coordinates.",
-     CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_OPTIONAL},
+     CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
 
     {"atomtype", cmd_atomtype, "atomtype A B [C ...]", "Define atom types and their order.",
      CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
@@ -871,29 +871,35 @@ void finalize_atom_dependent(const ParseContext *p_ctx, struct UserInputs *input
                (size_t)inputs->atom_names_cnt * sizeof(double));
     }
 
+    // initialize solubility flags, default to false if not specified
+    inputs->is_soluble = (bool *)malloc((size_t)inputs->atom_names_cnt * sizeof(bool));
+    if (inputs->is_soluble == NULL) {
+        fprintf(stderr, "Couldn't allocate memory for dissolution flags, is_soluble: %s",
+                strerror(errno));
+        clean_ctx((ParseContext *)p_ctx);
+        clean_and_error(INPUT_ERR_ALLOC);
+    }
+
+    inputs->dissolution = 0;
     if (p_ctx->dissolution_raw) {
         if (p_ctx->dissolution_count != inputs->atom_names_cnt) {
             fprintf(stderr, "dissolution count mismatch at line %d\n", p_ctx->dissolution_lineno);
             clean_ctx((ParseContext *)p_ctx);
             clean_and_error(INPUT_ERR_COUNT_MISMATCH);
         }
-        inputs->is_soluble = (bool *)malloc((size_t)inputs->atom_names_cnt * sizeof(bool));
-        if (inputs->is_soluble == NULL) {
-            fprintf(stderr, "Couldn't allocate memory for dissolution flags, is_soluble: %s",
-                    strerror(errno));
-            clean_ctx((ParseContext *)p_ctx);
-            clean_and_error(INPUT_ERR_ALLOC);
-        }
         memcpy(inputs->is_soluble, p_ctx->dissolution_raw,
                (size_t)inputs->atom_names_cnt * sizeof(bool));
-        // TODO: move to finalization
-        // inputs->dissolution = 0;
-        // for (int i = 0; i < p_ctx->dissolution_count; i++) {
-        //     if (p_ctx->dissolution_raw[i]) {
-        //         inputs->dissolution = 1;
-        //         break;
-        //     }
-        // }
+
+        for (int i = 0; i < p_ctx->dissolution_count; i++) {
+            if (p_ctx->dissolution_raw[i]) {
+                inputs->dissolution = 1;
+                break;
+            }
+        }
+    } else {
+        for (int i = 0; i < inputs->atom_names_cnt; i++) {
+            inputs->is_soluble[i] = false;
+        }
     }
 }
 
@@ -920,27 +926,23 @@ void finalize_nne(const ParseContext *p_ctx, struct UserInputs *inputs)
             fprintf(stderr, "nne at line %d expects %d values, got %d\n", p_ctx->nne_cmds[c].line,
                     expected, p_ctx->nne_cmds[c].nvalues);
             clean_ctx((ParseContext *)p_ctx);
-            ;
             clean_and_error(INPUT_ERR_COUNT_MISMATCH);
         }
         if (lvl > inputs->num_nn_levels) {
             fprintf(stderr, "nne level %d exceeds nnlevels (line %d)\n", lvl,
                     p_ctx->nne_cmds[c].line);
             clean_ctx((ParseContext *)p_ctx);
-            ;
             clean_and_error(INPUT_ERR_INVALID_ARG);
         }
         if (defined[lvl - 1]) {
             fprintf(stderr, "duplicate nne for level %d (line %d)\n", lvl, p_ctx->nne_cmds[c].line);
             clean_ctx((ParseContext *)p_ctx);
-            ;
             clean_and_error(INPUT_ERR_DUPLICATE_CMD);
         }
 
         if (p_ctx->nne_cmds[c].values == NULL) {
             fprintf(stderr, "nne command at line %d has no values\n", p_ctx->nne_cmds[c].line);
             clean_ctx((ParseContext *)p_ctx);
-            ;
             clean_and_error(INPUT_ERR_COUNT_MISMATCH);
         }
 
@@ -1022,7 +1024,6 @@ void check_required_inputs(const ParseContext *p_ctx, unsigned int flavor)
         } else {
             fprintf(stderr, "Unknown simulation flavor %u\n", flavor);
             clean_ctx((ParseContext *)p_ctx);
-            ;
             clean_and_error(INPUT_ERR_MISSING_CMD);
         }
 
@@ -1036,9 +1037,23 @@ void check_required_inputs(const ParseContext *p_ctx, unsigned int flavor)
         }
     }
     if (failed_requirements) {
-        clean_ctx((ParseContext *)p_ctx);
-        ;
         clean_and_error(INPUT_ERR_MISSING_CMD);
+    }
+}
+
+void validate_input_values(const struct UserInputs *inputs)
+{
+    if (inputs->system_size_x <= 0 || inputs->system_size_y <= 0 || inputs->system_size_z <= 0) {
+        fprintf(stderr, "System size must be positive in all dimensions\n");
+        clean_and_error(INPUT_ERR_INVALID_ARG);
+    }
+    if (inputs->temperature <= 0) {
+        fprintf(stderr, "Temperature must be positive\n");
+        clean_and_error(INPUT_ERR_INVALID_ARG);
+    }
+    if (inputs->num_nn_levels <= 0) {
+        fprintf(stderr, "Number of nearest neighbor levels must be positive\n");
+        clean_and_error(INPUT_ERR_INVALID_ARG);
     }
 }
 
@@ -1048,6 +1063,7 @@ void finalize_config(const ParseContext *p_ctx, struct UserInputs *inputs, struc
     finalize_nne(p_ctx, inputs);
     finalize_csv_fields(ls, inputs->flavor);
     check_required_inputs(p_ctx, inputs->flavor);
+    validate_input_values(inputs);
 }
 
 // finalize_nne using multidimensional array for nn_energy

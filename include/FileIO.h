@@ -16,15 +16,15 @@ extern const size_t CSV_FIELD_FUNCS_COUNT;
 
 void safe_log(FILE *stream, const char *fmt, ...);
 
-bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
-                                     struct SimulationEnv *se, struct LoggingState *ls);
+void simulation_parameters_from_file(char *filename, struct UserInputs *inputs,
+                                     struct LoggingState *ls);
 bool process_xyz_file(FILE *input_file, struct SimulationState *ss, struct SimulationEnv *se,
                       struct LoggingState *ls);
 void process_in_file(FILE *input_file, struct UserInputs *inputs, struct LoggingState *ls);
 
 int get_precision(double total, double increment, int incr_precision);
-void input_logging(struct SimulationState *sim_state, struct SimulationEnv *sim_env,
-                   struct LoggingState *log_state);
+void input_logging(struct UserInputs *inputs, struct SimulationState *sim_state,
+                   struct SimulationEnv *sim_env, struct LoggingState *log_state);
 bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, double elapsed_stime,
                      double temperature, double overpotential, long int atom_cnt,
                      double total_internal_energy);

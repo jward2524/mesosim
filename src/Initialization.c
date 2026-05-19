@@ -74,21 +74,56 @@ void get_system_normal(double basis[3][3]) // XXX: supposedly only for vizualiza
     return;
 }
 
-// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; zone_arr, rmat; normal_x,
-// normal_y, normal_z; num_transition_vectors, se->transition_vectors, se->opposite_tvectors; zi*,
-// zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_stime, overpotential,
-// next_log_checkpoint
-void initialize_simulation_variables(struct SimulationState *ss, struct SimulationEnv *se)
+void initialize_state_from_input(struct UserInputs *inputs, struct SimulationState *ss)
 {
-    // holy shit, when not =DISSOLUTION[=1], it breaks some shit heavy
-    if (!se->dissolution) {
-        se->is_soluble = (bool *)malloc((size_t)se->num_elements * sizeof(bool));
-        for (int i = 0; i < se->num_elements; i++) {
-            se->is_soluble[i] = false;
-        }
-    }
+    ss->temperature = inputs->temperature;
+    ss->overpotential = inputs->initial_overpotential;
 
-    // finish initializing structs
+    ss->sim_end_type = inputs->sim_end_type;
+    ss->final_iteration = inputs->final_iteration;
+    ss->run_stime = inputs->run_stime;
+
+    ss->rate_cnt = 0;
+    ss->transition_cnt = 0;
+    ss->atom_cnt = 0;
+    ss->frequency_sum = 0.0;
+
+    // TODO: allow for reading simulation variables from intermediate xyz file
+    ss->elapsed_stime = 0.0;
+
+    ss->total_atoms_dissolved = 0;
+
+    // iteration count
+    ss->iter = 0;
+}
+
+void initialize_env_from_input(struct UserInputs *inputs, struct SimulationEnv *se)
+{
+    get_shifts(se);
+    set_primitive_basis(inputs->lattice_type, se);
+    initialize_simulation_box(inputs, se);
+    initialize_neighbor_offsets(inputs, se);
+
+    // system size was copied during initialize_simulation_box
+    se->rand_seed = inputs->rand_seed;
+    srand(se->rand_seed);
+
+    se->overpotential_ramp_rate = inputs->overpotential_ramp_rate;
+    se->max_overpotential = inputs->max_overpotential;
+
+    se->substrate_composition = inputs->substrate_composition;
+    se->dissolution = inputs->dissolution;
+    se->is_soluble = inputs->is_soluble;
+    se->atom_names_cnt = inputs->atom_names_cnt;
+    se->atom_names = inputs->atom_names;
+
+    se->num_nn_levels = inputs->num_nn_levels;
+    se->num_elements = inputs->num_elements;
+    se->num_bond_types = inputs->num_bond_types;
+    se->num_nn_types = inputs->num_nn_types;
+
+    se->nn_energy = inputs->nn_energy;
+    se->flavor = inputs->flavor;
 
     // max_rates = combination of contributors and number of nn bond types
     // (and evaporation and final configuration count)
@@ -103,7 +138,17 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
 
     se->max_atoms = se->lat_range[0] * se->lat_range[1] * se->lat_range[2];
     se->max_transitions = ((se->num_transition_vectors + se->dissolution) * se->max_atoms) + 10;
+}
 
+// updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; zone_arr, rmat; normal_x,
+// normal_y, normal_z; num_transition_vectors, se->transition_vectors, se->opposite_tvectors; zi*,
+// zi*shift, *sh], rate_cnt, transition_cnt, atom_cnt, frequency_sum, elapsed_stime, overpotential,
+// next_log_checkpoint
+void allocate_simulation_arrays(struct SimulationState *ss, struct SimulationEnv *se)
+{
+    initialize_zones(&ss->zone_arr, se);
+
+    // finish initializing structs
     ss->atom_arr = (Atom **)malloc((size_t)se->max_atoms * sizeof(Atom *));
     ss->rate_arr = (Rate *)malloc((size_t)se->max_rates * sizeof(Rate));
     ss->transition_arr = (Transition **)malloc((size_t)se->max_transitions * sizeof(Transition *));
@@ -140,54 +185,27 @@ void initialize_simulation_variables(struct SimulationState *ss, struct Simulati
         clean_and_error(errno);
     }
 
-    ss->rate_cnt = 0; // initialize global transition variables
-    ss->transition_cnt = 0;
-    ss->atom_cnt = 0; // initialize global atom variables
-    // XXX: commented code, never used
-    // current_iteration = 0; //not needed if only running 1 simulation at a time
-    ss->frequency_sum = 0.0;
-
-    // TODO: allow for reading simulation variables from intermediate xyz file
-    ss->elapsed_stime = 0.0;
-
-    ss->total_atoms_dissolved = 0;
-
-    // iteration count
-    ss->iter = 0;
-
-    ss->overpotential = se->initial_overpotential;
-
-    srand(se->rand_seed);
-
-    se->centroid[0] = 0.;
-    se->centroid[1] = 0.;
-    se->centroid[2] = 0.;
-
-    // // XXX: redundant
-    // // next_log_checkpoint is initialized to one log_interval_step step
-    // if (ls->analysis_type == REGULAR_TIME_INTERVALS) // TODO: reconsider what is happening here
-    // 	ls->next_log_checkpoint = ls->next_log_checkpoint;	//do we want this to be true? -
-    // overwrites what was in the input file else if (ls->analysis_type == LN_TIME_INTERVALS)
-    // ls->next_log_checkpoint = ls->next_log_checkpoint;
-
     return;
 }
 
-void initialize_initial_structure(struct SimulationState *ss, struct SimulationEnv *se,
-                                  struct LoggingState *ls)
+// requires: geometry, system_size_xyz, primitive_basis, substrate_composition,
+// simbox_limits_lat, sheet_thickness, cluster_radius
+// updates: atom_arr, atom_cnt, ...
+void initialize_initial_structure(struct UserInputs *inputs, struct SimulationState *ss,
+                                  struct SimulationEnv *se, struct LoggingState *ls)
 {
     // index represents geometry, from macros
-    switch (se->geometry) {
+    switch (inputs->geometry) {
     case GEOMETRY_FLAT_SHEET: // flat plane
-        initialize_flat_sheet(ss, se);
+        initialize_flat_sheet(inputs->geometry_param, ss, se);
         break;
 
     case GEOMETRY_CLUSTER:
-        initialize_spherical_cluster(ss, se);
+        initialize_spherical_cluster(inputs->geometry_param, ss, se);
         break;
 
     case GEOMETRY_FROM_FILE:
-        initialize_from_file(ss, se, ls);
+        initialize_from_file(inputs->atoms_filename, ss, se, ls);
         break;
     }
 
@@ -198,11 +216,11 @@ void initialize_initial_structure(struct SimulationState *ss, struct SimulationE
     return;
 }
 
-/********************************************************************************/
-/********************************************************************************/
+// bit shifts for periodic boundary conditions
+// requires: zone_count_uvw, system_size_xyz
+// updates: zixyzshift, ssxyzshift, xyzsh
 // zi* are the number of zones in that dimension, zi*shift is for bit shifting to find which zone a
 // lattice coordinate corresponds to?
-// updates zi*, zi*shift, *sh
 void get_shifts(struct SimulationEnv *se)
 {
     size_t temp1;
@@ -321,7 +339,10 @@ void set_default_orientation(int lattice_type, double rmat[3][3])
     return;
 }
 
+// initialize zones - help figure out which atoms are next to which other atoms
 // updates zone (array) based on zi* (zone sizes?), initializes offset to -1
+// requires: zone_count_uvw
+// updates: zone_arr
 void initialize_zones(Zone ****zone_arr, struct SimulationEnv *se)
 {
     Zone ***za = (Zone ***)malloc((size_t)se->zone_count_u * sizeof(Zone **));
@@ -338,39 +359,11 @@ void initialize_zones(Zone ****zone_arr, struct SimulationEnv *se)
     return;
 }
 
-// initializes primitve_basis, ucell_params, ss*
-void initialize_lattice_geometry(struct SimulationEnv *se)
-{
-    // Initializes the generic lattice geometry to be simple cubic (i.e., a=1, b=1, c=1, alpha = 90,
-    // beta = 90, gamma = 90)
-
-    // int i,j;
-
-    // for (i=0;i<3;++i)
-    // 	for (j=0;j<3;++j)
-    // 		if (i == j) primitive_basis[i][j] = 1.0; else primitive_basis[i][j] = 0.0;
-
-    double pb[3][3] = {
-        {1., 0., 0.},
-        {0., 1., 0.},
-        {0., 0., 1.},
-    };
-    memcpy(se->primitive_basis, pb, 3 * 3 * sizeof(double));
-
-    inver(se->primitive_basis, se->invert_primitive_basis);
-    primitive_basis2ucell_params(se->primitive_basis, se->ucell_params);
-
-    se->system_size_x = 1;
-    se->system_size_y = 1;
-    se->system_size_z = 1;
-
-    return;
-}
-
-/********************************************************************************/
-/********************************************************************************/
-// updates num_transition_vectors, [se->transition_vectors, se->opposite_tvectors]
-void initialize_neighbor_offsets(struct SimulationEnv *se)
+// sets jump offsets for given crystal type
+// requires: lattice_type, num_nn_levels
+// updates: num_transition_vectors, atoms_per_nn_level, num_energy_contributors,
+// transition_vectors, opposite_tvectors
+void initialize_neighbor_offsets(struct UserInputs *inputs, struct SimulationEnv *se)
 {
     int i;
     int fcc_opposite[12] = {11, 10, 7, 4, 3, 6, 5, 2, 9, 8, 1, 0};
@@ -384,7 +377,7 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
 
     // assumes only first-nearest neighbor transitions
     // but can energy contributors can be second-nearest neighbors
-    switch (se->lattice_type) {
+    switch (inputs->lattice_type) {
     case FCC:
         se->num_transition_vectors = 12;
         extra = 6;
@@ -408,14 +401,18 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
         vectors2 = BCC_OFFSET_2;
         opposite_vectors = bcc_opposite;
         break;
+
+    default:
+        fprintf(stderr, "Error: invalid lattice type %d\n", inputs->lattice_type);
+        clean_and_error(1);
     }
 
     int transition_length;
-    se->atoms_per_nn_level = (int *)malloc((size_t)se->num_nn_levels * sizeof(int));
+    se->atoms_per_nn_level = (int *)malloc((size_t)inputs->num_nn_levels * sizeof(int));
     se->atoms_per_nn_level[0] = se->num_transition_vectors;
-    if (se->num_nn_levels == 1) {
+    if (inputs->num_nn_levels == 1) {
         se->num_energy_contributors = se->num_transition_vectors;
-    } else if (se->num_nn_levels == 2) {
+    } else if (inputs->num_nn_levels == 2) {
         se->atoms_per_nn_level[1] = extra;
         se->num_energy_contributors = se->num_transition_vectors + extra;
     }
@@ -432,7 +429,7 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
     se->opposite_tvectors =
         (int *)malloc((size_t)se->num_transition_vectors * sizeof(*se->opposite_tvectors));
     if (!se->opposite_tvectors) {
-        perror("Couldn't allocate memory for jump offset array");
+        perror("Couldn't allocate memory for jump offset opposite array");
         clean_and_error(errno);
     }
 
@@ -443,7 +440,7 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
         se->opposite_tvectors[i] = opposite_vectors[i];
     }
 
-    if (se->num_nn_levels == 2) {
+    if (inputs->num_nn_levels == 2) {
         for (i = 0; i < extra; i++) {
             se->transition_vectors[se->num_transition_vectors + i].dx = vectors2[i].dx;
             se->transition_vectors[se->num_transition_vectors + i].dy = vectors2[i].dy;
@@ -454,12 +451,12 @@ void initialize_neighbor_offsets(struct SimulationEnv *se)
     return;
 }
 
-/********************************************************************************/
-/********************************************************************************/
 // updates primitive_basis, ucell_params, Atoms' cart_coords? to match lattice type
-void set_primitive_basis(struct SimulationEnv *se) // lattice_type = crystal structure type
+// requires: lattice_type
+// updates: primitive_basis, invert_primitive_basis, ucell_params
+void set_primitive_basis(int lattice_type, struct SimulationEnv *se)
 {
-    switch (se->lattice_type) {
+    switch (lattice_type) {
     case FCC:
         se->primitive_basis[0][0] = (double)FCCXV1;
         se->primitive_basis[0][1] = (double)FCCXV2;
@@ -511,13 +508,14 @@ void set_primitive_basis(struct SimulationEnv *se) // lattice_type = crystal str
 }
 
 // TODO: this doesn't respect the simulation box limits
-void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se)
+void initialize_flat_sheet(int sheet_thickness, struct SimulationState *ss,
+                           struct SimulationEnv *se)
 {
     double rand;
 
     int mid_w = se->simbox_limits_lat[2][0] +
                 ((se->simbox_limits_lat[2][1] - se->simbox_limits_lat[2][0]) / 2);
-    int half_thickness = se->sheet_thickness / 2;
+    int half_thickness = sheet_thickness / 2;
 
     // ENHANCE: parallelize and collapse
     for (int k = mid_w - half_thickness; k < mid_w + half_thickness; ++k) {
@@ -544,7 +542,8 @@ void initialize_flat_sheet(struct SimulationState *ss, struct SimulationEnv *se)
 /********************************************************************************/
 // ENHANCE: currently adds one extra atom to radius - remove it
 // radius of cluster in number of atoms (nearest-neighbor distances)
-void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationEnv *se)
+void initialize_spherical_cluster(int cluster_radius, struct SimulationState *ss,
+                                  struct SimulationEnv *se)
 {
     double center_cart[3];   // cartesian/orthogonal coordinates of center point
     int center_lattice[3];   // lattice coordinates of center point
@@ -577,7 +576,7 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
         if (mag > max_mag)
             max_mag = mag;
     }
-    radius_cart = se->cluster_radius * max_mag;
+    radius_cart = cluster_radius * max_mag;
 
     // algorithm: lattice sphere from cartesian sphere
     // equation: x^2 + y^2 + z^2 <= radius_cart^2
@@ -663,25 +662,25 @@ void initialize_spherical_cluster(struct SimulationState *ss, struct SimulationE
 /********************************************************************************/
 /********************************************************************************/
 // get atom positions from a file
-void initialize_from_file(struct SimulationState *ss, struct SimulationEnv *se,
-                          struct LoggingState *ls)
+void initialize_from_file(char *atoms_filename, struct SimulationState *ss,
+                          struct SimulationEnv *se, struct LoggingState *ls)
 {
-    char *file_ext = strrchr(se->atoms_filename, '.') + 1;
+    char *file_ext = strrchr(atoms_filename, '.') + 1;
     if (strcmp(file_ext, "xyz") != 0) {
         fprintf(stderr, "File extension %s not recognized as atom input file\n", file_ext);
         clean_and_error(EXIT_FAILURE);
     }
 
-    FILE *atom_file = fopen(se->atoms_filename, "r");
+    FILE *atom_file = fopen(atoms_filename, "r");
     if (!atom_file) {
-        printf("ERROR! Couldn't open output file %s\n", se->atoms_filename);
-        fprintf(stderr, "Couldn't open file %s: %s\n", se->atoms_filename, strerror(errno));
+        printf("ERROR! Couldn't open output file %s\n", atoms_filename);
+        fprintf(stderr, "Couldn't open file %s: %s\n", atoms_filename, strerror(errno));
         clean_and_error(errno);
     }
 
     bool ret = process_xyz_file(atom_file, ss, se, ls);
     if (!ret) {
-        fprintf(stderr, "Error processing xyz file %s\n - check stderr", se->atoms_filename);
+        fprintf(stderr, "Error processing xyz file %s\n - check stderr", atoms_filename);
         clean_and_error(ret);
     }
 
@@ -691,10 +690,13 @@ void initialize_from_file(struct SimulationState *ss, struct SimulationEnv *se,
 
 // int simbox_limits_lat[3][2]; // lattice limits of simulation box in each dimension - for zones
 // double system_size_x, double system_size_y, double system_size_z)
+
 // TODO: this is a mess. Units are inconsistent between input file, initialization functions, and
 // output. System size xyz inputs are used to make a primitive cell fits the sim box, so its larger
 // than the sim box
-void initialize_simulation_box(struct SimulationEnv *se)
+// requires: invert_primitive_basis, system_size_xyz
+// updates: simbox_limits_lat, lat_range, simbox_vectors_cart, simbox_origin_cart
+void initialize_simulation_box(struct UserInputs *inputs, struct SimulationEnv *se)
 {
     // assuming simulation box/prism
     // system size in cartesian units [nearest-neighbor (or some other lattice-based) units in
@@ -713,6 +715,10 @@ void initialize_simulation_box(struct SimulationEnv *se)
 
     // each plane also has associated translation vector, cart2lattice(system size * normal)
     // if outside region, translate by translation vector
+
+    se->system_size_x = inputs->system_size_x;
+    se->system_size_y = inputs->system_size_y;
+    se->system_size_z = inputs->system_size_z;
 
     double point_cart[6][3] = {
         {0, 0, 0},                 // x
@@ -833,62 +839,22 @@ void corners2limits(double corners_cart[8][3], int limits_lat[3][2], double inv_
     }
 }
 
-void initialize_simulation(struct SimulationState *ss, struct SimulationEnv *se,
-                           struct LoggingState *ls)
+void initialize_simulation(struct UserInputs *inputs, struct SimulationState *ss,
+                           struct SimulationEnv *se, struct LoggingState *ls)
 {
 
     se->zone_count_u = TTS;
     se->zone_count_v = TTS;
     se->zone_count_w = TTS;
 
-    // bit shifts for periodic boundary conditions
-    // requires: zone_count_uvw, system_size_xyz
-    // updates: zixyzshift, ssxyzshift, xyzsh
-    get_shifts(se);
-
-    // initialize zones - help figure out which atoms are next to which other atoms
-    // requires: zone_count_uvw
-    // updates: zone_arr
-    initialize_zones(&ss->zone_arr, se);
-
-    // requires: lattice_type
-    // updates: primitive_basis, invert_primitive_basis, ucell_params
-    set_primitive_basis(se);
-
-    // supposedly was only for visualization
-    // set_default_orientation(sim_state->atom_arr, sim_state->atom_cnt, sim_env->lattice_type,
-    //                         sim_env->rmat, sim_env->primitive_basis);
-    // maybe only for visualization
-    // get_system_normal(sim_env->primitive_basis);
-
-    // requires: invert_primitive_basis, system_size_xyz
-    // updates: simbox_limits_lat, lat_range, simbox_vectors_cart, simbox_origin_cart
-    initialize_simulation_box(se);
-
-    /*
-    sets jump offsets for given crystal type
-    requires: lattice_type, num_nn_levels
-    updates: num_transition_vectors, atoms_per_nn_level, num_energy_contributors,
-    transition_vectors, opposite_tvectors
-    */
-    initialize_neighbor_offsets(se);
-
-    // mallocs and sets to zero (or something else) simulation variables
-    // requires: dissolution, num_elements, num_bond_types, atoms_per_nn_level, max_atoms,
-    // initial_overpotential, lat_range
-    // updates: a lot
-    initialize_simulation_variables(ss, se);
+    initialize_state_from_input(inputs, ss);
+    initialize_env_from_input(inputs, se);
+    allocate_simulation_arrays(ss, se);
 
     // requires: geometry, system_size_xyz, primitive_basis, substrate_composition,
     // simbox_limits_lat, sheet_thickness, cluster_radius
     // updates: atom_arr, atom_cnt, ...
-    initialize_initial_structure(ss, se, ls);
+    initialize_initial_structure(inputs, ss, se, ls);
 
-    // check_system(sim_state, sim_env); // XXX?
-
-    // default flavor is KMC, if unset
-    if (se->flavor == 0)
-        se->flavor = FLAVOR_KMC;
-
-    input_logging(ss, se, ls);
+    input_logging(inputs, ss, se, ls);
 }

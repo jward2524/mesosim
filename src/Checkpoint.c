@@ -99,11 +99,6 @@ static void fill_env_payload(CheckpointEnvPayload *payload, const struct Simulat
 {
     payload->flavor = se->flavor;
     payload->rand_seed = se->rand_seed;
-    payload->geometry = se->geometry;
-    payload->evaporation_flag = se->evaporation_flag;
-    payload->lattice_type = se->lattice_type;
-    payload->sheet_thickness = se->sheet_thickness;
-    payload->cluster_radius = se->cluster_radius;
     payload->system_size_x = se->system_size_x;
     payload->system_size_y = se->system_size_y;
     payload->system_size_z = se->system_size_z;
@@ -122,7 +117,6 @@ static void fill_env_payload(CheckpointEnvPayload *payload, const struct Simulat
     payload->primitive_basis_w1 = se->primitive_basis[2][0];
     payload->primitive_basis_w2 = se->primitive_basis[2][1];
     payload->primitive_basis_w3 = se->primitive_basis[2][2];
-    payload->initial_overpotential = se->initial_overpotential;
     payload->overpotential_ramp_rate = se->overpotential_ramp_rate;
     payload->max_overpotential = se->max_overpotential;
 }
@@ -132,11 +126,6 @@ static void apply_env_payload(const CheckpointEnvPayload *payload, struct Simula
 {
     se->flavor = payload->flavor;
     se->rand_seed = payload->rand_seed;
-    se->geometry = payload->geometry;
-    se->evaporation_flag = payload->evaporation_flag;
-    se->lattice_type = payload->lattice_type;
-    se->sheet_thickness = payload->sheet_thickness;
-    se->cluster_radius = payload->cluster_radius;
     se->system_size_x = payload->system_size_x;
     se->system_size_y = payload->system_size_y;
     se->system_size_z = payload->system_size_z;
@@ -155,7 +144,6 @@ static void apply_env_payload(const CheckpointEnvPayload *payload, struct Simula
     se->primitive_basis[2][0] = payload->primitive_basis_w1;
     se->primitive_basis[2][1] = payload->primitive_basis_w2;
     se->primitive_basis[2][2] = payload->primitive_basis_w3;
-    se->initial_overpotential = payload->initial_overpotential;
     se->overpotential_ramp_rate = payload->overpotential_ramp_rate;
     se->max_overpotential = payload->max_overpotential;
 }

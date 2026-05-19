@@ -13,6 +13,47 @@
 // uvw refer to coordinates in lattice vector space
 // xyz refer to coordinates in cartesian (orthogonal basis) space
 
+struct UserInputs {
+    int system_size_x, system_size_y, system_size_z;
+    double temperature;
+    unsigned rand_seed;
+
+    double initial_overpotential;
+    double overpotential_ramp_rate;
+    double max_overpotential;
+
+    int lattice_type;
+
+    // output formats
+
+    // initial geometry
+    int geometry;
+    int geometry_param;
+    char atoms_filename[256];
+
+    double *substrate_composition;
+
+    int dissolution;
+    bool *is_soluble;
+    int atom_names_cnt;
+    char **atom_names;
+
+    int num_nn_levels;
+    int num_nn_types;
+    int num_elements;
+    int num_bond_types;
+
+    double *nn_energy;
+
+    int sim_end_type;
+    double run_stime;
+    unsigned long final_iteration; // max number of iterations
+
+    unsigned flavor;
+};
+
+// TODO: break out user-defined parameters (from input file)
+// to separate parameters that set derived parameters from derived parameters
 // variables for simulation conditions
 // (generally) initialized and then never edited again, only read
 struct SimulationEnv {
@@ -24,25 +65,17 @@ struct SimulationEnv {
     long int max_transitions;
     long int max_rates;
 
-    int geometry;
-    bool evaporation_flag;
-
+    // shifts
     int zixshift, ziyshift, zizshift;
     int ssxshift, ssyshift, sszshift;
-    int zsh, ysh, xsh; // shifts
+    int zsh, ysh, xsh;
 
     // [ ]: cartesian, units of nearest-neighbor spacing?
-    int system_size_x, system_size_y, system_size_z; // system size x, y, z
+    int system_size_x, system_size_y, system_size_z;
     double ssr;
+    // TODO: to input?
     size_t zone_count_u, zone_count_v, zone_count_w;
 
-    int lattice_type;
-
-    int sheet_thickness;
-    int cluster_radius;
-    char atoms_filename[256];
-
-    double initial_overpotential;
     double overpotential_ramp_rate;
     double max_overpotential;
 
@@ -69,16 +102,16 @@ struct SimulationEnv {
     // atom types
     double *nn_energy; // nnE[env_idx]
 
+    int dissolution;  // flag for whether dissolution events can occur
     bool *is_soluble; // [num_elements] (implemented as always [8])
 
-    int dissolution;   // flag for whether dissolution events can occur
     char **atom_names; // [num_elements][BUFFER_SIZE or 3 or something]
     int atom_names_cnt;
     // TODO: remove this, can just use num_elements
 
     /* symmetry related variables */
-    double rmat[3][3];  // visualization?
-    double centroid[3]; // coordinates for center of gravity
+    // double rmat[3][3];  // visualization?
+    // double centroid[3]; // coordinates for center of gravity
 
     // relevant vectors to neighbors
     LatticeVector *transition_vectors;

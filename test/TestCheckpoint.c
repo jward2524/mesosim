@@ -155,11 +155,6 @@ void test_checkpoint_save_and_load_env_scalars(void)
     // populate a minimal env with key config fields for checkpointing.
     se.flavor = FLAVOR_KMC;
     se.rand_seed = 12345u;
-    se.geometry = 1;
-    se.evaporation_flag = true;
-    se.lattice_type = 2;
-    se.sheet_thickness = 5;
-    se.cluster_radius = 10;
     se.system_size_x = 20;
     se.system_size_y = 20;
     se.system_size_z = 20;
@@ -177,7 +172,6 @@ void test_checkpoint_save_and_load_env_scalars(void)
     se.primitive_basis[2][0] = 0.0;
     se.primitive_basis[2][1] = 0.0;
     se.primitive_basis[2][2] = 1.0;
-    se.initial_overpotential = 0.2;
     se.overpotential_ramp_rate = 0.01;
     se.max_overpotential = 1.0;
 
@@ -192,11 +186,6 @@ void test_checkpoint_save_and_load_env_scalars(void)
                                   "env scalar checkpoint should load successfully");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(FLAVOR_KMC, se.flavor, "flavor should restore");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(12345u, se.rand_seed, "random seed should restore");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, se.geometry, "geometry should restore");
-    TEST_ASSERT_TRUE_MESSAGE(se.evaporation_flag, "evaporation flag should restore");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(2, se.lattice_type, "lattice type should restore");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(5, se.sheet_thickness, "sheet thickness should restore");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(10, se.cluster_radius, "cluster radius should restore");
     TEST_ASSERT_EQUAL_INT_MESSAGE(20, se.system_size_x, "system size x should restore");
     TEST_ASSERT_EQUAL_INT_MESSAGE(20, se.system_size_y, "system size y should restore");
     TEST_ASSERT_EQUAL_INT_MESSAGE(20, se.system_size_z, "system size z should restore");
@@ -212,8 +201,6 @@ void test_checkpoint_save_and_load_env_scalars(void)
                                      "primitive basis [1][1] should restore");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.0, se.primitive_basis[2][2],
                                      "primitive basis [2][2] should restore");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, se.initial_overpotential,
-                                     "initial overpotential should restore");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.01, se.overpotential_ramp_rate,
                                      "overpotential ramp rate should restore");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.0, se.max_overpotential, "max overpotential should restore");

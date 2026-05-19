@@ -95,16 +95,15 @@ void open_log_files(struct LoggingState *ls, unsigned flavor)
     }
 }
 
-bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
-                                     struct SimulationEnv *se, struct LoggingState *ls)
+void simulation_parameters_from_file(char *filename, struct UserInputs *inputs,
+                                     struct LoggingState *ls)
 {
     FILE *input_file = fopen(filename, "r");
     fopen_error(filename, input_file, "Failed to open input file, ");
 
-    struct UserInputs inputs = {0};
-    process_in_file(input_file, &inputs, ls);
+    process_in_file(input_file, inputs, ls);
     fclose(input_file);
-    return true;
+    return;
 }
 
 void process_in_file(FILE *input_file, struct UserInputs *inputs, struct LoggingState *ls)
@@ -130,6 +129,7 @@ bool process_xyz_file(FILE *input_file, struct SimulationState *ss, struct Simul
                       struct LoggingState *ls)
 {
     // processes file with .xyz format (number of atoms / comment / type x y z)
+    // LoggingState only needed for xyz_framenum
 
     char command_string[BUFFER_SIZE];
     char *ptr; // for fgets return values
@@ -381,14 +381,16 @@ static char *schedule_list_to_string(OutputSchedule *schedule)
 }
 
 // print a lot of information to the log
-void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct LoggingState *ls)
+// use simulation structs when possible to show values have been set, otherwise grab from inputs
+void input_logging(struct UserInputs *inputs, struct SimulationState *ss, struct SimulationEnv *se,
+                   struct LoggingState *ls)
 {
     safe_log(ls->sim_log, "Successfully read input file and preprocessed\n");
     safe_log(ls->sim_log, "System size is %d x %d x %d\n", se->system_size_x, se->system_size_y,
              se->system_size_z);
 
     safe_log(ls->sim_log, "Crystal structure is ");
-    switch (se->lattice_type) {
+    switch (inputs->lattice_type) {
     case FCC:
         safe_log(ls->sim_log, "FCC");
         break;
@@ -427,6 +429,19 @@ void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct 
             }
         }
     }
+    char flavor_str[4];
+    switch (inputs->flavor) {
+    case FLAVOR_KMC:
+        strncpy(flavor_str, "KMC", sizeof(flavor_str));
+        break;
+    case FLAVOR_MC:
+        strncpy(flavor_str, "MC", sizeof(flavor_str));
+        break;
+    default:
+        strncpy(flavor_str, "IDK", sizeof(flavor_str));
+        break;
+    }
+    safe_log(ls->sim_log, "Flavor is %s\n", flavor_str);
 
     safe_log(ls->sim_log, "Temperature is %lf K\n", ss->temperature);
 
@@ -498,17 +513,18 @@ void input_logging(struct SimulationState *ss, struct SimulationEnv *se, struct 
 
     safe_log(ls->sim_log, "Random seed is %u\n", se->rand_seed);
 
-    switch (se->geometry) {
+    switch (inputs->geometry) {
     case GEOMETRY_FLAT_SHEET:
         safe_log(ls->sim_log, "Initialized flat sheet with monolayer depth %d\n",
-                 se->sheet_thickness);
+                 inputs->geometry_param);
         break;
     case GEOMETRY_CLUSTER:
-        safe_log(ls->sim_log, "Initialized spherical cluster with radius %d\n", se->cluster_radius);
+        safe_log(ls->sim_log, "Initialized spherical cluster with radius %d\n",
+                 inputs->geometry_param);
         break;
     case GEOMETRY_FROM_FILE:
         safe_log(ls->sim_log, "Initialized user-defined structure with filename %s\n",
-                 se->atoms_filename);
+                 inputs->atoms_filename);
         break;
     }
 

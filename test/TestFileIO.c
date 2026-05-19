@@ -141,30 +141,27 @@ void test_process_in_file_mc(void)
 void test_process_xyz_file(void)
 {
     char filename[] = "test/sheet256.xyz";
-    strncpy(se->atoms_filename, filename, strlen(se->atoms_filename));
-    // initialize_from_file(ss, se, ls);
-
     atom_file = open_file(filename);
+    struct UserInputs inputs = {0};
 
-    se->lattice_type = FCC;
-    se->system_size_x = 256;
-    se->system_size_y = 256;
-    se->system_size_z = 256;
-    se->atom_names = malloc(2 * sizeof *se->atom_names);
-    se->atom_names[0] = malloc(sizeof "Ag");
-    strcpy(se->atom_names[0], "Ag");
-    se->atom_names[1] = malloc(sizeof "Au");
-    strcpy(se->atom_names[1], "Au");
-    se->atom_names_cnt = 2;
+    inputs.lattice_type = FCC;
+    inputs.num_nn_levels = 1; // needed for transition vectors
+    inputs.system_size_x = 256;
+    inputs.system_size_y = 256;
+    inputs.system_size_z = 256;
+    inputs.atom_names = malloc(2 * sizeof *inputs.atom_names);
+    inputs.atom_names[0] = malloc(sizeof "Ag");
+    strcpy(inputs.atom_names[0], "Ag");
+    inputs.atom_names[1] = malloc(sizeof "Au");
+    strcpy(inputs.atom_names[1], "Au");
+    inputs.atom_names_cnt = 2;
+
     se->zone_count_u = 256;
     se->zone_count_v = 256;
     se->zone_count_w = 256;
-    get_shifts(se);
-    set_primitive_basis(se);
-    initialize_simulation_box(se);
-    initialize_zones(&ss->zone_arr, se);
-    initialize_simulation_variables(ss, se);
-
+    initialize_state_from_input(&inputs, ss);
+    initialize_env_from_input(&inputs, se);
+    allocate_simulation_arrays(ss, se);
     process_xyz_file(atom_file, ss, se, ls);
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(499996, ss->atom_cnt, "Atom count");
@@ -621,7 +618,6 @@ void test_input_logging_basic(void)
     se->system_size_x = 10;
     se->system_size_y = 20;
     se->system_size_z = 30;
-    se->lattice_type = FCC;
     se->num_elements = 1;
     se->atom_names = malloc(sizeof(char *));
     se->atom_names[0] = dup_str("Ag");
@@ -632,8 +628,6 @@ void test_input_logging_basic(void)
     se->num_nn_levels = 1;
     se->nn_energy = malloc(sizeof(double));
     se->nn_energy[0] = 0.1;
-    se->geometry = GEOMETRY_CLUSTER;
-    se->cluster_radius = 5;
     se->rand_seed = 123;
     ss->atom_cnt = 42;
     ss->temperature = 300.0;
@@ -642,8 +636,15 @@ void test_input_logging_basic(void)
     ls->output_state_csv = 0;
     ls->output_xyz = 0;
 
+    struct UserInputs inputs = {
+        .flavor = FLAVOR_KMC,
+        .lattice_type = FCC,
+        .geometry = GEOMETRY_CLUSTER,
+        .geometry_param = 5,
+    };
+
     rewind(temp_log);
-    input_logging(ss, se, ls);
+    input_logging(&inputs, ss, se, ls);
     rewind(temp_log);
 
     ss->atom_cnt = 0;        // prevent free of uninitialized atoms in tearDown
@@ -661,6 +662,7 @@ void test_input_logging_basic(void)
     TEST_ASSERT_NOT_NULL(strstr(buffer, "Random seed is 123"));
     TEST_ASSERT_NOT_NULL(strstr(buffer, "Initialized spherical cluster with radius 5"));
     TEST_ASSERT_NOT_NULL(strstr(buffer, "Atoms created, 42 total"));
+    TEST_ASSERT_NOT_NULL(strstr(buffer, "Flavor is KMC"));
 }
 
 // TODO: write_xyz and write_logs tests need simulation variables to be initialized

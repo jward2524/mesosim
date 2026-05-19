@@ -425,8 +425,9 @@ int refresh_transitions(long atom_idx, struct SimulationState *ss,
     int indices = se->num_transition_vectors + atom_soluble;
     for (int i = 0; i < indices; ++i) {
         // transition can happen in the "i" direction
-        if (ss->atom_arr[atom_idx]->transition_indices[i] != -1)
+        if (ss->atom_arr[atom_idx]->transition_indices[i] != -1) {
             remove_from_transition_list(atom_idx, i, ss);
+        }
     }
 
     // cycle through the neighbor sites

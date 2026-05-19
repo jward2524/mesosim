@@ -110,27 +110,14 @@ int main(int argc, char *argv[])
     safe_log(log_state->sim_log, "Attempting to read in file %s\n", input_filename);
 
     // pre-process the file information and fill in the gaps with defaults
-    bool res = simulation_parameters_from_file(input_filename, sim_state, sim_env, log_state);
-    open_log_files(log_state, sim_env->flavor);
-
-    int failed_setup = 0;
-    if ((res == false) || sim_state->simulation_should_kill_itself) {
-        safe_log(stderr, "ERROR! Something bad happened when reading the input file\n");
-        failed_setup = 1;
-    }
-
-    if (sim_env->geometry == 0) {
-        safe_log(stderr, "ERROR! Structure type was not specified in input file\n");
-        failed_setup = 1;
-    }
-
-    if (failed_setup) {
-        clean_and_error(EXIT_FAILURE);
-    }
-
+    struct UserInputs inputs = {0};
+    simulation_parameters_from_file(input_filename, &inputs, log_state);
     printf("Read file successfully\n");
 
-    initialize_simulation(sim_state, sim_env, log_state);
+    open_log_files(log_state, inputs.flavor);
+
+    // TODO: take user inputs as argument
+    initialize_simulation(&inputs, sim_state, sim_env, log_state);
 
     double presim_time = (double)(clock() - presim_start) / CLOCKS_PER_SEC;
     safe_log(log_state->sim_log, "Pre-simulation setup time: %lg seconds\n", presim_time);
