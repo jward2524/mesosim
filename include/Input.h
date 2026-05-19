@@ -78,8 +78,7 @@ enum CmdRequired {
 };
 
 typedef InputErrorFlag (*CmdFunc)(int argc, char **argv, int line, ParseContext *ctx,
-                                  struct SimulationState *ss, struct SimulationEnv *se,
-                                  struct LoggingState *ls);
+                                  struct UserInputs *inputs, struct LoggingState *ls);
 
 typedef struct {
     const char *name;
@@ -95,15 +94,14 @@ extern const Command commands[];
 
 /* ================= Parsing API ================= */
 
-void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationState *ss,
-                      struct SimulationEnv *se, struct LoggingState *ls);
+void parse_input_file(FILE *fp, ParseContext *ctx, struct UserInputs *inputs,
+                      struct LoggingState *ls);
 void clean_ctx(ParseContext *ctx);
-void finalize_atom_dependent(const ParseContext *ctx, struct SimulationEnv *se);
-void finalize_nne(const ParseContext *ctx, struct SimulationEnv *se);
+void finalize_atom_dependent(const ParseContext *ctx, struct UserInputs *inputs);
+void finalize_nne(const ParseContext *ctx, struct UserInputs *inputs);
 void finalize_csv_fields(struct LoggingState *ls, unsigned int flavor);
 void check_required_inputs(const ParseContext *ctx, unsigned int flavor);
-void finalize_config(const ParseContext *ctx, struct SimulationState *ss, struct SimulationEnv *se,
-                     struct LoggingState *ls);
+void finalize_config(const ParseContext *ctx, struct UserInputs *inputs, struct LoggingState *ls);
 void print_help(const char *cmd);
 
 #endif

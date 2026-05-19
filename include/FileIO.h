@@ -20,8 +20,7 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
                                      struct SimulationEnv *se, struct LoggingState *ls);
 bool process_xyz_file(FILE *input_file, struct SimulationState *ss, struct SimulationEnv *se,
                       struct LoggingState *ls);
-void process_in_file(FILE *input_file, struct SimulationState *ss, struct SimulationEnv *se,
-                     struct LoggingState *ls);
+void process_in_file(FILE *input_file, struct UserInputs *inputs, struct LoggingState *ls);
 
 int get_precision(double total, double increment, int incr_precision);
 void input_logging(struct SimulationState *sim_state, struct SimulationEnv *sim_env,

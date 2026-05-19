@@ -101,17 +101,17 @@ bool simulation_parameters_from_file(char *filename, struct SimulationState *ss,
     FILE *input_file = fopen(filename, "r");
     fopen_error(filename, input_file, "Failed to open input file, ");
 
-    process_in_file(input_file, ss, se, ls);
+    struct UserInputs inputs = {0};
+    process_in_file(input_file, &inputs, ls);
     fclose(input_file);
     return true;
 }
 
-void process_in_file(FILE *input_file, struct SimulationState *ss, struct SimulationEnv *se,
-                     struct LoggingState *ls)
+void process_in_file(FILE *input_file, struct UserInputs *inputs, struct LoggingState *ls)
 {
     ParseContext ctx = {0};
-    parse_input_file(input_file, &ctx, ss, se, ls);
-    finalize_config(&ctx, ss, se, ls);
+    parse_input_file(input_file, &ctx, inputs, ls);
+    finalize_config(&ctx, inputs, ls);
     clean_ctx(&ctx);
     return;
 }

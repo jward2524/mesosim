@@ -70,39 +70,35 @@ static int parse_double(const char *s, double *out)
 /* ================= Command handlers ================= */
 
 static InputErrorFlag cmd_atomtype(int argc, char **argv, int line, ParseContext *p_ctx,
-                                   struct SimulationState *ss, struct SimulationEnv *se,
-                                   struct LoggingState *ls)
+                                   struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
-    (void)ss;
     (void)ls;
     if (argc < 2) {
         fprintf(stderr, "Input error - no arguments provided for command %s\n", argv[0]);
         return INPUT_ERR_COUNT_MISMATCH;
     }
 
-    se->atom_names_cnt = argc - 1;
-    se->atom_names = (char **)malloc((size_t)se->atom_names_cnt * sizeof(char *));
-    if (se->atom_names == NULL) {
+    inputs->atom_names_cnt = argc - 1;
+    inputs->atom_names = (char **)malloc((size_t)inputs->atom_names_cnt * sizeof(char *));
+    if (inputs->atom_names == NULL) {
         fprintf(stderr, "Couldn't allocate memory for atom names: %s", strerror(errno));
         return INPUT_ERR_ALLOC;
     }
-    for (int i = 0; i < se->atom_names_cnt; i++) {
-        se->atom_names[i] = dup_str(argv[i + 1]);
+    for (int i = 0; i < inputs->atom_names_cnt; i++) {
+        inputs->atom_names[i] = dup_str(argv[i + 1]);
     }
-    se->num_elements = argc - 1;
-    se->num_bond_types = get_num_bond_types(se->num_elements);
+    inputs->num_elements = argc - 1;
+    inputs->num_bond_types = get_num_bond_types(inputs->num_elements);
 
     return INPUT_ERR_NONE;
 }
 
 static InputErrorFlag cmd_composition(int argc, char **argv, int line, ParseContext *p_ctx,
-                                      struct SimulationState *ss, struct SimulationEnv *se,
-                                      struct LoggingState *ls)
+                                      struct UserInputs *inputs, struct LoggingState *ls)
 {
-    (void)ss;
-    (void)se;
+    (void)inputs;
     (void)ls;
     if (argc < 2) {
         fprintf(stderr, "Input error - no arguments provided for command %s\n", argv[0]);
@@ -129,11 +125,9 @@ static InputErrorFlag cmd_composition(int argc, char **argv, int line, ParseCont
 }
 
 static InputErrorFlag cmd_dissolution(int argc, char **argv, int line, ParseContext *p_ctx,
-                                      struct SimulationState *ss, struct SimulationEnv *se,
-                                      struct LoggingState *ls)
+                                      struct UserInputs *inputs, struct LoggingState *ls)
 {
-    (void)ss;
-    (void)se;
+    (void)inputs;
     (void)ls;
     if (argc < 2) {
         fprintf(stderr, "Input error - no arguments provided for command %s\n", argv[0]);
@@ -166,18 +160,16 @@ static InputErrorFlag cmd_dissolution(int argc, char **argv, int line, ParseCont
 }
 
 static InputErrorFlag cmd_nnlevels(int argc, char **argv, int line, ParseContext *p_ctx,
-                                   struct SimulationState *ss, struct SimulationEnv *se,
-                                   struct LoggingState *ls)
+                                   struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
-    (void)ss;
     (void)ls;
     if (argc != 2) {
         fprintf(stderr, "Input error - expected 1 argument for command %s\n", argv[0]);
         return INPUT_ERR_COUNT_MISMATCH;
     }
-    int res = parse_int(argv[1], &se->num_nn_levels);
+    int res = parse_int(argv[1], &inputs->num_nn_levels);
     if (res) {
         fprintf(stderr, "Input error - could not parse nnlevels value %s\n", argv[1]);
         return INPUT_ERR_INVALID_ARG;
@@ -186,11 +178,9 @@ static InputErrorFlag cmd_nnlevels(int argc, char **argv, int line, ParseContext
 }
 
 static InputErrorFlag cmd_nne(int argc, char **argv, int line, ParseContext *p_ctx,
-                              struct SimulationState *ss, struct SimulationEnv *se,
-                              struct LoggingState *ls)
+                              struct UserInputs *inputs, struct LoggingState *ls)
 {
-    (void)ss;
-    (void)se;
+    (void)inputs;
     (void)ls;
     if (argc < 2) {
         fprintf(stderr, "Input error - no arguments provided for command %s\n", argv[0]);
@@ -237,39 +227,36 @@ static InputErrorFlag cmd_nne(int argc, char **argv, int line, ParseContext *p_c
 }
 
 static InputErrorFlag cmd_systemsize(int argc, char **argv, int line, ParseContext *p_ctx,
-                                     struct SimulationState *ss, struct SimulationEnv *se,
-                                     struct LoggingState *ls)
+                                     struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
-    (void)ss;
     (void)ls;
     if (argc != 4) {
         fprintf(stderr, "Input error - expected 3 arguments for command %s\n", argv[0]);
         return INPUT_ERR_COUNT_MISMATCH;
     }
-    if (parse_int(argv[1], &se->system_size_x) || parse_int(argv[2], &se->system_size_y) ||
-        parse_int(argv[3], &se->system_size_z)) {
+    if (parse_int(argv[1], &inputs->system_size_x) || parse_int(argv[2], &inputs->system_size_y) ||
+        parse_int(argv[3], &inputs->system_size_z)) {
         fprintf(stderr, "Input error - could not parse systemsize arguments\n");
         return INPUT_ERR_INVALID_ARG;
     }
-    se->max_atoms = (long)se->system_size_x * (long)se->system_size_y * (long)se->system_size_z;
+    // TODO: move to finalization
+    // se->max_atoms = (long)se->system_size_x * (long)se->system_size_y * (long)se->system_size_z;
     return INPUT_ERR_NONE;
 }
 
 static InputErrorFlag cmd_temp(int argc, char **argv, int line, ParseContext *ctx,
-                               struct SimulationState *ss, struct SimulationEnv *se,
-                               struct LoggingState *ls)
+                               struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
-    (void)se;
     (void)ls;
     if (argc != 2) {
         fprintf(stderr, "Input error - expected 1 argument for command %s\n", argv[0]);
         return INPUT_ERR_COUNT_MISMATCH;
     }
-    if (parse_double(argv[1], &ss->temperature)) {
+    if (parse_double(argv[1], &inputs->temperature)) {
         fprintf(stderr, "Input error - could not parse temp value %s\n", argv[1]);
         return INPUT_ERR_INVALID_ARG;
     }
@@ -277,12 +264,10 @@ static InputErrorFlag cmd_temp(int argc, char **argv, int line, ParseContext *ct
 }
 
 static InputErrorFlag cmd_seed(int argc, char **argv, int line, ParseContext *p_ctx,
-                               struct SimulationState *ss, struct SimulationEnv *se,
-                               struct LoggingState *ls)
+                               struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
-    (void)ss;
     (void)ls;
     if (argc != 2) {
         fprintf(stderr, "Input error - expected 1 argument for command %s\n", argv[0]);
@@ -292,14 +277,14 @@ static InputErrorFlag cmd_seed(int argc, char **argv, int line, ParseContext *p_
     if (strcmp(argv[1], "random") == 0) {
         time_t seedtime;
         time(&seedtime);
-        se->rand_seed = (unsigned int)seedtime;
+        inputs->rand_seed = (unsigned int)seedtime;
         return INPUT_ERR_NONE;
     }
     if (strcmp(argv[1], "default") == 0) {
-        se->rand_seed = DEFAULT_SEED;
+        inputs->rand_seed = DEFAULT_SEED;
         return INPUT_ERR_NONE;
     }
-    if (parse_uint(argv[1], &se->rand_seed)) {
+    if (parse_uint(argv[1], &inputs->rand_seed)) {
         fprintf(stderr, "Input error - could not parse seed value %s\n", argv[1]);
         return INPUT_ERR_INVALID_ARG;
     }
@@ -307,28 +292,26 @@ static InputErrorFlag cmd_seed(int argc, char **argv, int line, ParseContext *p_
 }
 
 static InputErrorFlag cmd_potential(int argc, char **argv, int line, ParseContext *p_ctx,
-                                    struct SimulationState *ss, struct SimulationEnv *se,
-                                    struct LoggingState *ls)
+                                    struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
-    (void)ss;
     (void)ls;
     if (argc != 2 && argc != 4) {
         fprintf(stderr, "Input error - expected 1 or 3 arguments for command %s\n", argv[0]);
         return INPUT_ERR_COUNT_MISMATCH;
     }
-    if (parse_double(argv[1], &se->initial_overpotential)) {
+    if (parse_double(argv[1], &inputs->initial_overpotential)) {
         fprintf(stderr, "Input error - could not parse potential value %s\n", argv[1]);
         return INPUT_ERR_INVALID_ARG;
     }
     if (argc == 2) {
-        se->overpotential_ramp_rate = 0.0;
-        se->max_overpotential = se->initial_overpotential;
+        inputs->overpotential_ramp_rate = 0.0;
+        inputs->max_overpotential = inputs->initial_overpotential;
         return INPUT_ERR_NONE;
     }
-    if (parse_double(argv[2], &se->overpotential_ramp_rate) ||
-        parse_double(argv[3], &se->max_overpotential)) {
+    if (parse_double(argv[2], &inputs->overpotential_ramp_rate) ||
+        parse_double(argv[3], &inputs->max_overpotential)) {
         fprintf(stderr, "Input error - could not parse potential sweep arguments\n");
         return INPUT_ERR_INVALID_ARG;
     }
@@ -336,28 +319,27 @@ static InputErrorFlag cmd_potential(int argc, char **argv, int line, ParseContex
 }
 
 static InputErrorFlag cmd_struct(int argc, char **argv, int line, ParseContext *p_ctx,
-                                 struct SimulationState *ss, struct SimulationEnv *se,
-                                 struct LoggingState *ls)
+                                 struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
-    (void)ss;
     (void)ls;
     if (argc != 2) {
         fprintf(stderr, "Input error - expected 1 argument for command %s\n", argv[0]);
         return INPUT_ERR_COUNT_MISMATCH;
     }
     if (strcmp(argv[1], "FCC") == 0 || strcmp(argv[1], "fcc") == 0) {
-        se->lattice_type = FCC;
+        inputs->lattice_type = FCC;
     } else if (strcmp(argv[1], "BCC") == 0 || strcmp(argv[1], "bcc") == 0) {
-        se->lattice_type = BCC;
+        inputs->lattice_type = BCC;
     } else if (strcmp(argv[1], "SC") == 0 || strcmp(argv[1], "sc") == 0) {
-        se->lattice_type = SC;
+        inputs->lattice_type = SC;
     } else {
         fprintf(stderr, "Input error - structure type %s not valid\n", argv[1]);
         return INPUT_ERR_INVALID_ARG;
     }
-    se->num_transition_vectors = MAXIMUM_NUMBER_OF_NEIGHBORS;
+    // TODO: move to finalization
+    // inputs->num_transition_vectors = MAXIMUM_NUMBER_OF_NEIGHBORS;
     return INPUT_ERR_NONE;
 }
 
@@ -581,13 +563,11 @@ static InputErrorFlag parse_steps_csv(int argc, char **argv, struct LoggingState
 }
 
 static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *p_ctx,
-                                 struct SimulationState *ss, struct SimulationEnv *se,
-                                 struct LoggingState *ls)
+                                 struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
-    (void)ss;
-    (void)se;
+    (void)inputs;
 
     if (argc < 2) {
         fprintf(stderr, "Input error - output command expects at least 1 argument\n");
@@ -606,36 +586,34 @@ static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *
 }
 
 static InputErrorFlag cmd_geometry(int argc, char **argv, int line, ParseContext *p_ctx,
-                                   struct SimulationState *ss, struct SimulationEnv *se,
-                                   struct LoggingState *ls)
+                                   struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
-    (void)ss;
     (void)ls;
     if (argc < 3) {
         fprintf(stderr, "Input error - not enough arguments for command %s\n", argv[0]);
         return INPUT_ERR_COUNT_MISMATCH;
     }
     if (strcmp(argv[1], "sheet") == 0) {
-        if (argc != 3 || parse_int(argv[2], &se->sheet_thickness)) {
+        if (argc != 3 || parse_int(argv[2], &inputs->geometry_param)) {
             fprintf(stderr, "Input error - invalid sheet thickness %s\n", argc > 2 ? argv[2] : "");
             return INPUT_ERR_INVALID_ARG;
         }
-        se->geometry = GEOMETRY_FLAT_SHEET;
+        inputs->geometry = GEOMETRY_FLAT_SHEET;
     } else if (strcmp(argv[1], "cluster") == 0) {
-        if (argc != 3 || parse_int(argv[2], &se->cluster_radius)) {
+        if (argc != 3 || parse_int(argv[2], &inputs->geometry_param)) {
             fprintf(stderr, "Input error - invalid cluster radius %s\n", argc > 2 ? argv[2] : "");
             return INPUT_ERR_INVALID_ARG;
         }
-        se->geometry = GEOMETRY_CLUSTER;
+        inputs->geometry = GEOMETRY_CLUSTER;
     } else if (strcmp(argv[1], "file") == 0) {
         if (argc != 3) {
             fprintf(stderr, "Input error - geometry file expects a filename\n");
             return INPUT_ERR_COUNT_MISMATCH;
         }
-        se->geometry = GEOMETRY_FROM_FILE;
-        snprintf(se->atoms_filename, sizeof(se->atoms_filename), "%s", argv[2]);
+        inputs->geometry = GEOMETRY_FROM_FILE;
+        snprintf(inputs->atoms_filename, sizeof(inputs->atoms_filename), "%s", argv[2]);
     } else {
         fprintf(stderr, "Input error - unrecognized geometry type %s\n", argv[1]);
         return INPUT_ERR_INVALID_ARG;
@@ -644,26 +622,24 @@ static InputErrorFlag cmd_geometry(int argc, char **argv, int line, ParseContext
 }
 
 static InputErrorFlag cmd_run(int argc, char **argv, int line, ParseContext *p_ctx,
-                              struct SimulationState *ss, struct SimulationEnv *se,
-                              struct LoggingState *ls)
+                              struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
-    (void)se;
     (void)ls;
     if (argc != 3) {
         fprintf(stderr, "Input error - expected 2 arguments for command %s\n", argv[0]);
         return INPUT_ERR_COUNT_MISMATCH;
     }
     if (strcmp(argv[1], "time") == 0) {
-        ss->sim_end_type = SIM_END_BY_STIME;
-        if (parse_double(argv[2], &ss->run_stime)) {
+        inputs->sim_end_type = SIM_END_BY_STIME;
+        if (parse_double(argv[2], &inputs->run_stime)) {
             fprintf(stderr, "Input error - invalid run time %s\n", argv[2]);
             return INPUT_ERR_INVALID_ARG;
         }
     } else if (strcmp(argv[1], "iteration") == 0) {
-        ss->sim_end_type = SIM_END_BY_ITERATIONS;
-        if (parse_ulong(argv[2], &ss->final_iteration)) {
+        inputs->sim_end_type = SIM_END_BY_ITERATIONS;
+        if (parse_ulong(argv[2], &inputs->final_iteration)) {
             fprintf(stderr, "Input error - invalid run iteration %s\n", argv[2]);
             return INPUT_ERR_INVALID_ARG;
         }
@@ -675,21 +651,19 @@ static InputErrorFlag cmd_run(int argc, char **argv, int line, ParseContext *p_c
 }
 
 static InputErrorFlag cmd_flavor(int argc, char **argv, int line, ParseContext *p_ctx,
-                                 struct SimulationState *ss, struct SimulationEnv *se,
-                                 struct LoggingState *ls)
+                                 struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
-    (void)ss;
     (void)ls;
     if (argc != 2) {
         fprintf(stderr, "Input error - expected 1 argument for command %s\n", argv[0]);
         return INPUT_ERR_COUNT_MISMATCH;
     }
     if (strcmp(argv[1], "KMC") == 0) {
-        se->flavor = FLAVOR_KMC;
+        inputs->flavor = FLAVOR_KMC;
     } else if (strcmp(argv[1], "MC") == 0) {
-        se->flavor = FLAVOR_MC;
+        inputs->flavor = FLAVOR_MC;
     } else {
         fprintf(stderr, "Input error - unknown flavor %s\n", argv[1]);
         return INPUT_ERR_INVALID_ARG;
@@ -709,13 +683,11 @@ void print_help(const char *cmd)
 }
 
 static InputErrorFlag cmd_help(int argc, char **argv, int line, ParseContext *p_ctx,
-                               struct SimulationState *ss, struct SimulationEnv *se,
-                               struct LoggingState *ls)
+                               struct UserInputs *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
-    (void)ss;
-    (void)se;
+    (void)inputs;
     (void)ls;
     if (argc == 1)
         print_help(NULL);
@@ -820,8 +792,8 @@ void clean_ctx(ParseContext *p_ctx)
     free_if_exists((void **)&p_ctx->cmd_present);
 }
 
-void parse_input_file(FILE *fp, ParseContext *p_ctx, struct SimulationState *ss,
-                      struct SimulationEnv *se, struct LoggingState *ls)
+void parse_input_file(FILE *fp, ParseContext *p_ctx, struct UserInputs *inputs,
+                      struct LoggingState *ls)
 {
     char line[MAX_LINE];
     char *argv[MAX_TOKENS];
@@ -844,7 +816,7 @@ void parse_input_file(FILE *fp, ParseContext *p_ctx, struct SimulationState *ss,
             if (strcmp(argv[0], c->name) == 0 ||
                 (strcmp(c->name, "nne") == 0 && isdigit(argv[0][0]))) {
                 mark_requirement(p_ctx, c);
-                InputErrorFlag err = c->func(argc, argv, lineno, p_ctx, ss, se, ls);
+                InputErrorFlag err = c->func(argc, argv, lineno, p_ctx, inputs, ls);
                 if (err != INPUT_ERR_NONE) {
                     // if handler fails
                     fprintf(stderr, "Error in command '%s' at line %d\nUsage: %s\n", argv[0],
@@ -865,15 +837,15 @@ void parse_input_file(FILE *fp, ParseContext *p_ctx, struct SimulationState *ss,
 
 /* ================= Finalization ================= */
 
-void finalize_atom_dependent(const ParseContext *p_ctx, struct SimulationEnv *se)
+void finalize_atom_dependent(const ParseContext *p_ctx, struct UserInputs *inputs)
 {
-    if (se->atom_names_cnt <= 0) {
+    if (inputs->atom_names_cnt <= 0) {
         fprintf(stderr, "atomtype must be specified\n");
         clean_and_error(INPUT_ERR_MISSING_DEPENDENCY);
     }
 
     if (p_ctx->composition_raw) {
-        if (p_ctx->composition_count != se->atom_names_cnt) {
+        if (p_ctx->composition_count != inputs->atom_names_cnt) {
             fprintf(stderr, "composition count mismatch at line %d\n", p_ctx->composition_lineno);
             clean_ctx((ParseContext *)p_ctx);
             clean_and_error(INPUT_ERR_COUNT_MISMATCH);
@@ -887,58 +859,60 @@ void finalize_atom_dependent(const ParseContext *p_ctx, struct SimulationEnv *se
             clean_ctx((ParseContext *)p_ctx);
             clean_and_error(INPUT_ERR_MISSING_DEPENDENCY);
         }
-        se->substrate_composition = (double *)malloc((size_t)se->atom_names_cnt * sizeof(double));
-        if (se->substrate_composition == NULL) {
+        inputs->substrate_composition =
+            (double *)malloc((size_t)inputs->atom_names_cnt * sizeof(double));
+        if (inputs->substrate_composition == NULL) {
             fprintf(stderr, "Couldn't allocate memory for substrate composition: %s",
                     strerror(errno));
             clean_ctx((ParseContext *)p_ctx);
             clean_and_error(INPUT_ERR_ALLOC);
         }
-        memcpy(se->substrate_composition, p_ctx->composition_raw,
-               (size_t)se->atom_names_cnt * sizeof(double));
+        memcpy(inputs->substrate_composition, p_ctx->composition_raw,
+               (size_t)inputs->atom_names_cnt * sizeof(double));
     }
 
     if (p_ctx->dissolution_raw) {
-        if (p_ctx->dissolution_count != se->atom_names_cnt) {
+        if (p_ctx->dissolution_count != inputs->atom_names_cnt) {
             fprintf(stderr, "dissolution count mismatch at line %d\n", p_ctx->dissolution_lineno);
             clean_ctx((ParseContext *)p_ctx);
             clean_and_error(INPUT_ERR_COUNT_MISMATCH);
         }
-        se->is_soluble = (bool *)malloc((size_t)se->atom_names_cnt * sizeof(bool));
-        if (se->is_soluble == NULL) {
+        inputs->is_soluble = (bool *)malloc((size_t)inputs->atom_names_cnt * sizeof(bool));
+        if (inputs->is_soluble == NULL) {
             fprintf(stderr, "Couldn't allocate memory for dissolution flags, is_soluble: %s",
                     strerror(errno));
             clean_ctx((ParseContext *)p_ctx);
             clean_and_error(INPUT_ERR_ALLOC);
         }
-        memcpy(se->is_soluble, p_ctx->dissolution_raw, (size_t)se->atom_names_cnt * sizeof(bool));
-        se->dissolution = 0;
-        for (int i = 0; i < p_ctx->dissolution_count; i++) {
-            if (p_ctx->dissolution_raw[i]) {
-                se->dissolution = 1;
-                break;
-            }
-        }
+        memcpy(inputs->is_soluble, p_ctx->dissolution_raw,
+               (size_t)inputs->atom_names_cnt * sizeof(bool));
+        // TODO: move to finalization
+        // inputs->dissolution = 0;
+        // for (int i = 0; i < p_ctx->dissolution_count; i++) {
+        //     if (p_ctx->dissolution_raw[i]) {
+        //         inputs->dissolution = 1;
+        //         break;
+        //     }
+        // }
     }
 }
 
-void finalize_nne(const ParseContext *p_ctx, struct SimulationEnv *se)
+void finalize_nne(const ParseContext *p_ctx, struct UserInputs *inputs)
 {
-    int ntypes = se->atom_names_cnt;
-    se->num_bond_types = get_num_bond_types(se->num_elements);
+    int ntypes = inputs->atom_names_cnt;
+    inputs->num_bond_types = get_num_bond_types(inputs->num_elements);
 
-    if (se->num_nn_levels <= 0) {
+    if (inputs->num_nn_levels <= 0) {
         fprintf(stderr, "nnlevels must be specified\n");
         clean_ctx((ParseContext *)p_ctx);
-        ;
         clean_and_error(INPUT_ERR_MISSING_DEPENDENCY);
     }
 
-    se->num_nn_types = se->num_nn_levels * se->num_bond_types;
-    se->nn_energy = (double *)calloc((size_t)se->num_nn_types, sizeof(double));
+    inputs->num_nn_types = inputs->num_nn_levels * inputs->num_bond_types;
+    inputs->nn_energy = (double *)calloc((size_t)inputs->num_nn_types, sizeof(double));
 
-    int *defined = calloc((size_t)se->num_nn_levels, sizeof(int));
-    int expected = se->num_bond_types;
+    int *defined = calloc((size_t)inputs->num_nn_levels, sizeof(int));
+    int expected = inputs->num_bond_types;
 
     for (int c = 0; c < p_ctx->nne_cmd_count; c++) {
         int lvl = p_ctx->nne_cmds[c].level;
@@ -949,7 +923,7 @@ void finalize_nne(const ParseContext *p_ctx, struct SimulationEnv *se)
             ;
             clean_and_error(INPUT_ERR_COUNT_MISMATCH);
         }
-        if (lvl > se->num_nn_levels) {
+        if (lvl > inputs->num_nn_levels) {
             fprintf(stderr, "nne level %d exceeds nnlevels (line %d)\n", lvl,
                     p_ctx->nne_cmds[c].line);
             clean_ctx((ParseContext *)p_ctx);
@@ -971,14 +945,14 @@ void finalize_nne(const ParseContext *p_ctx, struct SimulationEnv *se)
         }
 
         // Fill upper triangle from flattened input
-        int bond_index = nn_bondidx_2_envidx(lvl - 1, 0, se->num_bond_types);
+        int bond_index = nn_bondidx_2_envidx(lvl - 1, 0, inputs->num_bond_types);
         double *vals = p_ctx->nne_cmds[c].values;
         int idx = 0;
         for (int i = 0; i < ntypes; i++) {
             for (int j = i; j < ntypes; j++) {
                 if (idx >= expected)
                     break;
-                se->nn_energy[bond_index] = vals[idx];
+                inputs->nn_energy[bond_index] = vals[idx];
                 idx++;
                 bond_index++;
             }
@@ -986,7 +960,7 @@ void finalize_nne(const ParseContext *p_ctx, struct SimulationEnv *se)
         defined[lvl - 1] = 1;
     }
 
-    for (int i = 0; i < se->num_nn_levels; i++) {
+    for (int i = 0; i < inputs->num_nn_levels; i++) {
         if (!defined[i]) {
             fprintf(stderr, "missing nne definition for level %d\n", i + 1);
             clean_ctx((ParseContext *)p_ctx);
@@ -1068,14 +1042,12 @@ void check_required_inputs(const ParseContext *p_ctx, unsigned int flavor)
     }
 }
 
-void finalize_config(const ParseContext *p_ctx, struct SimulationState *ss,
-                     struct SimulationEnv *se, struct LoggingState *ls)
+void finalize_config(const ParseContext *p_ctx, struct UserInputs *inputs, struct LoggingState *ls)
 {
-    (void)ss;
-    finalize_atom_dependent(p_ctx, se);
-    finalize_nne(p_ctx, se);
-    finalize_csv_fields(ls, se->flavor);
-    check_required_inputs(p_ctx, se->flavor);
+    finalize_atom_dependent(p_ctx, inputs);
+    finalize_nne(p_ctx, inputs);
+    finalize_csv_fields(ls, inputs->flavor);
+    check_required_inputs(p_ctx, inputs->flavor);
 }
 
 // finalize_nne using multidimensional array for nn_energy
