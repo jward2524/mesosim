@@ -273,9 +273,6 @@ void test_checkpoint_save_and_load_atom_round_trip(void)
     original_atom.lattice[0] = 4;
     original_atom.lattice[1] = -2;
     original_atom.lattice[2] = 9;
-    original_atom.cartesian[0] = 1.25;
-    original_atom.cartesian[1] = 2.5;
-    original_atom.cartesian[2] = 3.75;
     original_atom.bsradius = 0.42;
 
     ss.atom_cnt = 1;

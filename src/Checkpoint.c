@@ -8,7 +8,7 @@
 // packed payload used for the first real checkpoint slice: the mutable state scalars that need
 // to survive a pause/resume cycle on the same machine.
 #pragma pack(push, 1)
-typedef struct {
+typedef struct SSP {
     unsigned long iter;
     unsigned long mmc_steps;
     unsigned long final_iteration;
@@ -59,10 +59,11 @@ static void apply_state_payload(const CheckpointStatePayload *payload, struct Si
     ss->total_atoms_dissolved = payload->total_atoms_dissolved;
 }
 
+// TODO: add the rest of the members of the SimulationEnv struct
 // packed payload for the immutable simulation environment: geometry, lattice, and configuration.
 // these fields define how to interpret the atom array and rebuild derived structures on restore.
 #pragma pack(push, 1)
-typedef struct {
+typedef struct SEP {
     unsigned flavor;
     unsigned rand_seed;
     int geometry;
@@ -163,15 +164,12 @@ static void apply_env_payload(const CheckpointEnvPayload *payload, struct Simula
 // derived fields like transition_indices, neighbor_atom_idxs, and linked-list pointers will be
 // rebuilt from the atom snapshot during restore, so we do not serialize them here.
 #pragma pack(push, 1)
-typedef struct {
+typedef struct AtomP {
     unsigned char type;
     double energy;
     int lattice_u;
     int lattice_v;
     int lattice_w;
-    double cartesian_x;
-    double cartesian_y;
-    double cartesian_z;
     double bsradius;
 } CheckpointAtomPayload;
 #pragma pack(pop)
@@ -184,9 +182,6 @@ static void fill_atom_payload(CheckpointAtomPayload *payload, const Atom *atom)
     payload->lattice_u = atom->lattice[0];
     payload->lattice_v = atom->lattice[1];
     payload->lattice_w = atom->lattice[2];
-    payload->cartesian_x = atom->cartesian[0];
-    payload->cartesian_y = atom->cartesian[1];
-    payload->cartesian_z = atom->cartesian[2];
     payload->bsradius = atom->bsradius;
 }
 
@@ -200,9 +195,6 @@ static void apply_atom_payload(const CheckpointAtomPayload *payload, Atom *atom)
     atom->lattice[0] = payload->lattice_u;
     atom->lattice[1] = payload->lattice_v;
     atom->lattice[2] = payload->lattice_w;
-    atom->cartesian[0] = payload->cartesian_x;
-    atom->cartesian[1] = payload->cartesian_y;
-    atom->cartesian[2] = payload->cartesian_z;
     atom->bsradius = payload->bsradius;
 }
 
@@ -314,7 +306,7 @@ CheckpointStatus checkpoint_save(const char *path, const struct SimulationState 
     uint32_t atom_payload_bytes = 0u;
     if (ss && ss->atom_cnt > 0) {
         atom_payload_bytes =
-            (uint32_t)(sizeof(uint32_t) + ss->atom_cnt * sizeof(CheckpointAtomPayload));
+            (uint32_t)(sizeof(uint32_t) + (uint32_t)ss->atom_cnt * sizeof(CheckpointAtomPayload));
         payload_bytes += atom_payload_bytes;
     }
 
@@ -610,7 +602,7 @@ CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,
     // apply payloads to the provided structures.
     if (has_state && ss) {
         apply_state_payload(&state_payload, ss);
-        ss->atom_cnt = atom_cnt_loaded;
+        ss->atom_cnt = (long int)atom_cnt_loaded;
         // allocate atom_arr if atoms were loaded.
         if (has_atoms && atom_cnt_loaded > 0u) {
             ss->atom_arr = (Atom **)malloc(atom_cnt_loaded * sizeof(Atom *));
@@ -622,16 +614,17 @@ CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,
                 return CHECKPOINT_ERROR;
             }
             for (long int i = 0; i < (long int)atom_cnt_loaded; ++i) {
-                ss->atom_arr[i] = (Atom *)malloc(sizeof(Atom));
-                if (!ss->atom_arr[i]) {
+                Atom *atom = (Atom *)malloc(sizeof(Atom));
+                if (!atom) {
                     fprintf(stderr, "Checkpoint error: out of memory allocating atom %ld\n", i);
                     free(atom_payloads);
                     fclose(file);
                     return CHECKPOINT_ERROR;
                 }
                 // zero-initialize the atom, then apply payload (sets core fields).
-                memset(ss->atom_arr[i], 0, sizeof(Atom));
-                apply_atom_payload(&atom_payloads[i], ss->atom_arr[i]);
+                memset(atom, 0, sizeof(Atom));
+                apply_atom_payload(&atom_payloads[i], atom);
+                ss->atom_arr[i] = atom;
             }
         }
     }
