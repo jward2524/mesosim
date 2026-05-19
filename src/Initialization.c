@@ -202,12 +202,10 @@ void initialize_initial_structure(struct SimulationState *ss, struct SimulationE
 /********************************************************************************/
 // zi* are the number of zones in that dimension, zi*shift is for bit shifting to find which zone a
 // lattice coordinate corresponds to?
+// updates zi*, zi*shift, *sh
 void get_shifts(struct SimulationEnv *se)
-{ // updates zi*, zi*shift, *sh
+{
     size_t temp1;
-    se->zone_count_u = TTS;
-    se->zone_count_v = TTS;
-    se->zone_count_w = TTS;
 
     temp1 = se->zone_count_u;
     se->zixshift = 0;
@@ -838,6 +836,10 @@ void corners2limits(double corners_cart[8][3], int limits_lat[3][2], double inv_
 void initialize_simulation(struct SimulationState *ss, struct SimulationEnv *se,
                            struct LoggingState *ls)
 {
+
+    se->zone_count_u = TTS;
+    se->zone_count_v = TTS;
+    se->zone_count_w = TTS;
 
     // bit shifts for periodic boundary conditions
     // requires: zone_count_uvw, system_size_xyz
