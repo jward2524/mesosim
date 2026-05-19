@@ -3,6 +3,8 @@
 
 #include "State.h"
 
+void add_atom_to_zone_list(long int atom_idx, int zone_u, int zone_v, int zone_w,
+                           struct SimulationState *ss);
 long int add_atom(int u, int v, int w, unsigned char type, int special, struct SimulationState *ss,
                   struct SimulationEnv *se);
 long atom_at(int u, int v, int w, Atom **atom_arr, Zone ***zone_arr, struct SimulationEnv *se);

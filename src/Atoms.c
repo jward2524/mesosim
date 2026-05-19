@@ -43,8 +43,33 @@ void create_default_atom(long int atom_idx, Atom **atom_arr, struct SimulationEn
     return;
 }
 
-/*******************************************************************************
-*******************************************************************************/
+void add_atom_to_zone_list(long int atom_idx, int zone_u, int zone_v, int zone_w,
+                           struct SimulationState *ss)
+{
+    Atom *atom = ss->atom_arr[atom_idx];
+
+    // add atom to zone's linked list
+    if (ss->zone_arr[zone_u][zone_v][zone_w].offset == -1) {
+        // zone was empty
+        // this will be the first atom in this zone
+        ss->zone_arr[zone_u][zone_v][zone_w].offset = atom_idx;
+        atom->next_atom = -1;
+        atom->previous_atom = -1;
+    } else {
+        // zone is not empty
+        // find the last atom in the zone's linked list
+        long int last_idx = ss->zone_arr[zone_u][zone_v][zone_w].offset;
+        while (ss->atom_arr[last_idx]->next_atom != -1) {
+            last_idx = ss->atom_arr[last_idx]->next_atom;
+        }
+
+        // link this atom to the end of the list
+        ss->atom_arr[last_idx]->next_atom = atom_idx;
+        atom->previous_atom = last_idx;
+        atom->next_atom = -1;
+    }
+}
+
 // updates [atom_arr], atom_arr[i]->lattice, [atom_arr[n]->cart_coord], atom_cnt,
 // zone_arr[xzone][yzone][zzone].offset, atom_arr[pos]->next_atom/prev_atom,
 // atom_arr[pos]->transition_indices; returns index in atom_arr
@@ -53,17 +78,13 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
                   struct SimulationEnv *se)
 {
     // XXX: special isn't really used
-    // lattice coordinates xyz, atom type, special atom conditions (unused)
 
     long int atom_idx;
 
-    int zone_u, zone_v, zone_w;
-
-    long int pos;
-
-    // [ ]: this is a sanity check? iterating over atom list instead of zone (like atom_at)
+    // if there is alraedy an atom at this site, throw error
     if (atom_at(u, v, w, ss->atom_arr, ss->zone_arr, se) >= 0) {
         int num_overlapping = 0;
+        // count number of atoms at this site for error message
         for (int i = 0; i < ss->atom_cnt; ++i) {
             if ((ss->atom_arr[i]->lattice[0] == u) && (ss->atom_arr[i]->lattice[1] == v) &&
                 (ss->atom_arr[i]->lattice[2] == w))
@@ -72,15 +93,14 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
 
         fprintf(stderr, "ERROR! Unable to add atom %ld; %d other atoms found at (%d, %d, %d)\n",
                 ss->atom_cnt, num_overlapping, u, v, w);
-        // ss->simulation_should_kill_itself = true;
         clean_and_error(EXIT_FAILURE);
         return ss->atom_cnt;
     }
 
     // allocate memory pointed to by the last element of the atom list
-    pos = ss->atom_cnt; // position in atom array, presumably
-    if (pos > se->max_atoms) {
-        fprintf(stderr, "More atoms (%ld) than allocated in atom array (%ld)\n", pos,
+    atom_idx = ss->atom_cnt;
+    if (atom_idx > se->max_atoms) {
+        fprintf(stderr, "More atoms (%ld) than allocated in atom array (%ld)\n", atom_idx,
                 se->max_atoms);
         clean_and_error(EXIT_FAILURE);
     }
@@ -93,48 +113,21 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
         clean_and_error(errno);
     }
 
-    // TODO: this is already done in atom_at - why repeat it
+    // find which zone this atom should belong to
+    int zone_u, zone_v, zone_w;
     findzone(&zone_u, &zone_v, &zone_w, u, v, w, se);
 
-    // xzone, yzone, zzone now have a position open at the end of the zone
-    // pos points to this location.  mark the spot and increment the number of atoms
-    // in the zone.
+    add_atom_to_zone_list(atom_idx, zone_u, zone_v, zone_w, ss);
 
-    // update the zone.  Increment the number of elements.  If the zone was
-    // empty, create a link to the first element in that zone
+    ss->atom_arr[atom_idx]->lattice[0] = u;
+    ss->atom_arr[atom_idx]->lattice[1] = v;
+    ss->atom_arr[atom_idx]->lattice[2] = w;
 
-    if (ss->zone_arr[zone_u][zone_v][zone_w].offset == -1) // first atom in [zone?] linked list
-    {
-        ss->zone_arr[zone_u][zone_v][zone_w].offset = pos;
+    lattice2cartesian(ss->atom_arr[atom_idx]->lattice, se->primitive_basis,
+                      ss->atom_arr[atom_idx]->cartesian);
 
-        ss->atom_arr[pos]->next_atom = -1; // no valid link
-        ss->atom_arr[pos]->previous_atom = -1;
-    } else {
-        // link this atom to the others in the zone linked list
-
-        // first element of list
-        atom_idx = ss->zone_arr[zone_u][zone_v][zone_w].offset;
-
-        while (ss->atom_arr[atom_idx]->next_atom != -1)
-            atom_idx = ss->atom_arr[atom_idx]->next_atom;
-
-        // j points to the previous last atom in the zone linked list and points to nothing
-
-        ss->atom_arr[atom_idx]->next_atom = pos;
-        ss->atom_arr[pos]->previous_atom = atom_idx;
-        ss->atom_arr[pos]->next_atom = -1;
-    }
-
-    ss->atom_arr[pos]->lattice[0] = u;
-    ss->atom_arr[pos]->lattice[1] = v;
-    ss->atom_arr[pos]->lattice[2] = w;
-
-    lattice2cartesian(ss->atom_arr[pos]->lattice, se->primitive_basis,
-                      ss->atom_arr[pos]->cartesian);
-
-    ss->atom_arr[pos]->type = type;
+    ss->atom_arr[atom_idx]->type = type;
     // TODO: use pos instead of atom_cnt-1
-    // TODO: use snprintf instead of strcpy
 
     // update neighbors
     // update neighbor's neighbor (only updates index pointing to current atom)
@@ -143,7 +136,7 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
     for (int i = 0; i < se->num_transition_vectors; ++i) {
         // mark that this atom cannot yet jump in direction i
 
-        ss->atom_arr[pos]->transition_indices[i] = -1;
+        ss->atom_arr[atom_idx]->transition_indices[i] = -1;
         // [ ]: if system size is still 1 (in w direction?) and jump isn't zero, skip it?
         // if ((system_size_z == 1)&&(se->transition_vectors[i].dz != 0))
         // {
@@ -160,14 +153,14 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
             // //remainder of cases become irrelevant when removing burial
             //  set occupied_neighbor_site[i] to the atom at that site.
             //  If there really is an atom there, cross-link it to our new atom.
-            ss->atom_arr[pos]->neighbor_atom_idxs[i] =
+            ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] =
                 atom_at_offset(u, v, w, i, ss->atom_arr, ss->zone_arr, se);
 
             // if atom is present at potential jump site, fill position in neighbor_atom_idxs of
             // this atom and the found neighbor atom
-            if (ss->atom_arr[pos]->neighbor_atom_idxs[i] >= 0) {
-                ss->atom_arr[ss->atom_arr[pos]->neighbor_atom_idxs[i]]
-                    ->neighbor_atom_idxs[se->opposite_tvectors[i]] = pos;
+            if (ss->atom_arr[atom_idx]->neighbor_atom_idxs[i] >= 0) {
+                ss->atom_arr[ss->atom_arr[atom_idx]->neighbor_atom_idxs[i]]
+                    ->neighbor_atom_idxs[se->opposite_tvectors[i]] = atom_idx;
             }
 
             break;
@@ -183,9 +176,9 @@ long int add_atom(int u, int v, int w, unsigned char type, int special, struct S
     }
 
     if (special != NORMAL) // rates will be refreshed soon
-        return pos;
+        return atom_idx;
 
-    return pos;
+    return atom_idx;
 }
 
 // copies atom from initial_idx of atom_arr to final_idx
