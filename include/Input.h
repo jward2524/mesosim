@@ -51,11 +51,11 @@ typedef struct {
 
     double *composition_raw;
     int composition_count;
-    int composition_line;
+    int composition_lineno;
 
     bool *dissolution_raw;
     int dissolution_count;
-    int dissolution_line;
+    int dissolution_lineno;
 
     // array that holds flags for whether required commands were provided
     int *cmd_present;

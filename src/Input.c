@@ -109,7 +109,7 @@ static InputErrorFlag cmd_composition(int argc, char **argv, int line, ParseCont
         return INPUT_ERR_COUNT_MISMATCH;
     }
 
-    p_ctx->composition_line = line;
+    p_ctx->composition_lineno = line;
     p_ctx->composition_count = argc - 1;
     p_ctx->composition_raw = malloc((size_t)p_ctx->composition_count * sizeof(double));
     if (p_ctx->composition_raw == NULL) {
@@ -141,7 +141,7 @@ static InputErrorFlag cmd_dissolution(int argc, char **argv, int line, ParseCont
     }
 
     p_ctx->dissolution_count = argc - 1;
-    p_ctx->dissolution_line = line;
+    p_ctx->dissolution_lineno = line;
     p_ctx->dissolution_raw = malloc((size_t)p_ctx->dissolution_count * sizeof(int));
     if (p_ctx->dissolution_raw == NULL) {
         fprintf(stderr, "Couldn't allocate memory for dissolution array in ParseContext: %s",
@@ -874,7 +874,7 @@ void finalize_atom_dependent(const ParseContext *p_ctx, struct SimulationEnv *se
 
     if (p_ctx->composition_raw) {
         if (p_ctx->composition_count != se->atom_names_cnt) {
-            fprintf(stderr, "composition count mismatch at line %d\n", p_ctx->composition_line);
+            fprintf(stderr, "composition count mismatch at line %d\n", p_ctx->composition_lineno);
             clean_ctx((ParseContext *)p_ctx);
             clean_and_error(INPUT_ERR_COUNT_MISMATCH);
         }
@@ -900,7 +900,7 @@ void finalize_atom_dependent(const ParseContext *p_ctx, struct SimulationEnv *se
 
     if (p_ctx->dissolution_raw) {
         if (p_ctx->dissolution_count != se->atom_names_cnt) {
-            fprintf(stderr, "dissolution count mismatch at line %d\n", p_ctx->dissolution_line);
+            fprintf(stderr, "dissolution count mismatch at line %d\n", p_ctx->dissolution_lineno);
             clean_ctx((ParseContext *)p_ctx);
             clean_and_error(INPUT_ERR_COUNT_MISMATCH);
         }
