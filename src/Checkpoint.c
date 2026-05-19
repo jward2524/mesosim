@@ -642,6 +642,7 @@ CheckpointStatus checkpoint_header_write(FILE *file, const CheckpointHeader *hea
     size_t written = fwrite(header, sizeof(*header), 1, file);
 
     if (written != 1) {
+        fprintf(stderr, "checkpoint: failed to write checkpoint header: %s\n", strerror(errno));
         return CHECKPOINT_ERROR;
     }
 
@@ -653,6 +654,7 @@ CheckpointStatus checkpoint_header_read(FILE *file, CheckpointHeader *header)
     size_t read_count = fread(header, sizeof(*header), 1, file);
 
     if (read_count != 1) {
+        fprintf(stderr, "checkpoint: failed to read checkpoint header: %s\n", strerror(errno));
         return CHECKPOINT_ERROR;
     }
 
