@@ -59,7 +59,7 @@ void test_parse_input_two_atomtypes_one_shell_success(void)
                         "1nne 0.1 0.2 0.3\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -90,7 +90,7 @@ void test_parse_input_three_atomtypes_two_shells_success(void)
                         "2nne 6 5 4 3 2 1\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -130,7 +130,7 @@ void test_parse_input_three_atomtypes_two_shells_success(void)
 void test_parse_input_cluster_nns_file_success(void)
 {
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_file("test/cluster_nns.in");
     TEST_ASSERT_NOT_NULL_MESSAGE(mock_input_file, "Failed to open test/cluster_nns.in");
 
@@ -216,7 +216,7 @@ void test_parse_input_multi_command_unknown_mid_file_fails(void)
                         "nnlevels 1\n"
                         "1nne 0.1 0.2 0.3\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_UNKNOWN_CMD, {
@@ -237,7 +237,7 @@ void test_parse_input_multi_command_finalize_composition_sum_fails(void)
                         "nnlevels 1\n"
                         "1nne 0.1 0.2 0.3\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
@@ -255,7 +255,7 @@ void test_parse_input_missing_atomtype_fails(void)
                         "1nne 0.1\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
@@ -272,7 +272,7 @@ void test_parse_input_missing_nne_shell_fails(void)
                         "1nne 0.1 0.2 0.3\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
@@ -290,7 +290,7 @@ void test_parse_input_unknown_command_fails(void)
                         "foobar 123\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_UNKNOWN_CMD, {
@@ -305,7 +305,7 @@ void test_nnlevels_wrong_argcount_fails(void)
                         "nnlevels 1 2\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -320,7 +320,7 @@ void test_composition_non_numeric_fails(void)
                         "composition 0.5 foo\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -335,7 +335,7 @@ void test_dissolution_invalid_boolean_fails(void)
                         "dissolution true maybe\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -351,7 +351,7 @@ void test_nne_level_exceeds_nnlevels_fails(void)
                         "2nne 0.1 0.2 0.3\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -369,7 +369,7 @@ void test_nne_duplicate_definition_fails(void)
                         "1nne 0.3 0.2 0.1\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_DUPLICATE_CMD, {
@@ -386,7 +386,7 @@ void test_nne_too_few_values_fails(void)
                         "1nne 1 2 3\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -402,7 +402,7 @@ void test_composition_count_mismatch_fails(void)
                         "composition 0.5 0.5\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -416,7 +416,7 @@ void test_systemsize_valid_values_success(void)
 {
     const char *input = "systemsize 10 11 12\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -430,7 +430,7 @@ void test_systemsize_non_numeric_fails(void)
 {
     const char *input = "systemsize 10 a 12\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -443,7 +443,7 @@ void test_temp_valid_value_success(void)
 {
     const char *input = "temp 293.5\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -455,7 +455,7 @@ void test_temp_non_numeric_fails(void)
 {
     const char *input = "temp abc\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -468,7 +468,7 @@ void test_seed_default_keyword_success(void)
 {
     const char *input = "seed default\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -480,7 +480,7 @@ void test_seed_non_numeric_fails(void)
 {
     const char *input = "seed notanumber\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -493,7 +493,7 @@ void test_potential_sweep_values_success(void)
 {
     const char *input = "potential 0.9 0.03 1.2\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -508,7 +508,7 @@ void test_potential_bad_argcount_fails(void)
 {
     const char *input = "potential 0.9 0.03\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -521,7 +521,7 @@ void test_struct_fcc_success(void)
 {
     const char *input = "struct FCC\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -533,7 +533,7 @@ void test_struct_invalid_value_fails(void)
 {
     const char *input = "struct HCP\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -547,7 +547,7 @@ void test_output_csv_interval_iteration_success(void)
     const char *input = "output csv test/output/cluster.csv interval iteration 200 fields iter "
                         "time energy temperature\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -575,7 +575,7 @@ void test_output_csv_list_time_success(void)
     const char *input =
         "output csv test/output/cluster.csv list time 0.1 0.2 0.3 fields iter time energy\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -605,7 +605,7 @@ void test_output_xyz_interval_time_success(void)
 {
     const char *input = "output xyz test/output/cluster interval time 0.5\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -627,7 +627,7 @@ void test_output_xyz_stripped_success(void)
 {
     const char *input = "output xyz stripped test/output/cluster interval time 0.2\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -649,7 +649,7 @@ void test_output_iter_default_filename_success(void)
 {
     const char *input = "output steps\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -668,7 +668,7 @@ void test_output_iter_default_filename_coord_success(void)
 {
     const char *input = "output steps coord\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -688,7 +688,7 @@ void test_output_iter_with_filename_success(void)
 {
     const char *input = "output steps my_steps.csv\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -704,7 +704,7 @@ void test_output_iter_with_filename_coord_success(void)
 {
     const char *input = "output steps my_steps.csv coord\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -721,7 +721,7 @@ void test_output_iter_with_filename_and_extra_args_fails(void)
 {
     const char *input = "output steps my_steps.csv extra\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -735,7 +735,7 @@ void test_output_invalid_mode_fails(void)
     const char *input =
         "output csv test/output/cluster.csv cadence iteration 200 fields iter time\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -749,7 +749,7 @@ void test_output_missing_fields_keyword_fails(void)
     const char *input =
         "output csv test/output/cluster.csv interval iteration 200 iter time energy\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
@@ -762,7 +762,7 @@ void test_output_fields_empty_fails(void)
 {
     const char *input = "output csv test/output/cluster.csv interval iteration 200 fields\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -776,7 +776,7 @@ void test_output_xyz_with_fields_fails(void)
     const char *input =
         "output xyz test/output/cluster.xyz interval iteration 200 fields iter time\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -789,7 +789,7 @@ void test_output_csv_default_filename_time_success(void)
 {
     const char *input = "output csv interval iteration 100 fields iter time\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
     time_t now = time(NULL);
 
@@ -828,7 +828,7 @@ void test_output_xyz_default_prefix_time_success(void)
 {
     const char *input = "output xyz interval iteration 100\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
     time_t now = time(NULL);
 
@@ -866,7 +866,7 @@ void test_output_unrecognized_field_fails(void)
     const char *input =
         "output csv test/output/cluster.csv interval iteration 200 fields iter time notafield\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -881,7 +881,7 @@ void test_output_unsupported_field_for_flavor_fails(void)
         "flavor KMC\n"
         "output csv test/output/cluster.csv interval iteration 200 fields iter time notafield\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -896,7 +896,7 @@ void test_output_non_numeric_interval_fails(void)
     const char *input =
         "output csv test/output/cluster.csv interval iteration notanumber fields iter time\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -909,7 +909,7 @@ void test_geometry_cluster_success(void)
 {
     const char *input = "geometry cluster 32\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -922,7 +922,7 @@ void test_geometry_invalid_type_fails(void)
 {
     const char *input = "geometry cube 4\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -935,7 +935,7 @@ void test_run_iteration_mode_success(void)
 {
     const char *input = "run iteration 2000\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -950,7 +950,7 @@ void test_run_unknown_mode_fails(void)
 {
     const char *input = "run steps 100\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -963,7 +963,7 @@ void test_flavor_kmc_success(void)
 {
     const char *input = "flavor KMC\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -975,7 +975,7 @@ void test_flavor_invalid_value_fails(void)
 {
     const char *input = "flavor BAD\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -988,7 +988,7 @@ void test_systemsize_wrong_argcount_fails(void)
 {
     const char *input = "systemsize 10 11\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -1001,7 +1001,7 @@ void test_temp_extra_arg_fails(void)
 {
     const char *input = "temp 300 301\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -1014,7 +1014,7 @@ void test_seed_missing_arg_fails(void)
 {
     const char *input = "seed\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -1027,7 +1027,7 @@ void test_potential_non_numeric_sweep_fails(void)
 {
     const char *input = "potential 0.9 foo 1.2\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -1040,7 +1040,7 @@ void test_geometry_cluster_non_numeric_fails(void)
 {
     const char *input = "geometry cluster radius\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -1053,7 +1053,7 @@ void test_geometry_file_missing_name_fails(void)
 {
     const char *input = "geometry file\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -1066,7 +1066,7 @@ void test_run_iteration_non_numeric_fails(void)
 {
     const char *input = "run iteration ten\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -1079,7 +1079,7 @@ void test_run_bad_argcount_fails(void)
 {
     const char *input = "run time\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -1095,7 +1095,7 @@ void test_nne_non_numeric_value_fails(void)
                         "1nne 0.1 x 0.3\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -1110,7 +1110,7 @@ void test_composition_sum_not_one_fails(void)
                         "composition 0.6 0.5\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
@@ -1126,7 +1126,7 @@ void test_dissolution_count_mismatch_additional_fails(void)
                         "dissolution true false\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -1140,7 +1140,7 @@ void test_atomtype_three_types_success(void)
 {
     const char *input = "atomtype Ag Au Cu\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -1156,7 +1156,7 @@ void test_atomtype_missing_args_fails(void)
 {
     const char *input = "atomtype\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -1170,7 +1170,7 @@ void test_composition_two_types_finalize_success(void)
     const char *input = "atomtype A B\n"
                         "composition 0.25 0.75\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -1186,7 +1186,7 @@ void test_composition_missing_values_fails(void)
 {
     const char *input = "composition\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -1200,7 +1200,7 @@ void test_dissolution_all_true_sets_flag_success(void)
     const char *input = "atomtype A B C\n"
                         "dissolution true true true\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -1215,7 +1215,7 @@ void test_dissolution_missing_values_fails(void)
 {
     const char *input = "dissolution\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -1228,7 +1228,7 @@ void test_nnlevels_single_value_success(void)
 {
     const char *input = "nnlevels 3\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -1240,7 +1240,7 @@ void test_nnlevels_non_numeric_fails(void)
 {
     const char *input = "nnlevels abc\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -1255,7 +1255,7 @@ void test_nne_missing_values_fails(void)
                         "nnlevels 1\n"
                         "1nne\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
@@ -1271,7 +1271,7 @@ void test_finalize_nne_missing_nnlevels_fails(void)
     const char *input = "atomtype A B\n"
                         "1nne 0.1 0.2 0.3\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
@@ -1287,7 +1287,7 @@ void test_finalize_atom_dependent_direct_success(void)
                         "composition 0.4 0.6\n"
                         "dissolution false true\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -1305,7 +1305,7 @@ void test_finalize_atom_dependent_missing_atomtype_fails(void)
 {
     const char *input = "composition 1.0\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_DEPENDENCY, {
@@ -1321,7 +1321,7 @@ void test_finalize_nne_direct_single_shell_success(void)
                         "nnlevels 1\n"
                         "1nne 0.11 0.22 0.33\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -1340,7 +1340,7 @@ void test_finalize_nne_direct_duplicate_shell_fails(void)
                         "1nne 0.1 0.2 0.3\n"
                         "1nne 0.3 0.2 0.1\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_DUPLICATE_CMD, {
@@ -1356,7 +1356,7 @@ void test_finalize_nne_direct_level_exceeds_nnlevels_fails(void)
                         "nnlevels 1\n"
                         "2nne 0.1 0.2 0.3\n";
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -1382,7 +1382,7 @@ void test_required_commands_all_present_success(void)
                         "temp 300\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
@@ -1422,7 +1422,7 @@ void test_missing_required_systemsize_fails(void)
         "temp 300\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
@@ -1448,7 +1448,7 @@ void test_missing_required_struct_fails(void)
                         "temp 300\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
@@ -1475,7 +1475,7 @@ void test_missing_multiple_required_commands_fails(void)
         "temp 300\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
@@ -1492,7 +1492,7 @@ void test_missing_all_required_commands_fails(void)
     const char *input = "# No required commands present\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {
@@ -1518,7 +1518,7 @@ void test_required_commands_invalid_args_fail_for_argument(void)
                         "temp 300\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_INVALID_ARG, {
@@ -1544,7 +1544,7 @@ void test_required_commands_commented_out_treated_as_missing(void)
                         "temp 300\n";
 
     ParseContext ctx = {0};
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
 
     EXPECT_EXIT(INPUT_ERR_MISSING_CMD, {

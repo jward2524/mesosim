@@ -95,7 +95,7 @@ void open_log_files(struct LoggingState *ls, unsigned flavor)
     }
 }
 
-void simulation_parameters_from_file(char *filename, struct UserInputs *inputs,
+void simulation_parameters_from_file(char *filename, struct SimulationConfig *inputs,
                                      struct LoggingState *ls)
 {
     FILE *input_file = fopen(filename, "r");
@@ -106,7 +106,7 @@ void simulation_parameters_from_file(char *filename, struct UserInputs *inputs,
     return;
 }
 
-void process_in_file(FILE *input_file, struct UserInputs *inputs, struct LoggingState *ls)
+void process_in_file(FILE *input_file, struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     ParseContext ctx = {0};
     parse_input_file(input_file, &ctx, inputs, ls);
@@ -382,8 +382,8 @@ static char *schedule_list_to_string(OutputSchedule *schedule)
 
 // print a lot of information to the log
 // use simulation structs when possible to show values have been set, otherwise grab from inputs
-void input_logging(struct UserInputs *inputs, struct SimulationState *ss, struct SimulationEnv *se,
-                   struct LoggingState *ls)
+void input_logging(struct SimulationConfig *inputs, struct SimulationState *ss,
+                   struct SimulationEnv *se, struct LoggingState *ls)
 {
     safe_log(ls->sim_log, "Successfully read input file and preprocessed\n");
     safe_log(ls->sim_log, "System size is %d x %d x %d\n", se->system_size_x, se->system_size_y,

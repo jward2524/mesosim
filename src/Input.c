@@ -71,7 +71,7 @@ static int parse_double(const char *s, double *out)
 /* ================= Command handlers ================= */
 
 static InputErrorFlag cmd_atomtype(int argc, char **argv, int line, ParseContext *p_ctx,
-                                   struct UserInputs *inputs, struct LoggingState *ls)
+                                   struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
@@ -96,7 +96,7 @@ static InputErrorFlag cmd_atomtype(int argc, char **argv, int line, ParseContext
 }
 
 static InputErrorFlag cmd_composition(int argc, char **argv, int line, ParseContext *p_ctx,
-                                      struct UserInputs *inputs, struct LoggingState *ls)
+                                      struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)inputs;
     (void)ls;
@@ -125,7 +125,7 @@ static InputErrorFlag cmd_composition(int argc, char **argv, int line, ParseCont
 }
 
 static InputErrorFlag cmd_dissolution(int argc, char **argv, int line, ParseContext *p_ctx,
-                                      struct UserInputs *inputs, struct LoggingState *ls)
+                                      struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)inputs;
     (void)ls;
@@ -160,7 +160,7 @@ static InputErrorFlag cmd_dissolution(int argc, char **argv, int line, ParseCont
 }
 
 static InputErrorFlag cmd_nnlevels(int argc, char **argv, int line, ParseContext *p_ctx,
-                                   struct UserInputs *inputs, struct LoggingState *ls)
+                                   struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
@@ -178,7 +178,7 @@ static InputErrorFlag cmd_nnlevels(int argc, char **argv, int line, ParseContext
 }
 
 static InputErrorFlag cmd_nne(int argc, char **argv, int line, ParseContext *p_ctx,
-                              struct UserInputs *inputs, struct LoggingState *ls)
+                              struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)inputs;
     (void)ls;
@@ -227,7 +227,7 @@ static InputErrorFlag cmd_nne(int argc, char **argv, int line, ParseContext *p_c
 }
 
 static InputErrorFlag cmd_systemsize(int argc, char **argv, int line, ParseContext *p_ctx,
-                                     struct UserInputs *inputs, struct LoggingState *ls)
+                                     struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
@@ -247,7 +247,7 @@ static InputErrorFlag cmd_systemsize(int argc, char **argv, int line, ParseConte
 }
 
 static InputErrorFlag cmd_temp(int argc, char **argv, int line, ParseContext *ctx,
-                               struct UserInputs *inputs, struct LoggingState *ls)
+                               struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)ctx;
@@ -264,7 +264,7 @@ static InputErrorFlag cmd_temp(int argc, char **argv, int line, ParseContext *ct
 }
 
 static InputErrorFlag cmd_seed(int argc, char **argv, int line, ParseContext *p_ctx,
-                               struct UserInputs *inputs, struct LoggingState *ls)
+                               struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
@@ -292,7 +292,7 @@ static InputErrorFlag cmd_seed(int argc, char **argv, int line, ParseContext *p_
 }
 
 static InputErrorFlag cmd_potential(int argc, char **argv, int line, ParseContext *p_ctx,
-                                    struct UserInputs *inputs, struct LoggingState *ls)
+                                    struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
@@ -319,7 +319,7 @@ static InputErrorFlag cmd_potential(int argc, char **argv, int line, ParseContex
 }
 
 static InputErrorFlag cmd_struct(int argc, char **argv, int line, ParseContext *p_ctx,
-                                 struct UserInputs *inputs, struct LoggingState *ls)
+                                 struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
@@ -563,7 +563,7 @@ static InputErrorFlag parse_steps_csv(int argc, char **argv, struct LoggingState
 }
 
 static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *p_ctx,
-                                 struct UserInputs *inputs, struct LoggingState *ls)
+                                 struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
@@ -586,7 +586,7 @@ static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *
 }
 
 static InputErrorFlag cmd_geometry(int argc, char **argv, int line, ParseContext *p_ctx,
-                                   struct UserInputs *inputs, struct LoggingState *ls)
+                                   struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
@@ -622,7 +622,7 @@ static InputErrorFlag cmd_geometry(int argc, char **argv, int line, ParseContext
 }
 
 static InputErrorFlag cmd_run(int argc, char **argv, int line, ParseContext *p_ctx,
-                              struct UserInputs *inputs, struct LoggingState *ls)
+                              struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
@@ -651,7 +651,7 @@ static InputErrorFlag cmd_run(int argc, char **argv, int line, ParseContext *p_c
 }
 
 static InputErrorFlag cmd_flavor(int argc, char **argv, int line, ParseContext *p_ctx,
-                                 struct UserInputs *inputs, struct LoggingState *ls)
+                                 struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
@@ -683,7 +683,7 @@ void print_help(const char *cmd)
 }
 
 static InputErrorFlag cmd_help(int argc, char **argv, int line, ParseContext *p_ctx,
-                               struct UserInputs *inputs, struct LoggingState *ls)
+                               struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     (void)line;
     (void)p_ctx;
@@ -792,7 +792,7 @@ void clean_ctx(ParseContext *p_ctx)
     free_if_exists((void **)&p_ctx->cmd_present);
 }
 
-void parse_input_file(FILE *fp, ParseContext *p_ctx, struct UserInputs *inputs,
+void parse_input_file(FILE *fp, ParseContext *p_ctx, struct SimulationConfig *inputs,
                       struct LoggingState *ls)
 {
     char line[MAX_LINE];
@@ -837,7 +837,7 @@ void parse_input_file(FILE *fp, ParseContext *p_ctx, struct UserInputs *inputs,
 
 /* ================= Finalization ================= */
 
-void finalize_atom_dependent(const ParseContext *p_ctx, struct UserInputs *inputs)
+void finalize_atom_dependent(const ParseContext *p_ctx, struct SimulationConfig *inputs)
 {
     if (inputs->atom_names_cnt <= 0) {
         fprintf(stderr, "atomtype must be specified\n");
@@ -903,7 +903,7 @@ void finalize_atom_dependent(const ParseContext *p_ctx, struct UserInputs *input
     }
 }
 
-void finalize_nne(const ParseContext *p_ctx, struct UserInputs *inputs)
+void finalize_nne(const ParseContext *p_ctx, struct SimulationConfig *inputs)
 {
     int ntypes = inputs->atom_names_cnt;
     inputs->num_bond_types = get_num_bond_types(inputs->num_elements);
@@ -1041,7 +1041,7 @@ void check_required_inputs(const ParseContext *p_ctx, unsigned int flavor)
     }
 }
 
-void validate_input_values(const struct UserInputs *inputs)
+void validate_input_values(const struct SimulationConfig *inputs)
 {
     if (inputs->system_size_x <= 0 || inputs->system_size_y <= 0 || inputs->system_size_z <= 0) {
         fprintf(stderr, "System size must be positive in all dimensions\n");
@@ -1060,7 +1060,7 @@ void validate_input_values(const struct UserInputs *inputs)
     }
 }
 
-void finalize_config(const ParseContext *p_ctx, struct UserInputs *inputs, struct LoggingState *ls)
+void finalize_config(const ParseContext *p_ctx, struct SimulationConfig *inputs, struct LoggingState *ls)
 {
     finalize_atom_dependent(p_ctx, inputs);
     finalize_nne(p_ctx, inputs);

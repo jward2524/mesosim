@@ -71,7 +71,7 @@ void test_set_primitive_basis_fcc_sets_expected_vectors(void)
 
 void test_initialize_neighbor_offsets_fcc_sets_expected_values(void)
 {
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     inputs.lattice_type = FCC;
     inputs.num_nn_levels = 2;
 
@@ -107,7 +107,7 @@ void test_corners2limits_updates_limits_correctly(void)
 
 void test_initialize_state_from_input_copies_values(void)
 {
-    struct UserInputs in = {0};
+    struct SimulationConfig in = {0};
     in.temperature = 400.0;
     in.initial_overpotential = 0.5;
     in.sim_end_type = SIM_END_BY_STIME;
@@ -144,7 +144,7 @@ void test_initialize_zones_allocates_and_sets_offsets(void)
 
 void test_initialize_simulation_box_and_lat_range(void)
 {
-    struct UserInputs in = {0};
+    struct SimulationConfig in = {0};
     in.system_size_x = 8;
     in.system_size_y = 8;
     in.system_size_z = 8;
@@ -204,7 +204,7 @@ void test_allocate_simulation_arrays_allocates_expected_buffers(void)
 
 void test_initialize_env_from_input_sets_seed_and_overpotentials(void)
 {
-    struct UserInputs in = {0};
+    struct SimulationConfig in = {0};
     in.system_size_x = 8;
     in.system_size_y = 8;
     in.system_size_z = 8;
@@ -230,7 +230,7 @@ void test_initialize_env_from_input_sets_seed_and_overpotentials(void)
 
 void test_initialize_simulation(void)
 {
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     inputs.system_size_x = 128;
     inputs.system_size_y = 128;
     inputs.system_size_z = 128;

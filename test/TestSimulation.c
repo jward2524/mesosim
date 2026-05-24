@@ -33,7 +33,7 @@ void test_simulation(void)
 {
     ls->sim_log = temp_log;
     char filename[] = "test/cluster_nns.in";
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     simulation_parameters_from_file(filename, &inputs, ls);
     open_log_files(ls, se->flavor);
 

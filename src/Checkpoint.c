@@ -167,7 +167,7 @@ static void fill_env_payload(CheckpointEnvPayload *payload, const struct Simulat
 
 // restore the immutable SimulationEnv config from a saved payload.
 static void apply_env_payload_to_config(const CheckpointEnvPayload *payload,
-                                        struct UserInputs *config)
+                                        struct SimulationConfig *config)
 {
     config->flavor = payload->flavor;
     config->rand_seed = payload->rand_seed;
@@ -1067,7 +1067,7 @@ CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,
     // initialize transitions and rates
 
     // cases where objects are required but not provided should have been caught above
-    struct UserInputs config = {0};
+    struct SimulationConfig config = {0};
     if (header.has_ss) {
         apply_state_payload_to_simstate(&state_payload, ss);
     }

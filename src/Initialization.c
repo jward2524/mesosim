@@ -75,7 +75,7 @@ void get_system_normal(double basis[3][3]) // XXX: supposedly only for vizualiza
     return;
 }
 
-void initialize_state_from_config(struct UserInputs *config, struct SimulationState *ss)
+void initialize_state_from_config(struct SimulationConfig *config, struct SimulationState *ss)
 {
     ss->temperature = config->temperature;
     ss->overpotential = config->initial_overpotential;
@@ -137,7 +137,7 @@ void set_maximum_array_sizes(struct SimulationEnv *se)
     se->max_transitions = (long int)tmp;
 }
 
-bool validate_config(struct UserInputs *config)
+bool validate_config(struct SimulationConfig *config)
 {
     if (config->num_elements <= 0) {
         fprintf(stderr, "Error: num_elements (%d) must be greater than 0.\n", config->num_elements);
@@ -160,7 +160,7 @@ bool validate_config(struct UserInputs *config)
     return true;
 }
 
-void initialize_env_from_config(struct UserInputs *config, struct SimulationEnv *se)
+void initialize_env_from_config(struct SimulationConfig *config, struct SimulationEnv *se)
 {
     bool is_valid = validate_config(config);
     if (!is_valid) {
@@ -250,7 +250,7 @@ void allocate_simulation_arrays(struct SimulationState *ss, struct SimulationEnv
 // requires: geometry, system_size_xyz, primitive_basis, substrate_composition,
 // simbox_limits_lat, sheet_thickness, cluster_radius
 // updates: atom_arr, atom_cnt, ...
-void initialize_initial_structure(struct UserInputs *inputs, struct SimulationState *ss,
+void initialize_initial_structure(struct SimulationConfig *inputs, struct SimulationState *ss,
                                   struct SimulationEnv *se, struct LoggingState *ls)
 {
     // index represents geometry, from macros
@@ -426,7 +426,7 @@ void initialize_zones(Zone ****zone_arr, struct SimulationEnv *se)
 // requires: lattice_type, num_nn_levels
 // updates: num_transition_vectors, atoms_per_nn_level, num_energy_contributors,
 // transition_vectors, opposite_tvectors
-void initialize_neighbor_offsets(struct UserInputs *inputs, struct SimulationEnv *se)
+void initialize_neighbor_offsets(struct SimulationConfig *inputs, struct SimulationEnv *se)
 {
     int fcc_opposite[12] = {11, 10, 7, 4, 3, 6, 5, 2, 9, 8, 1, 0};
     int sc_opposite[6] = {1, 0, 3, 2, 5, 4};
@@ -766,7 +766,7 @@ void initialize_from_file(char *atoms_filename, struct SimulationState *ss,
 // than the sim box
 // requires: invert_primitive_basis, system_size_xyz
 // updates: simbox_limits_lat, lat_range, simbox_vectors_cart, simbox_origin_cart
-void initialize_simulation_box(struct UserInputs *inputs, struct SimulationEnv *se)
+void initialize_simulation_box(struct SimulationConfig *inputs, struct SimulationEnv *se)
 {
     // assuming simulation box/prism
     // system size in cartesian units [nearest-neighbor (or some other lattice-based) units in
@@ -909,7 +909,7 @@ void corners2limits(double corners_cart[8][3], int limits_lat[3][2], double inv_
     }
 }
 
-void initialize_simulation(struct UserInputs *inputs, struct SimulationState *ss,
+void initialize_simulation(struct SimulationConfig *inputs, struct SimulationState *ss,
                            struct SimulationEnv *se, struct LoggingState *ls)
 {
 

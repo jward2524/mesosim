@@ -43,7 +43,7 @@ void test_process_in_file_cluster(void)
 {
     char filename[] = "test/cluster_nns.in";
     input_file = open_file(filename);
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
 
     process_in_file(input_file, &inputs, ls);
     TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_KMC, inputs.flavor, "flavor");
@@ -95,7 +95,7 @@ void test_process_in_file_mc(void)
 {
     char filename[] = "test/mc.in";
     input_file = open_file(filename);
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
 
     process_in_file(input_file, &inputs, ls);
     TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_MC, inputs.flavor, "flavor");
@@ -142,7 +142,7 @@ void test_process_xyz_file(void)
 {
     char filename[] = "test/sheet256.xyz";
     atom_file = open_file(filename);
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
 
     inputs.lattice_type = FCC;
     inputs.flavor = FLAVOR_KMC;
@@ -638,7 +638,7 @@ void test_input_logging_basic(void)
     ls->output_state_csv = 0;
     ls->output_xyz = 0;
 
-    struct UserInputs inputs = {
+    struct SimulationConfig inputs = {
         .flavor = FLAVOR_KMC,
         .lattice_type = FCC,
         .geometry = GEOMETRY_CLUSTER,

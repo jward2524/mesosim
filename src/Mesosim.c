@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
     safe_log(log_state->sim_log, "Attempting to read in file %s\n", input_filename);
 
     // pre-process the file information and fill in the gaps with defaults
-    struct UserInputs inputs = {0};
+    struct SimulationConfig inputs = {0};
     simulation_parameters_from_file(input_filename, &inputs, log_state);
     printf("Read file successfully\n");
 

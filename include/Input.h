@@ -21,22 +21,7 @@ typedef enum {
     INPUT_ERR_OTHER               // Other/unclassified error
 } InputErrorFlag;
 
-/* ================= Simulation configuration ================= */
-
-// typedef struct {
-//     int natomtypes;
-//     char **atomtypes;
-
-//     double *composition; // size natomtypes
-//     int *dissolution;    // size natomtypes
-
-//     int nnlevels;
-//     double ***nne; // nne[shell][i][j], symmetric
-
-// } UserInputs;
-
 /* ================= Deferred parse context ================= */
-
 struct NNECmd {
     int level;
     double *values; // flattened upper-triangle for arbitrary ntypes
@@ -78,7 +63,7 @@ enum CmdRequired {
 };
 
 typedef InputErrorFlag (*CmdFunc)(int argc, char **argv, int line, ParseContext *ctx,
-                                  struct UserInputs *inputs, struct LoggingState *ls);
+                                  struct SimulationConfig *inputs, struct LoggingState *ls);
 
 typedef struct {
     const char *name;
@@ -94,14 +79,15 @@ extern const Command commands[];
 
 /* ================= Parsing API ================= */
 
-void parse_input_file(FILE *fp, ParseContext *ctx, struct UserInputs *inputs,
+void parse_input_file(FILE *fp, ParseContext *ctx, struct SimulationConfig *inputs,
                       struct LoggingState *ls);
 void clean_ctx(ParseContext *ctx);
-void finalize_atom_dependent(const ParseContext *ctx, struct UserInputs *inputs);
-void finalize_nne(const ParseContext *ctx, struct UserInputs *inputs);
+void finalize_atom_dependent(const ParseContext *ctx, struct SimulationConfig *inputs);
+void finalize_nne(const ParseContext *ctx, struct SimulationConfig *inputs);
 void finalize_csv_fields(struct LoggingState *ls, unsigned int flavor);
 void check_required_inputs(const ParseContext *ctx, unsigned int flavor);
-void finalize_config(const ParseContext *ctx, struct UserInputs *inputs, struct LoggingState *ls);
+void finalize_config(const ParseContext *ctx, struct SimulationConfig *inputs,
+                     struct LoggingState *ls);
 void print_help(const char *cmd);
 
 #endif

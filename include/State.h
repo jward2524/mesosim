@@ -13,7 +13,7 @@
 // uvw refer to coordinates in lattice vector space
 // xyz refer to coordinates in cartesian (orthogonal basis) space
 
-struct UserInputs {
+struct SimulationConfig {
 
     /* Not in simulation structs */
     // initial geometry

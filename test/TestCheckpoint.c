@@ -378,7 +378,7 @@ void test_checkpoint_rebuild_zones_and_rates_from_atoms(void)
     CheckpointStatus save_status, load_status;
 
     // setup minimal env to support zone queries
-    struct UserInputs dummy_config = {
+    struct SimulationConfig dummy_config = {
         .system_size_x = 40,
         .system_size_y = 40,
         .system_size_z = 40,
