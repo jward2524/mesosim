@@ -1147,7 +1147,6 @@ void test_atomtype_three_types_success(void)
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(3, inputs.atom_names_cnt, "Number of atom names");
     TEST_ASSERT_EQUAL_INT_MESSAGE(3, inputs.num_elements, "Number of elements");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(6, inputs.num_bond_types, "Number of bond types");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("Ag", inputs.atom_names[0], "Atom type name at index 0");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("Au", inputs.atom_names[1], "Atom type name at index 1");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("Cu", inputs.atom_names[2], "Atom type name at index 2");

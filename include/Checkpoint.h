@@ -10,6 +10,8 @@
 #define CHECKPOINT_MAGIC_STRING "MESOSIM2"
 #define CHECKPOINT_MAGIC_SIZE 8u
 #define CHECKPOINT_FORMAT_VERSION 1u
+#define CHECKPOINT_ARRAY_MAGIC 0x4D32 // 'M2' in hex
+#define CHECKPOINT_ARRAY_MAGIC_SIZE 2u
 
 typedef enum {
     CHECKPOINT_OK = 0,
@@ -25,19 +27,11 @@ typedef struct {
     uint32_t header_bytes;
     uint32_t payload_bytes;
     uint32_t checksum;
+    uint8_t has_ss;
+    uint8_t has_se;
+    uint8_t has_atoms;
     // end of header or placeholder for future features
     uint32_t reserved0;
-
-    uint64_t iter;
-    double elapsed_stime;
-    uint64_t rand_seed;
-    uint64_t atom_cnt;
-    uint64_t rate_cnt;
-    uint64_t transition_cnt;
-    double temperature;
-    double overpotential;
-    double frequency_sum;
-    double total_internal_energy;
 } CheckpointHeader;
 #pragma pack(pop)
 
@@ -52,7 +46,7 @@ void checkpoint_header_init(CheckpointHeader *header);
 void checkpoint_header_finalize(CheckpointHeader *header, uint32_t payload_bytes,
                                 uint32_t checksum);
 bool checkpoint_header_has_valid_magic(const CheckpointHeader *header);
-bool checkpoint_header_has_valid_shape(const CheckpointHeader *header);
+bool checkpoint_header_has_valid_structure(const CheckpointHeader *header);
 bool checkpoint_header_has_valid_checksum(const CheckpointHeader *header, const void *payload,
                                           size_t payload_size);
 CheckpointStatus checkpoint_header_write(FILE *file, const CheckpointHeader *header);

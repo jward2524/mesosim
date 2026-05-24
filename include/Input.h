@@ -23,17 +23,17 @@ typedef enum {
 
 /* ================= Simulation configuration ================= */
 
-typedef struct {
-    int natomtypes;
-    char **atomtypes;
+// typedef struct {
+//     int natomtypes;
+//     char **atomtypes;
 
-    double *composition; // size natomtypes
-    int *dissolution;    // size natomtypes
+//     double *composition; // size natomtypes
+//     int *dissolution;    // size natomtypes
 
-    int nnlevels;
-    double ***nne; // nne[shell][i][j], symmetric
+//     int nnlevels;
+//     double ***nne; // nne[shell][i][j], symmetric
 
-} SimConfig;
+// } UserInputs;
 
 /* ================= Deferred parse context ================= */
 

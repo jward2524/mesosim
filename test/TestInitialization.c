@@ -114,7 +114,7 @@ void test_initialize_state_from_input_copies_values(void)
     in.run_stime = 12.5;
     in.final_iteration = 42;
 
-    initialize_state_from_input(&in, ss);
+    initialize_state_from_config(&in, ss);
 
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(400.0, ss->temperature, "temperature copied");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ss->overpotential, "overpotential copied");
@@ -218,8 +218,9 @@ void test_initialize_env_from_input_sets_seed_and_overpotentials(void)
     in.atom_names_cnt = 0;
     in.nn_energy = NULL;
     in.dissolution = 0;
+    in.flavor = FLAVOR_KMC;
 
-    initialize_env_from_input(&in, se);
+    initialize_env_from_config(&in, se);
 
     TEST_ASSERT_EQUAL_UINT_MESSAGE(in.rand_seed, se->rand_seed, "rand_seed copied");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.11, se->overpotential_ramp_rate,
@@ -252,6 +253,7 @@ void test_initialize_simulation(void)
 
     ls->framenum = 0;
     inputs.lattice_type = FCC;
+    inputs.flavor = FLAVOR_KMC;
     inputs.geometry = GEOMETRY_CLUSTER;
     inputs.geometry_param = 32;
     inputs.num_elements = 2;

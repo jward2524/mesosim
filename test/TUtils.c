@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+// TODO: move to build/test
 const char temp_name[] = "temp.log";
 
 void fopen_error(const char *filename, const FILE *file)

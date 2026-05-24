@@ -145,6 +145,8 @@ void test_process_xyz_file(void)
     struct UserInputs inputs = {0};
 
     inputs.lattice_type = FCC;
+    inputs.flavor = FLAVOR_KMC;
+    inputs.num_elements = 2;
     inputs.num_nn_levels = 1; // needed for transition vectors
     inputs.system_size_x = 256;
     inputs.system_size_y = 256;
@@ -159,8 +161,8 @@ void test_process_xyz_file(void)
     se->zone_count_u = 256;
     se->zone_count_v = 256;
     se->zone_count_w = 256;
-    initialize_state_from_input(&inputs, ss);
-    initialize_env_from_input(&inputs, se);
+    initialize_state_from_config(&inputs, ss);
+    initialize_env_from_config(&inputs, se);
     allocate_simulation_arrays(ss, se);
     process_xyz_file(atom_file, ss, se, ls);
 

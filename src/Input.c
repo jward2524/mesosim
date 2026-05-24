@@ -1,6 +1,7 @@
 #include "Input.h"
 #include "ErrorM.h"
 #include "FileIO.h"
+#include "Initialization.h"
 #include "Utils.h"
 #include <ctype.h>
 #include <errno.h>
@@ -90,7 +91,6 @@ static InputErrorFlag cmd_atomtype(int argc, char **argv, int line, ParseContext
         inputs->atom_names[i] = dup_str(argv[i + 1]);
     }
     inputs->num_elements = argc - 1;
-    inputs->num_bond_types = get_num_bond_types(inputs->num_elements);
 
     return INPUT_ERR_NONE;
 }
@@ -1053,6 +1053,9 @@ void validate_input_values(const struct UserInputs *inputs)
     }
     if (inputs->num_nn_levels <= 0) {
         fprintf(stderr, "Number of nearest neighbor levels must be positive\n");
+        clean_and_error(INPUT_ERR_INVALID_ARG);
+    } else if (inputs->num_nn_levels > MAX_NN_LEVELS) {
+        fprintf(stderr, "Number of nearest neighbor levels must not exceed %d\n", MAX_NN_LEVELS);
         clean_and_error(INPUT_ERR_INVALID_ARG);
     }
 }

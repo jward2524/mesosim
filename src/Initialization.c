@@ -5,6 +5,7 @@
 #include "Utils.h"
 #include "Vector.h"
 #include <errno.h>
+#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,70 +75,127 @@ void get_system_normal(double basis[3][3]) // XXX: supposedly only for vizualiza
     return;
 }
 
-void initialize_state_from_input(struct UserInputs *inputs, struct SimulationState *ss)
+void initialize_state_from_config(struct UserInputs *config, struct SimulationState *ss)
 {
-    ss->temperature = inputs->temperature;
-    ss->overpotential = inputs->initial_overpotential;
+    ss->temperature = config->temperature;
+    ss->overpotential = config->initial_overpotential;
 
-    ss->sim_end_type = inputs->sim_end_type;
-    ss->final_iteration = inputs->final_iteration;
-    ss->run_stime = inputs->run_stime;
+    ss->sim_end_type = config->sim_end_type;
+    ss->final_iteration = config->final_iteration;
+    ss->run_stime = config->run_stime;
 
+    // TODO: allow for reading simulation variables from intermediate xyz file
     ss->rate_cnt = 0;
     ss->transition_cnt = 0;
     ss->atom_cnt = 0;
     ss->frequency_sum = 0.0;
-
-    // TODO: allow for reading simulation variables from intermediate xyz file
     ss->elapsed_stime = 0.0;
-
     ss->total_atoms_dissolved = 0;
-
-    // iteration count
     ss->iter = 0;
 }
 
-void initialize_env_from_input(struct UserInputs *inputs, struct SimulationEnv *se)
+void set_maximum_array_sizes(struct SimulationEnv *se)
 {
-    get_shifts(se);
-    set_primitive_basis(inputs->lattice_type, se);
-    initialize_simulation_box(inputs, se);
-    initialize_neighbor_offsets(inputs, se);
-
-    // system size was copied during initialize_simulation_box
-    se->rand_seed = inputs->rand_seed;
-    srand(se->rand_seed);
-
-    se->overpotential_ramp_rate = inputs->overpotential_ramp_rate;
-    se->max_overpotential = inputs->max_overpotential;
-
-    se->substrate_composition = inputs->substrate_composition;
-    se->dissolution = inputs->dissolution;
-    se->is_soluble = inputs->is_soluble;
-    se->atom_names_cnt = inputs->atom_names_cnt;
-    se->atom_names = inputs->atom_names;
-
-    se->num_nn_levels = inputs->num_nn_levels;
-    se->num_elements = inputs->num_elements;
-    se->num_bond_types = inputs->num_bond_types;
-    se->num_nn_types = inputs->num_nn_types;
-
-    se->nn_energy = inputs->nn_energy;
-    se->flavor = inputs->flavor;
-
     // max_rates = combination of contributors and number of nn bond types
     // (and evaporation and final configuration count)
     // each contributor can be any kind of bond:
     // (1st nn bonds) ^ (1st nn contributors) + (2st nn bonds) ^ (2st nn contributors)
     // pow(base, exponent)
+
+    // overflow concern
+    double tmp;
     se->max_rates = 0;
     for (int i = 0; i < se->num_nn_levels; i++) {
-        se->max_rates += (long int)pow(se->num_bond_types, se->atoms_per_nn_level[i]);
+        tmp = pow(se->num_bond_types, se->atoms_per_nn_level[i]);
+        if (tmp > (double)LONG_MAX) {
+            fprintf(stderr,
+                    "Error: number of rates exceeds LONG_MAX. Consider reducing the number of "
+                    "bond types or neighbor levels.\n");
+            clean_and_error(EXIT_FAILURE);
+        }
+        se->max_rates += (long int)tmp;
     }
-    se->max_rates = (long int)((1 + se->dissolution) * se->max_rates);
+
+    tmp = ((1 + se->dissolution) * (double)se->max_rates);
+    if (tmp > (double)LONG_MAX) {
+        fprintf(stderr,
+                "Error: number of rates exceeds LONG_MAX. Consider reducing the number of bond "
+                "types, neighbor levels, or dissolution events.\n");
+        clean_and_error(EXIT_FAILURE);
+    }
+    se->max_rates = (long int)tmp;
 
     se->max_atoms = se->lat_range[0] * se->lat_range[1] * se->lat_range[2];
-    se->max_transitions = ((se->num_transition_vectors + se->dissolution) * se->max_atoms) + 10;
+
+    tmp = (((double)se->num_transition_vectors + se->dissolution) * (double)se->max_atoms) + 10;
+    if (tmp > (double)LONG_MAX) {
+        fprintf(stderr,
+                "Error: number of transitions exceeds LONG_MAX. Consider reducing the number of "
+                "transition vectors, dissolution events, or system size.\n");
+        clean_and_error(EXIT_FAILURE);
+    }
+    se->max_transitions = (long int)tmp;
+}
+
+bool validate_config(struct UserInputs *config)
+{
+    if (config->num_elements <= 0) {
+        fprintf(stderr, "Error: num_elements (%d) must be greater than 0.\n", config->num_elements);
+        return false;
+    }
+    if (config->num_nn_levels <= 0 || config->num_nn_levels > MAX_NN_LEVELS) {
+        fprintf(stderr, "Error: num_nn_levels (%d) must be greater than 0 and less than %d\n",
+                config->num_nn_levels, MAX_NN_LEVELS);
+        return false;
+    }
+    if (config->flavor != FLAVOR_KMC && config->flavor != FLAVOR_MC) {
+        fprintf(stderr, "Error: flavor (%d) must be set to either KMC or MC.\n", config->flavor);
+        return false;
+    }
+    if (config->lattice_type != BCC && config->lattice_type != FCC && config->lattice_type != SC) {
+        fprintf(stderr, "Error: lattice_type (%d) must be set to either BCC, FCC, or SC.\n",
+                config->lattice_type);
+        return false;
+    }
+    return true;
+}
+
+void initialize_env_from_config(struct UserInputs *config, struct SimulationEnv *se)
+{
+    bool is_valid = validate_config(config);
+    if (!is_valid) {
+        fprintf(stderr, "Invalid simulation configuration\n");
+        clean_and_error(EXIT_FAILURE);
+    }
+    get_shifts(se);
+    set_primitive_basis(config->lattice_type, se);
+    initialize_simulation_box(config, se);
+    initialize_neighbor_offsets(config, se);
+
+    // system size was copied during initialize_simulation_box
+    se->rand_seed = config->rand_seed;
+    srand(se->rand_seed);
+
+    se->lattice_type = config->lattice_type;
+
+    se->overpotential_ramp_rate = config->overpotential_ramp_rate;
+    se->max_overpotential = config->max_overpotential;
+
+    se->substrate_composition = config->substrate_composition;
+    se->dissolution = config->dissolution;
+    se->is_soluble = config->is_soluble;
+    se->atom_names_cnt = config->atom_names_cnt;
+    se->atom_names = config->atom_names;
+
+    se->num_nn_levels = config->num_nn_levels;
+    se->num_elements = config->num_elements;
+    se->num_bond_types = config->num_bond_types;
+    se->num_nn_types = config->num_nn_types;
+
+    se->nn_energy = config->nn_energy;
+    se->flavor = config->flavor;
+
+    set_maximum_array_sizes(se);
 }
 
 // updates [iv, iy; primitive_basis, ucell_params, Atoms' cart_coords?; zone_arr, rmat; normal_x,
@@ -150,18 +208,18 @@ void allocate_simulation_arrays(struct SimulationState *ss, struct SimulationEnv
 
     // finish initializing structs
     ss->atom_arr = (Atom **)malloc((size_t)se->max_atoms * sizeof(Atom *));
-    ss->rate_arr = (Rate *)malloc((size_t)se->max_rates * sizeof(Rate));
-    ss->transition_arr = (Transition **)malloc((size_t)se->max_transitions * sizeof(Transition *));
-
-    // null pointer checks
     if (!ss->atom_arr) {
         perror("Couldn't allocate memory for atom array");
         clean_and_error(errno);
     }
+
+    ss->rate_arr = (Rate *)malloc((size_t)se->max_rates * sizeof(Rate));
     if (!ss->rate_arr) {
         perror("Couldn't allocate memory for rate array");
         clean_and_error(errno);
     }
+
+    ss->transition_arr = (Transition **)malloc((size_t)se->max_transitions * sizeof(Transition *));
     if (!ss->transition_arr) {
         perror("Couldn't allocate memory for transition array");
         clean_and_error(errno);
@@ -169,17 +227,18 @@ void allocate_simulation_arrays(struct SimulationState *ss, struct SimulationEnv
 
     ss->transition_probability.rate_arr_index =
         (long *)malloc((size_t)se->max_rates * sizeof(long));
-    ss->transition_probability.lbound = (double *)malloc((size_t)se->max_rates * sizeof(double));
-    ss->transition_probability.ubound = (double *)malloc((size_t)se->max_rates * sizeof(double));
-
     if (!ss->transition_probability.rate_arr_index) {
         perror("Couldn't allocate memory for transition probability rate_arr_index");
         clean_and_error(errno);
     }
+
+    ss->transition_probability.lbound = (double *)malloc((size_t)se->max_rates * sizeof(double));
     if (!ss->transition_probability.lbound) {
         perror("Couldn't allocate memory for transition probability lbound");
         clean_and_error(errno);
     }
+
+    ss->transition_probability.ubound = (double *)malloc((size_t)se->max_rates * sizeof(double));
     if (!ss->transition_probability.ubound) {
         perror("Couldn't allocate memory for transition probability ubound");
         clean_and_error(errno);
@@ -346,6 +405,10 @@ void set_default_orientation(int lattice_type, double rmat[3][3])
 void initialize_zones(Zone ****zone_arr, struct SimulationEnv *se)
 {
     Zone ***za = (Zone ***)malloc((size_t)se->zone_count_u * sizeof(Zone **));
+    if (!za) {
+        perror("Couldn't allocate memory for zone array");
+        clean_and_error(errno);
+    }
     for (size_t i = 0; i < se->zone_count_u; ++i) {
         za[i] = (Zone **)malloc((size_t)se->zone_count_u * sizeof(Zone *));
         for (size_t j = 0; j < se->zone_count_v; ++j) {
@@ -365,7 +428,6 @@ void initialize_zones(Zone ****zone_arr, struct SimulationEnv *se)
 // transition_vectors, opposite_tvectors
 void initialize_neighbor_offsets(struct UserInputs *inputs, struct SimulationEnv *se)
 {
-    int i;
     int fcc_opposite[12] = {11, 10, 7, 4, 3, 6, 5, 2, 9, 8, 1, 0};
     int sc_opposite[6] = {1, 0, 3, 2, 5, 4};
     int bcc_opposite[8] = {7, 6, 3, 2, 5, 4, 1, 0};
@@ -409,12 +471,20 @@ void initialize_neighbor_offsets(struct UserInputs *inputs, struct SimulationEnv
 
     int transition_length;
     se->atoms_per_nn_level = (int *)malloc((size_t)inputs->num_nn_levels * sizeof(int));
+    if (!se->atoms_per_nn_level) {
+        perror("Couldn't allocate memory for atoms per nn level array");
+        clean_and_error(errno);
+    }
     se->atoms_per_nn_level[0] = se->num_transition_vectors;
     if (inputs->num_nn_levels == 1) {
         se->num_energy_contributors = se->num_transition_vectors;
     } else if (inputs->num_nn_levels == 2) {
         se->atoms_per_nn_level[1] = extra;
         se->num_energy_contributors = se->num_transition_vectors + extra;
+    } else {
+        fprintf(stderr, "Error: invalid number of nn levels %d - supports a maximum of %d\n",
+                inputs->num_nn_levels, MAX_NN_LEVELS);
+        clean_and_error(1);
     }
     transition_length = se->num_energy_contributors;
 
@@ -433,7 +503,7 @@ void initialize_neighbor_offsets(struct UserInputs *inputs, struct SimulationEnv
         clean_and_error(errno);
     }
 
-    for (i = 0; i < se->num_transition_vectors; ++i) {
+    for (int i = 0; i < se->num_transition_vectors; ++i) {
         se->transition_vectors[i].dx = vectors[i].dx;
         se->transition_vectors[i].dy = vectors[i].dy;
         se->transition_vectors[i].dz = vectors[i].dz;
@@ -441,7 +511,7 @@ void initialize_neighbor_offsets(struct UserInputs *inputs, struct SimulationEnv
     }
 
     if (inputs->num_nn_levels == 2) {
-        for (i = 0; i < extra; i++) {
+        for (int i = 0; i < extra; i++) {
             se->transition_vectors[se->num_transition_vectors + i].dx = vectors2[i].dx;
             se->transition_vectors[se->num_transition_vectors + i].dy = vectors2[i].dy;
             se->transition_vectors[se->num_transition_vectors + i].dz = vectors2[i].dz;
@@ -847,8 +917,8 @@ void initialize_simulation(struct UserInputs *inputs, struct SimulationState *ss
     se->zone_count_v = TTS;
     se->zone_count_w = TTS;
 
-    initialize_state_from_input(inputs, ss);
-    initialize_env_from_input(inputs, se);
+    initialize_state_from_config(inputs, ss);
+    initialize_env_from_config(inputs, se);
     allocate_simulation_arrays(ss, se);
 
     // requires: geometry, system_size_xyz, primitive_basis, substrate_composition,

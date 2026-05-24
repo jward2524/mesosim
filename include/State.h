@@ -14,22 +14,27 @@
 // xyz refer to coordinates in cartesian (orthogonal basis) space
 
 struct UserInputs {
-    int system_size_x, system_size_y, system_size_z;
-    double temperature;
-    unsigned rand_seed;
 
-    double initial_overpotential;
-    double overpotential_ramp_rate;
-    double max_overpotential;
-
-    int lattice_type;
-
-    // output formats
-
+    /* Not in simulation structs */
     // initial geometry
     int geometry;
     int geometry_param;
     char atoms_filename[256];
+    int lattice_type;
+
+    /* SimulationState */
+    int sim_end_type;
+    double run_stime;
+    unsigned long final_iteration; // max number of iterations
+    double temperature;
+    unsigned rand_seed;
+
+    /* SimulationEnv */
+    int system_size_x, system_size_y, system_size_z;
+
+    double initial_overpotential;
+    double overpotential_ramp_rate;
+    double max_overpotential;
 
     double *substrate_composition;
 
@@ -42,14 +47,11 @@ struct UserInputs {
     int num_nn_types;
     int num_elements;
     int num_bond_types;
-
     double *nn_energy;
 
-    int sim_end_type;
-    double run_stime;
-    unsigned long final_iteration; // max number of iterations
-
     unsigned flavor;
+
+    // output formats
 };
 
 // TODO: break out user-defined parameters (from input file)
@@ -58,6 +60,7 @@ struct UserInputs {
 // (generally) initialized and then never edited again, only read
 struct SimulationEnv {
 
+    /* --------- Simulation bounds --------- */
     unsigned flavor;
     unsigned rand_seed;
 
@@ -65,30 +68,20 @@ struct SimulationEnv {
     long int max_transitions;
     long int max_rates;
 
-    // shifts
-    int zixshift, ziyshift, zizshift;
-    int ssxshift, ssyshift, sszshift;
-    int zsh, ysh, xsh;
-
-    // [ ]: cartesian, units of nearest-neighbor spacing?
-    int system_size_x, system_size_y, system_size_z;
-    double ssr;
     // TODO: to input?
     size_t zone_count_u, zone_count_v, zone_count_w;
 
     double overpotential_ramp_rate;
     double max_overpotential;
 
-    double *substrate_composition;
-    // TODO: change most of these to size_t, if they are used in mallocs
-    int num_nn_levels;
-    int num_elements;
-    int num_bond_types; // Cr(num_elements,2), combination with replacement [two atoms per bond]
-    int num_neighbor_types;
-    int num_nn_types; // number of distinct bond types, se->num_nn_levels * se->num_bond_types
-    int *atoms_per_nn_level; // number of atoms per nn level, [num_nn_levels]
+    /* --------- Simulation space --------- */
+    // [ ]: cartesian, units of nearest-neighbor spacing?
+    int system_size_x, system_size_y, system_size_z;
 
-    double normal_x, normal_y, normal_z; // XXX: likely vistigal
+    // shifts
+    int zixshift, ziyshift, zizshift;
+    int ssxshift, ssyshift, sszshift;
+    int zsh, ysh, xsh;
 
     // the lattice coorinate limits in order to accomodate the "simulation box"
     int simbox_limits_lat[3][2];
@@ -98,22 +91,8 @@ struct SimulationEnv {
     double simbox_vectors_cart[3][3]; // [[u1 u2 u3], [v1 v2 v3], [w1 w2 w3]]
     double simbox_origin_cart[3];
 
-    // TODO: change this (and get_env_index) to be a 3D array nne[shell][i][j] where i and j are
-    // atom types
-    double *nn_energy; // nnE[env_idx]
-
-    int dissolution;  // flag for whether dissolution events can occur
-    bool *is_soluble; // [num_elements] (implemented as always [8])
-
-    char **atom_names; // [num_elements][BUFFER_SIZE or 3 or something]
-    int atom_names_cnt;
-    // TODO: remove this, can just use num_elements
-
-    /* symmetry related variables */
-    // double rmat[3][3];  // visualization?
-    // double centroid[3]; // coordinates for center of gravity
-
     // relevant vectors to neighbors
+    int lattice_type;
     LatticeVector *transition_vectors;
     int num_transition_vectors;  // TODO: change to unsigned char to match offset
     int num_energy_contributors; // based on num_nn_levels, directions must be hard-coded
@@ -132,6 +111,28 @@ struct SimulationEnv {
 
     // TODO: this is never used except for printing?
     double ucell_params[6]; // unit cell parameters; a b c alpha beta gamma
+
+    /* --------- Atom properties --------- */
+    int dissolution;  // flag for whether dissolution events can occur
+    bool *is_soluble; // [num_elements] (implemented as always [8])
+
+    char **atom_names; // [num_elements][BUFFER_SIZE or 3 or something]
+    int atom_names_cnt;
+    // TODO: remove this, can just use num_elements
+
+    /* --------- Atomic environments --------- */
+    double *substrate_composition;
+    // TODO: change most of these to size_t, if they are used in mallocs
+    int num_nn_levels;
+    int num_elements;
+    int num_bond_types; // Cr(num_elements,2), combination with replacement [two atoms per bond]
+    // int num_neighbor_types; // XXX
+    int num_nn_types; // number of distinct bond types, se->num_nn_levels * se->num_bond_types
+    int *atoms_per_nn_level; // number of atoms per nn level, [num_nn_levels]
+
+    // TODO: change this (and get_env_index) to be a 3D array nne[shell][i][j] where i and j are
+    // atom types
+    double *nn_energy; // nnE[env_idx]
 };
 
 // variables that describe the simulation state
