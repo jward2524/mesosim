@@ -9,97 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-// packed payload used for the first real checkpoint slice: the mutable state scalars that need
-// to survive a pause/resume cycle on the same machine.
-#pragma pack(push, 1)
-typedef struct SSP {
-    unsigned long iter;
-    unsigned long mmc_steps;
-    unsigned long final_iteration;
-    double run_stime;
-    bool simulation_should_kill_itself; // XXX
-    double elapsed_stime;
-    int sim_end_type;
-    double frequency_sum; // XXX
-    double total_internal_energy;
-    double temperature;
-    double overpotential;
-    int total_atoms_dissolved;
-} CheckpointStatePayload;
-#pragma pack(pop)
-
-// minimal atom payload
-// derived fields will be rebuilt during restore
-#pragma pack(push, 1)
-typedef struct AtomP {
-    unsigned char type;
-    double energy; // XXX: gets reset with refresh_transitions
-    int lattice_u;
-    int lattice_v;
-    int lattice_w;
-    double bsradius; // XXX:
-} CheckpointAtomPayload;
-#pragma pack(pop)
-
-// TODO: add the rest of the members of the SimulationEnv struct
-// TODO: remove duplicate info (num_elements, num_nn_types) from SEP and SEAP
-// packed payload for the immutable simulation environment: geometry, lattice, and configuration.
-// these fields define how to interpret the atom array and rebuild derived structures on restore.
-#pragma pack(push, 1)
-typedef struct SEP {
-    unsigned flavor;
-    unsigned rand_seed;
-
-    double overpotential_ramp_rate;
-    double max_overpotential;
-
-    int system_size_x;
-    int system_size_y;
-    int system_size_z;
-
-    int num_elements;
-    int num_nn_levels;
-    int num_bond_types;
-    int num_nn_types;
-    // int num_neighbor_types;
-    int num_transition_vectors; // XXX
-
-    int dissolution;
-    int atom_names_cnt;
-
-    /* not in SimulationEnv, but needed to build it up */
-    // gives simbox_vectors, simbox_limits_lat, primitive_basis, transition_vectors,
-    // num_transition_vectors, opposite_tvectors
-    int lattice_type;
-
-} CheckpointEnvPayload;
-#pragma pack(pop)
-
-typedef struct SEAP {
-    double *substrate_composition;
-    int n_substrate_composition;
-    double *nn_energy;
-    int n_nn_energy;
-    bool *is_soluble;
-    int n_is_soluble;
-    char **atom_names;
-    int n_atom_names;
-    int *n_atom_names_str;
-} CheckpointEnvArrPayload;
-
-enum CheckpointArrayFlag {
-    CAF_ATOMS = 1,
-    CAF_SUBSTRATE_COMPOSITION,
-    // CAF_ATOMS_PER_NN_LEVEL,
-    CAF_NN_ENERGY,
-    CAF_IS_SOLUBLE,
-    CAF_ATOM_NAMES,
-    CAF_ATOM_NAME_STR,
-    CAF_SENTINEL,
-};
-
 // copy the SimulationState fields we care about into a compact on-disk payload.
-static void fill_state_payload(CheckpointStatePayload *payload, const struct SimulationState *ss)
+void fill_state_payload(CheckpointStatePayload *payload, const struct SimulationState *ss)
 {
     payload->iter = ss->iter;
     payload->mmc_steps = ss->mmc_steps;
@@ -117,8 +28,8 @@ static void fill_state_payload(CheckpointStatePayload *payload, const struct Sim
 
 // copy the serialized payload back into a SimulationState so a restored run can resume with the
 // same counters and scalar conditions.
-static void apply_state_payload_to_simstate(const CheckpointStatePayload *payload,
-                                            struct SimulationState *ss)
+void apply_state_payload_to_simstate(const CheckpointStatePayload *payload,
+                                     struct SimulationState *ss)
 {
     ss->iter = payload->iter;
     ss->mmc_steps = payload->mmc_steps;
@@ -137,7 +48,7 @@ static void apply_state_payload_to_simstate(const CheckpointStatePayload *payloa
 }
 
 // copy the immutable SimulationEnv fields into a compact on-disk payload for restore validation.
-static void fill_env_payload(CheckpointEnvPayload *payload, const struct SimulationEnv *se)
+void fill_env_payload(CheckpointEnvPayload *payload, const struct SimulationEnv *se)
 {
     payload->flavor = se->flavor;
     payload->rand_seed = se->rand_seed;
@@ -159,6 +70,7 @@ static void fill_env_payload(CheckpointEnvPayload *payload, const struct Simulat
     payload->max_overpotential = se->max_overpotential;
 
     payload->dissolution = se->dissolution;
+    payload->atom_names_cnt = se->atom_names_cnt;
 
     // TODO: lattice type is only in se for this transfer
     // is there a better way?
@@ -166,8 +78,8 @@ static void fill_env_payload(CheckpointEnvPayload *payload, const struct Simulat
 }
 
 // restore the immutable SimulationEnv config from a saved payload.
-static void apply_env_payload_to_config(const CheckpointEnvPayload *payload,
-                                        struct SimulationConfig *config)
+void apply_env_payload_to_config(const CheckpointEnvPayload *payload,
+                                 struct SimulationConfig *config)
 {
     config->flavor = payload->flavor;
     config->rand_seed = payload->rand_seed;
@@ -185,11 +97,12 @@ static void apply_env_payload_to_config(const CheckpointEnvPayload *payload,
     // config->num_transition_vectors = payload->num_transition_vectors;
     config->overpotential_ramp_rate = payload->overpotential_ramp_rate;
     config->max_overpotential = payload->max_overpotential;
+    config->dissolution = payload->dissolution;
+    config->atom_names_cnt = payload->atom_names_cnt;
     config->lattice_type = payload->lattice_type;
 }
 
-static void fill_env_array_payload(CheckpointEnvArrPayload *arr_payload,
-                                   const struct SimulationEnv *se)
+void fill_env_array_payload(CheckpointEnvArrPayload *arr_payload, const struct SimulationEnv *se)
 {
     arr_payload->substrate_composition = se->substrate_composition;
     arr_payload->n_substrate_composition = (int)se->num_elements;
@@ -212,6 +125,10 @@ static void fill_env_array_payload(CheckpointEnvArrPayload *arr_payload,
 CheckpointStatus append_to_payload(const void *data, size_t data_size, uint8_t **p_payload,
                                    uint32_t *p_payload_bytes)
 {
+    if (p_payload == NULL || p_payload_bytes == NULL || (data == NULL && data_size > 0)) {
+        fprintf(stderr, "Checkpoint error: invalid output buffer for payload append\n");
+        return CHECKPOINT_ERROR;
+    }
     *p_payload = realloc(*p_payload, (size_t)*p_payload_bytes + data_size);
     if (*p_payload == NULL) {
         fprintf(stderr, "Checkpoint error: failed to allocate memory for payload: %s\n",
@@ -236,9 +153,13 @@ CheckpointStatus write_array_magic(uint8_t **p_payload, uint32_t *p_payload_byte
 }
 
 // TODO: make type of flag smaller and make sure type of n is large enough for everything
-CheckpointStatus write_array_header_into_payload(const uint16_t flag, const uint32_t n,
-                                                 uint8_t **p_payload)
+CheckpointStatus write_array_header_into_payload(uint16_t flag, uint32_t n, uint8_t **p_payload)
 {
+    if (p_payload == NULL || *p_payload == NULL) {
+        fprintf(stderr, "Checkpoint error: invalid output buffer for array header\n");
+        return CHECKPOINT_ERROR;
+    }
+
     const uint16_t arr_magic = CHECKPOINT_ARRAY_MAGIC;
     size_t header_size = sizeof(arr_magic) + sizeof(flag) + sizeof(n);
     uint8_t *header = malloc(header_size);
@@ -270,10 +191,15 @@ CheckpointStatus write_array_header_into_payload(const uint16_t flag, const uint
  * @param payload_bytes
  * @return CheckpointStatus
  */
-CheckpointStatus write_array(const uint16_t flag, const uint32_t n, const void *arr,
-                             const size_t elem_size, uint8_t **p_payload, uint32_t *p_payload_bytes)
+CheckpointStatus write_array(uint16_t flag, uint32_t n, const void *arr, size_t elem_size,
+                             uint8_t **p_payload, uint32_t *p_payload_bytes)
 {
     CheckpointStatus status;
+    if (p_payload == NULL || p_payload_bytes == NULL) {
+        fprintf(stderr, "Checkpoint error: invalid output buffer for array payload\n");
+        return CHECKPOINT_ERROR;
+    }
+
     const uint16_t arr_magic = CHECKPOINT_ARRAY_MAGIC;
     size_t header_size = sizeof(arr_magic) + sizeof(flag) + sizeof(n);
     size_t intermediate_size = header_size + elem_size * n;
@@ -285,6 +211,10 @@ CheckpointStatus write_array(const uint16_t flag, const uint32_t n, const void *
     }
 
     status = write_array_header_into_payload(flag, n, &intermediate_payload);
+    if (status != CHECKPOINT_OK) {
+        free(intermediate_payload);
+        return status;
+    }
     if (arr != NULL) {
         memcpy(intermediate_payload + header_size, arr, elem_size * n);
     }
@@ -298,8 +228,8 @@ CheckpointStatus write_array(const uint16_t flag, const uint32_t n, const void *
     return status;
 }
 
-static void write_env_arrays(const CheckpointEnvArrPayload *arr_payload, uint8_t **p_payload,
-                             uint32_t *p_payload_bytes)
+void write_env_arrays(const CheckpointEnvArrPayload *arr_payload, uint8_t **p_payload,
+                      uint32_t *p_payload_bytes)
 {
     CheckpointStatus status;
     status = write_array(
@@ -417,8 +347,8 @@ CheckpointStatus read_array(const uint8_t *payload, size_t *bytes_read, uint16_t
     return CHECKPOINT_OK;
 }
 
-static void read_env_arrays(uint8_t *payload, size_t *total_bytes_read,
-                            CheckpointEnvArrPayload *arr_payload)
+void read_env_arrays(uint8_t *payload, size_t *total_bytes_read,
+                     CheckpointEnvArrPayload *arr_payload)
 {
     CheckpointStatus status;
     uint16_t flag = 0;
@@ -487,6 +417,7 @@ static void read_env_arrays(uint8_t *payload, size_t *total_bytes_read,
         return;
     }
     payload_ptr += bytes_read;
+    arr_payload->n_atom_names = (int)n;
     arr_payload->atom_names = (char **)malloc(n * sizeof(char *));
     if (arr_payload->atom_names == NULL) {
         fprintf(stderr, "Checkpoint error: failed to allocate memory for atom names: %s\n",
@@ -531,7 +462,7 @@ void apply_env_arrays(CheckpointEnvArrPayload *arr_payload, struct SimulationEnv
 }
 
 // serialize a single atom into its checkpoint representation.
-static void fill_atom_payload(CheckpointAtomPayload *payload, const Atom *atom)
+void fill_atom_payload(CheckpointAtomPayload *payload, const Atom *atom)
 {
     payload->type = atom->type;
     payload->energy = atom->energy;
@@ -544,7 +475,7 @@ static void fill_atom_payload(CheckpointAtomPayload *payload, const Atom *atom)
 // restore a single atom from its checkpoint representation.
 // note: transition_indices, neighbor_atom_idxs, and linked-list fields are zeroed;
 // they will be rebuilt from the simulation state during restore.
-static void apply_atom_payload(const CheckpointAtomPayload *payload, Atom *atom)
+void apply_atom_payload(const CheckpointAtomPayload *payload, Atom *atom)
 {
     atom->type = payload->type;
     atom->energy = payload->energy;
@@ -804,6 +735,7 @@ CheckpointStatus checkpoint_save(const char *path, const struct SimulationState 
     if (se) {
         fill_env_array_payload(&env_arr_payload, se);
         write_env_arrays(&env_arr_payload, &payload, &payload_bytes);
+        free(env_arr_payload.n_atom_names_str);
     }
 
     // if state is present and has atoms, include atom count and array in payload.
@@ -858,8 +790,7 @@ CheckpointStatus checkpoint_save(const char *path, const struct SimulationState 
 
 // rebuild rate and transition arrays from restored atoms
 // must be called after zones are rebuilt
-static CheckpointStatus rebuild_rates_and_transitions(struct SimulationState *ss,
-                                                      struct SimulationEnv *se)
+CheckpointStatus rebuild_rates_and_transitions(struct SimulationState *ss, struct SimulationEnv *se)
 {
     if (!ss || !ss->atom_arr || ss->atom_cnt <= 0) {
         return CHECKPOINT_OK; // nothing to rebuild
@@ -1092,14 +1023,8 @@ CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,
         }
         rebuild_rates_and_transitions(ss, se);
     }
-    free(env_arr_payload.substrate_composition);
-    free(env_arr_payload.nn_energy);
-    free(env_arr_payload.is_soluble);
-    for (int i = 0; i < env_arr_payload.n_atom_names; i++) {
-        free(env_arr_payload.n_atom_names_str);
-    }
-    free(env_arr_payload.atom_names);
 
+    // env arrays in env_arr_payload have ownership transferred to SimulationEnv
     if (header.has_atoms && atom_cnt > 0) {
         free(atom_payload_arr);
     }
