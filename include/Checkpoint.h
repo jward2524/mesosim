@@ -110,6 +110,7 @@ typedef struct {
 } CheckpointHeader;
 #pragma pack(pop)
 
+// ENHANCE: macro for functions exposed only for testing
 CheckpointStatus checkpoint_save(const char *path, const struct SimulationState *ss,
                                  const struct SimulationEnv *se);
 CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,

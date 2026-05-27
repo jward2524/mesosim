@@ -196,6 +196,8 @@ typedef struct {
     double *list;            // list of output points (if mode is list)
     int list_len;            // number of entries in list
     int list_idx;            // current index in list
+    double next_checkpoint;
+    int frame_num;
 } OutputSchedule;
 
 struct CsvLsView {
@@ -204,6 +206,36 @@ struct CsvLsView {
 // returns malloced pointer to string
 typedef const char *(*CsvFieldFuncPtr)(const struct SimulationState *ss,
                                        const struct CsvLsView *view);
+
+typedef enum { OUTPUT_FORMAT_CSV = 1, OUTPUT_FORMAT_XYZ, OUTPUT_FORMAT_STEPS_CSV } OutputFormatType;
+
+// ENHANCE: can define each struct in the union seperately for better type control in functions?
+typedef struct {
+    int type;
+    union {
+        struct {
+            char filename[256];
+            FILE *file;
+            OutputSchedule schedule;
+            CsvFieldFuncPtr *field_funcs;
+            char **field_names;
+            int field_count;
+            int frame_num;
+        } csv;
+        struct {
+            OutputSchedule schedule;
+            char prefix[256];
+            char suffix[256];
+            bool stripped; // only output under-coordinated atoms
+        } xyz;
+        struct {
+            char filename[256];
+            FILE *file;
+            int coordination;
+            int frame_num;
+        } steps;
+    };
+} OutputFormat;
 
 // variables that describe state of logging
 // files and when to log
@@ -218,36 +250,8 @@ struct LoggingState {
     int stime_precision;
     int overpot_precision;
 
-    // TODO: switch to a unified output format struct that can be used for both csv and xyz and iter
-    // use a base struct for shared fields and then extended structs for csv and xyz specific fields
-    // and a `formats` array in LoggingState to hold all defined formats for a simulation
-    // https://embeddedartistry.com/fieldatlas/technique-inheritance-and-polymorphism-in-c/
-
-    // iteration output configuration
-    bool output_steps_csv;
-    char steps_filename[256];
-    FILE *steps_csv;
-    bool steps_coord; // whether to log coordination in steps csv
-
-    // CSV output configuration
-    bool output_state_csv;
-    FILE *state_csv;
-    char csv_filename[256];
-    char **csv_fields;
-    CsvFieldFuncPtr *csv_field_funcs;
-    int csv_field_count;
-    OutputSchedule csv_schedule;
-    int csv_framenum;
-    double next_csv_checkpoint;
-
-    // XYZ output configuration
-    bool output_xyz;
-    char xyz_prefix[256];
-    char xyz_suffix[256];
-    OutputSchedule xyz_schedule;
-    int xyz_framenum;
-    bool xyz_stripped; // only output under-coordinated atoms
-    double next_xyz_checkpoint;
+    OutputFormat *out_formats;
+    int out_formats_cnt;
 };
 
 #endif // COMMON_H
