@@ -198,20 +198,26 @@ void clean_and_error(int exit_error)
     if (ls != NULL) {
         if (ls->sim_log)
             fclose(ls->sim_log);
-        if (ls->steps_csv)
-            fclose(ls->steps_csv);
-        if (ls->state_csv)
-            fclose(ls->state_csv);
-        if (ls->csv_fields) {
-            for (int i = 0; i < ls->csv_field_count; i++) {
-                free_if_exists((void **)&ls->csv_fields[i]);
+        for (int i = 0; i < ls->out_formats_cnt; i++) {
+            OutputFormat f = ls->out_formats[i];
+            if (f.type == OUTPUT_FORMAT_CSV) {
+                if (f.csv.file)
+                    fclose(f.csv.file);
+                if (f.csv.field_names) {
+                    for (int j = 0; j < f.csv.field_count; j++) {
+                        free_if_exists((void **)&f.csv.field_names[j]);
+                    }
+                }
+                free_if_exists((void **)&f.csv.field_names);
+                free_if_exists((void **)&f.csv.field_funcs);
+                free_if_exists((void **)&f.csv.schedule.list);
+            } else if (f.type == OUTPUT_FORMAT_STEPS_CSV) {
+                if (f.steps.file)
+                    fclose(f.steps.file);
+            } else if (f.type == OUTPUT_FORMAT_XYZ) {
+                free_if_exists((void **)&f.xyz.schedule.list);
             }
         }
-        free_if_exists((void **)&ls->csv_fields);
-        free_if_exists((void **)&ls->csv_field_funcs);
-        free_if_exists((void **)&ls->csv_schedule.list);
-        free_if_exists((void **)&ls->xyz_schedule.list);
-
         free_if_exists((void **)gp_log_state);
         gp_log_state = NULL;
     }
