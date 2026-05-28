@@ -154,11 +154,24 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             int uvw1[] = {old_u, old_v, old_w};
             int uvw2[] = {new_u, new_v, new_w};
             log_mc_steps(ls->steps_csv, ss->iter, ss->total_internal_energy, deltaE, perform_flag,
-                        uvw1, uvw2, coord);
+                         uvw1, uvw2, coord);
         }
 
-        output_if_passed_checkpoint(ss, se, ls);
+        StepData step_data = {
+            .flavor = se->flavor,
+            .iter = ss->iter,
+            .sys_energy = ss->total_internal_energy,
+            .uvw1 = {old_u, old_v, old_w},
+            .uvw2 = {new_u, new_v, new_w},
+            .coord = coord,
+            .mc =
+                {
+                    .deltaE = deltaE,
+                    .performed = perform_flag,
+                },
+        };
 
+        output_on_schedule(&step_data, ss, se, ls);
     }
 
     // write elapsed_stime to mark finish

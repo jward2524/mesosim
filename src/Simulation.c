@@ -228,6 +228,20 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
             printf("Iteration %ld, time %le\n", ss->iter, ss->elapsed_stime);
         }
 
+        StepData step_data = {
+            .flavor = se->flavor,
+            .iter = ss->iter,
+            .sys_energy = ss->total_internal_energy,
+            .uvw1 = {old_x, old_y, old_z},
+            .uvw2 = {lastxt, lastyt, lastzt},
+            .coord = coord,
+            .kmc =
+                {
+                    .sim_time = ss->elapsed_stime,
+                    .is_evap = is_evaporation,
+                },
+        };
+
         if (ls->output_steps_csv) {
             int uvw1[] = {old_x, old_y, old_z};
             // lastxyzt will have wrong values if current step was evaporation
@@ -236,7 +250,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                           ss->total_internal_energy, uvw1, uvw2, is_evaporation, coord);
         }
 
-        output_if_passed_checkpoint(ss, se, ls);
+        output_on_schedule(&step_data, ss, se, ls);
 
         // check if simulation is over
         if (ss->sim_end_type == SIM_END_BY_STIME) {

@@ -73,25 +73,23 @@ void safe_log(FILE *stream, const char *fmt, ...)
 
 void open_log_files(struct LoggingState *ls, unsigned flavor)
 {
-    if (ls->output_state_csv) {
-        ls->state_csv = fopen(ls->csv_filename, "w+");
-        fopen_error(ls->csv_filename, ls->state_csv, "Failed to open csv file, ");
-        output_csv_header(ls->state_csv, ls);
-    } else {
-        ls->state_csv = NULL;
-    }
+    for (int i = 0; i < ls->out_formats_cnt; i) {
+        OutputFormat *format = &(ls->out_formats[i]);
+        if (format->type == OUTPUT_FORMAT_CSV) {
+            format->csv.file = fopen(format->csv.filename, "w+");
+            fopen_error(format->csv.filename, format->csv.file, "Failed to open csv file, ");
+            output_csv_header(format->csv.file, format);
+        } else if (format->type == OUTPUT_FORMAT_STEPS_CSV) {
+            format->csv.file = fopen(format->steps.filename, "w+");
+            fopen_error(format->steps.filename, format->csv.file,
+                        "Failed to open steps csv file, ");
 
-    if (ls->output_steps_csv) {
-        ls->steps_csv = fopen(ls->steps_filename, "w+");
-        fopen_error(ls->steps_filename, ls->steps_csv, "Failed to open steps csv file, ");
-
-        if (flavor == FLAVOR_KMC) {
-            output_kmc_steps_header(ls->steps_csv, ls->steps_coord);
-        } else if (flavor == FLAVOR_MC) {
-            output_mc_steps_header(ls->steps_csv, ls->steps_coord);
+            if (flavor == FLAVOR_KMC) {
+                output_kmc_steps_header(format->steps.file, format->steps.coordination);
+            } else if (flavor == FLAVOR_MC) {
+                output_mc_steps_header(format->steps.file, format->steps.coordination);
+            }
         }
-    } else {
-        ls->steps_csv = NULL;
     }
 }
 
@@ -160,6 +158,7 @@ bool process_xyz_file(FILE *input_file, struct SimulationState *ss, struct Simul
         return false;
     }
 
+    // TODO: provide flag to control whether comments get parsed
     // act upon key-value pairs - simulation variables, Properties
     // capture any simulation variables in the comment line that are used to continue a started
     // simulation ss->elapsed_stime, ss->temperature, ss->overpotential; all doubles ls->framenum;
@@ -192,8 +191,6 @@ bool process_xyz_file(FILE *input_file, struct SimulationState *ss, struct Simul
             ss->overpotential = strtod(kv.value, NULL);
         } else if (strncmp(kv.key, "iteration", 9) == 0) {
             ss->iter = strtoul(kv.value, NULL, 10);
-        } else if (strncmp(kv.key, "frame", 5) == 0) {
-            ls->xyz_framenum = atoi(kv.value);
         } else if (strncmp(kv.key, "energy", 6) == 0) {
             ss->total_internal_energy = strtod(kv.value, NULL);
         }
@@ -452,62 +449,48 @@ void input_logging(struct SimulationConfig *inputs, struct SimulationState *ss,
         safe_log(ls->sim_log, "Potential constant [eV] at %lf\n", ss->overpotential);
     }
 
-    if (ls->output_state_csv) {
-        safe_log(ls->sim_log, "CSV output to file %s\n", ls->csv_filename);
-
-        char *buf = schedule_list_to_string(&ls->csv_schedule);
-
-        switch (ls->csv_schedule.mode) {
-        case OUTPUT_SCHEDULE_INTERVAL_ITERATION:
-            safe_log(ls->sim_log,
-                     "Recording data at linear intervals [iterations] from at %.2lf increments\n",
-                     ls->csv_schedule.interval);
+    for (int i = 0; i < ls->out_formats_cnt; i++) {
+        OutputFormat *format = &(ls->out_formats[i]);
+        switch (format->type) {
+        case OUTPUT_FORMAT_CSV:
+            safe_log(ls->sim_log, "CSV output to file %s\n", format->csv.filename);
             break;
-        case OUTPUT_SCHEDULE_INTERVAL_TIME:
-            safe_log(ls->sim_log,
-                     "Recording data at linear intervals [s] from at %.2lg multiples\n",
-                     ls->csv_schedule.interval);
+        case OUTPUT_FORMAT_STEPS_CSV:
+            safe_log(ls->sim_log, "Steps CSV output to file %s\n", format->steps.filename);
             break;
-        case OUTPUT_SCHEDULE_LIST_ITERATION:
-            safe_log(ls->sim_log, "Recording data at iterations %s\n", buf);
-            break;
-        case OUTPUT_SCHEDULE_LIST_TIME:
-            safe_log(ls->sim_log, "Recording data at times %s\n", buf);
-            break;
-        default:
-            fprintf(stderr, "Invalid output schedule mode\n");
-            clean_and_error(EXIT_FAILURE);
+        case OUTPUT_FORMAT_XYZ:
+            safe_log(ls->sim_log, "XYZ output to file prefix %s\n", format->xyz.prefix);
             break;
         }
-    }
 
-    if (ls->output_xyz) {
-        safe_log(ls->sim_log, "XYZ output to file prefix %s\n", ls->xyz_prefix);
+        if (format->type == OUTPUT_FORMAT_CSV || format->type == OUTPUT_FORMAT_XYZ) {
+            OutputSchedule schedule =
+                (format->type == OUTPUT_FORMAT_CSV) ? format->csv.schedule : format->xyz.schedule;
+            char *buf = schedule_list_to_string(&schedule);
 
-        char *buf = schedule_list_to_string(&ls->xyz_schedule);
-
-        switch (ls->xyz_schedule.mode) {
-        case OUTPUT_SCHEDULE_INTERVAL_ITERATION:
-            safe_log(ls->sim_log,
-                     "Recording data at linear intervals [iterations] from %lf to %lf at %lf "
-                     "increments\n",
-                     ls->next_xyz_checkpoint, ss->run_stime, ls->xyz_schedule.interval);
-            break;
-        case OUTPUT_SCHEDULE_INTERVAL_TIME:
-            safe_log(ls->sim_log,
-                     "Recording data at linear intervals [s] from %lf to %lf at %lf multiples\n",
-                     ls->next_xyz_checkpoint, ss->run_stime, ls->xyz_schedule.interval);
-            break;
-        case OUTPUT_SCHEDULE_LIST_ITERATION:
-            safe_log(ls->sim_log, "Recording data at iterations %s\n", buf);
-            break;
-        case OUTPUT_SCHEDULE_LIST_TIME:
-            safe_log(ls->sim_log, "Recording data at times %s\n", buf);
-            break;
-        default:
-            fprintf(stderr, "Invalid output schedule mode\n");
-            clean_and_error(EXIT_FAILURE);
-            break;
+            switch (schedule.mode) {
+            case OUTPUT_SCHEDULE_INTERVAL_ITERATION:
+                safe_log(
+                    ls->sim_log,
+                    "Recording data at linear intervals [iterations] from at %.2lf increments\n",
+                    schedule.interval);
+                break;
+            case OUTPUT_SCHEDULE_INTERVAL_TIME:
+                safe_log(ls->sim_log,
+                         "Recording data at linear intervals [s] from at %.2lg multiples\n",
+                         schedule.interval);
+                break;
+            case OUTPUT_SCHEDULE_LIST_ITERATION:
+                safe_log(ls->sim_log, "Recording data at iterations %s\n", buf);
+                break;
+            case OUTPUT_SCHEDULE_LIST_TIME:
+                safe_log(ls->sim_log, "Recording data at times %s\n", buf);
+                break;
+            default:
+                fprintf(stderr, "Invalid output schedule mode\n");
+                clean_and_error(EXIT_FAILURE);
+                break;
+            }
         }
     }
 
@@ -573,33 +556,37 @@ bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, doubl
     return true;
 }
 
-void output_csv_header(FILE *csv_file, struct LoggingState *ls)
+// ENHANCE: make fields of union own type, so it can passed into this
+void output_csv_header(FILE *csv_file, OutputFormat *format)
 {
     safe_log(csv_file, "frame,");
-    for (int i = 0; i < ls->csv_field_count; ++i) {
-        safe_log(csv_file, "%s%s", ls->csv_fields[i], (i < ls->csv_field_count - 1) ? "," : "\n");
+    for (int i = 0; i < format->csv.field_count; ++i) {
+        safe_log(csv_file, "%s%s", format->csv.field_names[i],
+                 (i < format->csv.field_count - 1) ? "," : "\n");
     }
 }
 
-void log_state_csv(FILE *csv_file, struct SimulationState *ss, struct LoggingState *ls)
+void log_state_csv(OutputFormat *format, double stime_precision, double overpot_precision,
+                   struct SimulationState *ss)
 {
-    safe_log(csv_file, "%d,", ls->csv_framenum);
-    for (int i = 0; i < ls->csv_field_count; ++i) {
+    safe_log(format->csv.file, "%d,", format->csv.frame_num);
+    for (int i = 0; i < format->csv.field_count; ++i) {
         // malloc'd string, needs to be free'd when done
         struct CsvLsView *view = malloc(sizeof(struct CsvLsView));
-        if (strcmp(ls->csv_fields[i], "time") == 0) {
-            view->precision = ls->stime_precision;
-        } else if (strcmp(ls->csv_fields[i], "overpotential") == 0) {
-            view->precision = ls->overpot_precision;
+        if (strcmp(format->csv.field_names[i], "time") == 0) {
+            view->precision = stime_precision;
+        } else if (strcmp(format->csv.field_names[i], "overpotential") == 0) {
+            view->precision = overpot_precision;
         }
-        const char *value_str = ls->csv_field_funcs[i](ss, view);
+        const char *value_str = format->csv.field_funcs[i](ss, view);
         if (!value_str) {
-            fprintf(stderr, "Error formatting csv field %s: %s\n", ls->csv_fields[i],
+            fprintf(stderr, "Error formatting csv field %s: %s\n", format->csv.field_names[i],
                     strerror(errno));
             free((void *)value_str);
             clean_and_error(EXIT_FAILURE);
         }
-        safe_log(csv_file, "%s%s", value_str, (i < ls->csv_field_count - 1) ? "," : "\n");
+        safe_log(format->csv.file, "%s%s", value_str,
+                 (i < format->csv.field_count - 1) ? "," : "\n");
         free((void *)value_str);
     }
 }
@@ -616,21 +603,19 @@ void output_kmc_steps_header(FILE *csv_file, const bool output_coord)
 // output to csv:
 // iteration number, simulation time, system energy (per atom?), x1, y1, z1, x2, y2, z2
 // and atom ids at some point
-void log_kmc_steps(FILE *csv_file, const unsigned long int iter, const double sim_time,
-                   const int sim_time_precision, const double sys_energy, const int uvw1[3],
-                   const int uvw2[3], const int is_evap, const int coordination)
+void log_kmc_steps(FILE *csv_file, const StepData *step_data, double sim_time_precision)
 {
-    safe_log(csv_file, "%lu,", iter);
-    safe_log(csv_file, "%.*le,", sim_time_precision, sim_time);
-    safe_log(csv_file, "%lf,", sys_energy);
-    safe_log(csv_file, "%d,%d,%d,", uvw1[0], uvw1[1], uvw1[2]);
-    if (!is_evap) {
-        safe_log(csv_file, "%d,%d,%d", uvw2[0], uvw2[1], uvw2[2]);
+    safe_log(csv_file, "%lu,", step_data->iter);
+    safe_log(csv_file, "%.*le,", sim_time_precision, step_data->kmc.sim_time);
+    safe_log(csv_file, "%lf,", step_data->sys_energy);
+    safe_log(csv_file, "%d,%d,%d,", step_data->uvw1[0], step_data->uvw1[1], step_data->uvw1[2]);
+    if (!step_data->kmc.is_evap) {
+        safe_log(csv_file, "%d,%d,%d", step_data->uvw2[0], step_data->uvw2[1], step_data->uvw2[2]);
     } else {
         safe_log(csv_file, ",,");
     }
-    if (coordination > 0) {
-        safe_log(csv_file, ",%d", coordination);
+    if (step_data->coord > 0) {
+        safe_log(csv_file, ",%d", step_data->coord);
     }
     safe_log(csv_file, "\n");
 }
@@ -646,18 +631,16 @@ void output_mc_steps_header(FILE *csv_file, bool output_coord)
 
 // output to csv:
 // MCSS, system energy (per atom?), uvw1, uvw2
-void log_mc_steps(FILE *csv_file, const unsigned long int iter, const double sys_energy,
-                  const double deltaE, const int performed, const int uvw1[3], const int uvw2[3],
-                  const int coordination)
+void log_mc_steps(FILE *csv_file, const StepData *step_data)
 {
-    safe_log(csv_file, "%lu,", iter);
-    safe_log(csv_file, "%lf,", sys_energy);
-    safe_log(csv_file, "%lf,", deltaE);
-    safe_log(csv_file, "%d,", performed);
-    safe_log(csv_file, "%d,%d,%d,", uvw1[0], uvw1[1], uvw1[2]);
-    safe_log(csv_file, "%d,%d,%d", uvw2[0], uvw2[1], uvw2[2]);
-    if (coordination > 0) {
-        safe_log(csv_file, ",%d", coordination);
+    safe_log(csv_file, "%lu,", step_data->iter);
+    safe_log(csv_file, "%lf,", step_data->sys_energy);
+    safe_log(csv_file, "%lf,", step_data->mc.deltaE);
+    safe_log(csv_file, "%d,", step_data->mc.performed);
+    safe_log(csv_file, "%d,%d,%d,", step_data->uvw1[0], step_data->uvw1[1], step_data->uvw1[2]);
+    safe_log(csv_file, "%d,%d,%d", step_data->uvw2[0], step_data->uvw2[1], step_data->uvw2[2]);
+    if (step_data->coord > 0) {
+        safe_log(csv_file, ",%d", step_data->coord);
     }
     safe_log(csv_file, "\n");
 }
@@ -745,12 +728,12 @@ bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, int stripped,
     return true;
 }
 
-static int check_and_advance_checkpoint(OutputSchedule *sched, double *checkpoint, bool *state,
+static int check_and_advance_checkpoint(OutputSchedule *sched, bool *state,
                                         struct SimulationState *ss)
 {
     OutputScheduleMode mode = sched->mode;
-    int iter_reached = fabs(*checkpoint - (double)ss->iter) < FABS_TOL;
-    int stime_reached = ss->elapsed_stime >= *checkpoint;
+    int iter_reached = fabs(sched->next_checkpoint - (double)ss->iter) < FABS_TOL;
+    int stime_reached = ss->elapsed_stime >= sched->next_checkpoint;
 
     int checkpoint_reached = (mode == OUTPUT_SCHEDULE_INTERVAL_ITERATION && iter_reached) ||
                              (mode == OUTPUT_SCHEDULE_INTERVAL_TIME && stime_reached) ||
@@ -760,38 +743,38 @@ static int check_and_advance_checkpoint(OutputSchedule *sched, double *checkpoin
     if (checkpoint_reached) {
         if (mode == OUTPUT_SCHEDULE_INTERVAL_ITERATION || mode == OUTPUT_SCHEDULE_INTERVAL_TIME) {
             // interval-based increments
-            if (!checkpoint_reached && (ss->iter > *checkpoint)) {
+            if (!checkpoint_reached && (ss->iter > sched->next_checkpoint)) {
                 fprintf(stderr, "Iterations (%lu) exceeded log checkpoint (%lf) without noticing\n",
-                        ss->iter, *checkpoint);
+                        ss->iter, sched->next_checkpoint);
                 clean_and_error(EXIT_FAILURE);
             }
             if (mode == OUTPUT_SCHEDULE_INTERVAL_TIME) {
                 // kmc time steps can be large and skip over checkpoints, so advance in a loop until
                 // we are past the current time
-                while (*checkpoint <= ss->elapsed_stime) {
-                    *checkpoint += sched->interval;
+                while (sched->next_checkpoint <= ss->elapsed_stime) {
+                    sched->next_checkpoint += sched->interval;
                 }
             } else {
-                *checkpoint += sched->interval;
+                sched->next_checkpoint += sched->interval;
             }
         } else if (mode == OUTPUT_SCHEDULE_LIST_ITERATION || mode == OUTPUT_SCHEDULE_LIST_TIME) {
             // list-based increments
             sched->list_idx++;
             if (sched->list_idx < sched->list_len) {
-                *checkpoint = sched->list[sched->list_idx];
+                sched->next_checkpoint = sched->list[sched->list_idx];
                 if (mode == OUTPUT_SCHEDULE_INTERVAL_TIME) {
                     // kmc time steps can be large and skip over checkpoints, so advance in a loop
                     // until we are past the current time
-                    while (*checkpoint <= ss->elapsed_stime) {
+                    while (sched->next_checkpoint <= ss->elapsed_stime) {
                         fprintf(stderr,
                                 "Warning: simulation time %.4lf exceeded log checkpoint %.4lf "
                                 "without logging\n",
-                                ss->elapsed_stime, *checkpoint);
+                                ss->elapsed_stime, sched->next_checkpoint);
                         sched->list_idx++;
-                        *checkpoint += sched->list[sched->list_idx];
+                        sched->next_checkpoint += sched->list[sched->list_idx];
                     }
                 } else {
-                    *checkpoint += sched->interval;
+                    sched->next_checkpoint += sched->interval;
                 }
             } else {
                 // end of list reached, disable further logging
@@ -829,25 +812,47 @@ void write_xyz_suffix(char *suffix, OutputScheduleMode mode, double checkpoint)
  * @param se
  * @param ls
  */
-void write_logs(int output_csv, int output_xyz, struct SimulationState *ss,
-                struct SimulationEnv *se, struct LoggingState *ls)
+void write_logs(const StepData *step_data, struct SimulationState *ss, struct SimulationEnv *se,
+                struct LoggingState *ls)
 {
-    // udpate framenums after, so initial logs (t=0) show frame 0
-    if (output_csv || output_xyz) {
+    // update framenums after, so initial logs (t=0) show frame 0
+    int logging = 0;
+    for (int i = 0; i < ls->out_formats_cnt; i++) {
+        OutputFormat *format = &(ls->out_formats[i]);
+        if (format->should_log_now) {
+            switch (format->type) {
+            case OUTPUT_FORMAT_CSV:
+                logging |= format->should_log_now;
+                log_state_csv(&format->csv, ls->stime_precision, ls->overpot_precision, ss);
+                format->csv.frame_num++;
+                break;
+            case OUTPUT_FORMAT_XYZ:
+                logging |= format->should_log_now;
+                // suffix is expected to be updated by caller
+                write_xyz_file(format->xyz.prefix, format->xyz.frame_num, format->xyz.suffix,
+                               format->xyz.stripped, ss, se);
+                format->xyz.frame_num++;
+            case OUTPUT_FORMAT_STEPS_CSV:
+                // steps csv is written to every step
+                switch (se->flavor) {
+                case FLAVOR_KMC:
+                    log_kmc_steps(format->steps.file, step_data, ls->stime_precision);
+                    break;
+                case FLAVOR_MC:
+                    log_mc_steps(format->steps.file, step_data);
+                }
+                break;
+            }
+        }
+    }
+
+    // if something is being logged, then output the frame to sim_log
+    if (logging) {
         output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
                         ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
         ls->framenum++;
     }
 
-    if (output_csv) {
-        log_state_csv(ls->state_csv, ss, ls);
-        ls->csv_framenum++;
-    }
-    if (output_xyz) {
-        // suffix is expected to be updated by caller
-        write_xyz_file(ls->xyz_prefix, ls->xyz_framenum, ls->xyz_suffix, ls->xyz_stripped, ss, se);
-        ls->xyz_framenum++;
-    }
     return;
 }
 
@@ -859,22 +864,28 @@ void write_logs(int output_csv, int output_xyz, struct SimulationState *ss,
  * @param se
  * @param ls
  */
-void output_if_passed_checkpoint(struct SimulationState *ss, struct SimulationEnv *se,
-                                 struct LoggingState *ls)
+void output_on_schedule(StepData *step_data, struct SimulationState *ss, struct SimulationEnv *se,
+                        struct LoggingState *ls)
 {
-    int output_csv = 0;
-    int output_xyz = 0;
-    if (ls->output_state_csv) {
-        // only output csv if configed and checkpoint reached
-        output_csv = check_and_advance_checkpoint(&ls->csv_schedule, &ls->next_csv_checkpoint,
-                                                  &ls->output_state_csv, ss);
+    for (int i = 0; i < ls->out_formats_cnt; i++) {
+        OutputFormat *format = &(ls->out_formats[i]);
+        int output_now = false;
+        switch (format->type) {
+        case OUTPUT_FORMAT_CSV:
+            output_now =
+                check_and_advance_checkpoint(&format->csv.schedule, &format->is_active, ss);
+            break;
+        case OUTPUT_FORMAT_XYZ:
+            write_xyz_suffix(format->xyz.suffix, format->xyz.schedule.mode,
+                             format->xyz.schedule.next_checkpoint);
+            output_now =
+                check_and_advance_checkpoint(&format->xyz.schedule, &format->is_active, ss);
+            break;
+        case OUTPUT_FORMAT_STEPS_CSV:
+            // steps csv is written to every step, so no checkpoint to check against
+            break;
+        }
     }
-    if (ls->output_xyz) {
-        write_xyz_suffix(ls->xyz_suffix, ls->xyz_schedule.mode, ls->next_xyz_checkpoint);
-        // only output xyz if configed and checkpoint reached
-        output_xyz = check_and_advance_checkpoint(&ls->xyz_schedule, &ls->next_xyz_checkpoint,
-                                                  &ls->output_xyz, ss);
-    }
-    write_logs(output_csv, output_xyz, ss, se, ls);
+    write_logs(step_data, ss, se, ls);
     return;
 }

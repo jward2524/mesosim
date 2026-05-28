@@ -14,6 +14,25 @@ typedef struct {
 extern const CsvFieldFunc csv_field_map[];
 extern const size_t CSV_FIELD_FUNCS_COUNT;
 
+typedef struct {
+    int flavor;
+    unsigned long int iter;
+    double sys_energy;
+    int uvw1[3];
+    int uvw2[3];
+    int coord;
+    union {
+        struct {
+            double sim_time;
+            int is_evap;
+        } kmc;
+        struct {
+            double deltaE;
+            int performed;
+        } mc;
+    };
+} StepData;
+
 void safe_log(FILE *stream, const char *fmt, ...);
 
 void simulation_parameters_from_file(char *filename, struct SimulationConfig *inputs,
@@ -32,23 +51,20 @@ bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, doubl
 bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, int stripped,
                     struct SimulationState *ss, struct SimulationEnv *se);
 
-void output_csv_header(FILE *csv_file, struct LoggingState *ls);
-void log_state_csv(FILE *csv_file, struct SimulationState *ss, struct LoggingState *ls);
+void output_csv_header(FILE *csv_file, OutputFormat *format);
+void log_state_csv(OutputFormat *format, double stime_precision, double overpot_precision,
+                   struct SimulationState *ss);
 
 void output_kmc_steps_header(FILE *csv_file, const bool output_coord);
-void log_kmc_steps(FILE *csv_file, const unsigned long int iter, const double sim_time,
-                   const int sim_time_precision, const double sys_energy, const int uvw1[3],
-                   const int uvw2[3], const int is_evap, const int coordination);
+void log_kmc_steps(FILE *csv_file, const StepData *step_data, double sim_time_precision);
 void output_mc_steps_header(FILE *csv_file, bool output_coord);
-void log_mc_steps(FILE *csv_file, const unsigned long int iter, const double sys_energy,
-                  const double deltaE, const int performed, const int uvw1[3], const int uvw2[3],
-                  const int coordination);
+void log_mc_steps(FILE *csv_file, const StepData *step_data);
 
 void write_xyz_suffix(char *suffix, OutputScheduleMode mode, double checkpoint);
-void write_logs(int output_csv, int output_xyz, struct SimulationState *ss,
-                struct SimulationEnv *se, struct LoggingState *ls);
-void output_if_passed_checkpoint(struct SimulationState *ss, struct SimulationEnv *se,
-                                 struct LoggingState *ls);
+void write_logs(StepData step_data, struct SimulationState *ss, struct SimulationEnv *se,
+                struct LoggingState *ls);
+void output_on_schedule(StepData *step_data, struct SimulationState *ss,
+                                 struct SimulationEnv *se, struct LoggingState *ls);
 
 void open_log_files(struct LoggingState *ls, unsigned flavor);
 

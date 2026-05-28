@@ -819,7 +819,7 @@ void test_output_if_passed_checkpoint_triggers_write_logs(void)
     ls->xyz_schedule.list_idx = 0;
     ls->next_xyz_checkpoint = 10;
 
-    output_if_passed_checkpoint(ss, se, ls);
+    output_on_schedule(ss, se, ls);
 
     TEST_ASSERT_EQUAL_INT(1, ls->framenum);
     TEST_ASSERT_EQUAL_INT(1, ls->csv_framenum);

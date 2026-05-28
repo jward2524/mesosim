@@ -212,6 +212,8 @@ typedef enum { OUTPUT_FORMAT_CSV = 1, OUTPUT_FORMAT_XYZ, OUTPUT_FORMAT_STEPS_CSV
 // ENHANCE: can define each struct in the union seperately for better type control in functions?
 typedef struct {
     int type;
+    bool is_active;
+    bool should_log_now; // indicates whether this format should be logged at current iteration
     union {
         struct {
             char filename[256];
@@ -226,13 +228,13 @@ typedef struct {
             OutputSchedule schedule;
             char prefix[256];
             char suffix[256];
+            int frame_num;
             bool stripped; // only output under-coordinated atoms
         } xyz;
         struct {
             char filename[256];
             FILE *file;
             int coordination;
-            int frame_num;
         } steps;
     };
 } OutputFormat;
