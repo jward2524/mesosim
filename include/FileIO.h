@@ -51,7 +51,7 @@ bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, doubl
 bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, int stripped,
                     struct SimulationState *ss, struct SimulationEnv *se);
 
-void output_csv_header(FILE *csv_file, OutputFormat *format);
+void output_csv_header(OutputFormat *format);
 void log_state_csv(OutputFormat *format, double stime_precision, double overpot_precision,
                    struct SimulationState *ss);
 
@@ -61,10 +61,10 @@ void output_mc_steps_header(FILE *csv_file, bool output_coord);
 void log_mc_steps(FILE *csv_file, const StepData *step_data);
 
 void write_xyz_suffix(char *suffix, OutputScheduleMode mode, double checkpoint);
-void write_logs(StepData step_data, struct SimulationState *ss, struct SimulationEnv *se,
+void write_logs(const StepData *step_data, struct SimulationState *ss, struct SimulationEnv *se,
                 struct LoggingState *ls);
-void output_on_schedule(StepData *step_data, struct SimulationState *ss,
-                                 struct SimulationEnv *se, struct LoggingState *ls);
+void output_on_schedule(StepData *step_data, struct SimulationState *ss, struct SimulationEnv *se,
+                        struct LoggingState *ls);
 
 void open_log_files(struct LoggingState *ls, unsigned flavor);
 

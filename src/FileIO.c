@@ -78,7 +78,7 @@ void open_log_files(struct LoggingState *ls, unsigned flavor)
         if (format->type == OUTPUT_FORMAT_CSV) {
             format->csv.file = fopen(format->csv.filename, "w+");
             fopen_error(format->csv.filename, format->csv.file, "Failed to open csv file, ");
-            output_csv_header(format->csv.file, format);
+            output_csv_header(format);
         } else if (format->type == OUTPUT_FORMAT_STEPS_CSV) {
             format->csv.file = fopen(format->steps.filename, "w+");
             fopen_error(format->steps.filename, format->csv.file,
@@ -557,11 +557,11 @@ bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, doubl
 }
 
 // ENHANCE: make fields of union own type, so it can passed into this
-void output_csv_header(FILE *csv_file, OutputFormat *format)
+void output_csv_header(OutputFormat *format)
 {
-    safe_log(csv_file, "frame,");
+    safe_log(format->csv.file, "frame,");
     for (int i = 0; i < format->csv.field_count; ++i) {
-        safe_log(csv_file, "%s%s", format->csv.field_names[i],
+        safe_log(format->csv.file, "%s%s", format->csv.field_names[i],
                  (i < format->csv.field_count - 1) ? "," : "\n");
     }
 }
@@ -823,7 +823,7 @@ void write_logs(const StepData *step_data, struct SimulationState *ss, struct Si
             switch (format->type) {
             case OUTPUT_FORMAT_CSV:
                 logging |= format->should_log_now;
-                log_state_csv(&format->csv, ls->stime_precision, ls->overpot_precision, ss);
+                log_state_csv(&format, ls->stime_precision, ls->overpot_precision, ss);
                 format->csv.frame_num++;
                 break;
             case OUTPUT_FORMAT_XYZ:
@@ -834,15 +834,20 @@ void write_logs(const StepData *step_data, struct SimulationState *ss, struct Si
                 format->xyz.frame_num++;
             case OUTPUT_FORMAT_STEPS_CSV:
                 // steps csv is written to every step
-                switch (se->flavor) {
-                case FLAVOR_KMC:
-                    log_kmc_steps(format->steps.file, step_data, ls->stime_precision);
+                if (step_data) {
+                    switch (se->flavor) {
+                    case FLAVOR_KMC:
+                        log_kmc_steps(format->steps.file, step_data, ls->stime_precision);
+                        break;
+                    case FLAVOR_MC:
+                        log_mc_steps(format->steps.file, step_data);
+                    }
                     break;
-                case FLAVOR_MC:
-                    log_mc_steps(format->steps.file, step_data);
+                } else {
+                    fprintf(stderr, "Null pointer passed as step data to write_log\n");
                 }
-                break;
             }
+            format->should_log_now = false;
         }
     }
 
@@ -869,16 +874,15 @@ void output_on_schedule(StepData *step_data, struct SimulationState *ss, struct 
 {
     for (int i = 0; i < ls->out_formats_cnt; i++) {
         OutputFormat *format = &(ls->out_formats[i]);
-        int output_now = false;
         switch (format->type) {
         case OUTPUT_FORMAT_CSV:
-            output_now =
+            format->should_log_now =
                 check_and_advance_checkpoint(&format->csv.schedule, &format->is_active, ss);
             break;
         case OUTPUT_FORMAT_XYZ:
             write_xyz_suffix(format->xyz.suffix, format->xyz.schedule.mode,
                              format->xyz.schedule.next_checkpoint);
-            output_now =
+            format->should_log_now =
                 check_and_advance_checkpoint(&format->xyz.schedule, &format->is_active, ss);
             break;
         case OUTPUT_FORMAT_STEPS_CSV:

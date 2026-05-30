@@ -302,13 +302,20 @@ void test_get_precision_zero_incr_precision(void)
 
 void test_output_csv_header_success(void)
 {
-    ls->csv_field_count = 2;
-    ls->csv_fields = malloc(2 * sizeof(char *));
-    ls->csv_fields[0] = dup_str("iter");
-    ls->csv_fields[1] = dup_str("energy");
+    char *names[] = {"iter", "energy"};
+
+    OutputFormat format = {
+        .type = OUTPUT_FORMAT_CSV,
+        .csv =
+            {
+                .file = temp_log,
+                .field_count = 2,
+                .field_names = (char **)names,
+            },
+    };
 
     rewind(temp_log);
-    output_csv_header(temp_log, ls);
+    output_csv_header(&format);
     rewind(temp_log);
 
     char buffer[256];
@@ -322,17 +329,23 @@ void test_log_state_csv_success(void)
     ss->iter = 42;
     ss->total_internal_energy = 3.14;
 
-    ls->csv_framenum = 2;
-    ls->csv_field_count = 2;
-    ls->csv_field_funcs = malloc(2 * sizeof(CsvFieldFuncPtr));
-    ls->csv_field_funcs[0] = csv_field_map[0].get_value; // get_iter
-    ls->csv_field_funcs[1] = csv_field_map[2].get_value; // get_energy
-    ls->csv_fields = malloc(2 * sizeof(char *));
-    ls->csv_fields[0] = dup_str("iter");
-    ls->csv_fields[1] = dup_str("energy");
+    CsvFieldFuncPtr funcs[] = {csv_field_map[0].get_value, csv_field_map[2].get_value};
+    char *names[] = {"iter", "energy"};
+
+    OutputFormat format = {
+        .type = OUTPUT_FORMAT_CSV,
+        .csv =
+            {
+                .file = temp_log,
+                .field_count = 2,
+                .field_funcs = (CsvFieldFuncPtr *)funcs,
+                .field_names = (char **)names,
+                .frame_num = 2,
+            },
+    };
 
     rewind(temp_log);
-    log_state_csv(temp_log, ss, ls);
+    log_state_csv(&format, 6, 6, ss);
     rewind(temp_log);
 
     char buffer[256];
@@ -345,15 +358,24 @@ void test_log_state_csv_success(void)
 void test_log_state_csv_one_field(void)
 {
     ss->iter = 99;
-    ls->csv_framenum = 5;
-    ls->csv_field_count = 1;
-    ls->csv_field_funcs = malloc(sizeof(CsvFieldFuncPtr));
-    ls->csv_field_funcs[0] = csv_field_map[0].get_value; // get_iter
-    ls->csv_fields = malloc(1 * sizeof(char *));
-    ls->csv_fields[0] = dup_str("iter");
+
+    CsvFieldFuncPtr funcs[] = {csv_field_map[0].get_value};
+    char *names[] = {"iter"};
+
+    OutputFormat format = {
+        .type = OUTPUT_FORMAT_CSV,
+        .csv =
+            {
+                .file = temp_log,
+                .field_count = 1,
+                .field_funcs = (CsvFieldFuncPtr *)funcs,
+                .field_names = (char **)names,
+                .frame_num = 5,
+            },
+    };
 
     rewind(temp_log);
-    log_state_csv(temp_log, ss, ls);
+    log_state_csv(&format, 0, 0, ss);
     rewind(temp_log);
 
     char buffer[128];
@@ -364,12 +386,20 @@ void test_log_state_csv_one_field(void)
 
 void test_output_csv_header_one_field(void)
 {
-    ls->csv_field_count = 1;
-    ls->csv_fields = malloc(sizeof(char *));
-    ls->csv_fields[0] = dup_str("energy");
+
+    char *names[] = {"energy"};
+    OutputFormat format = {
+        .type = OUTPUT_FORMAT_CSV,
+        .csv =
+            {
+                .file = temp_log,
+                .field_count = 1,
+                .field_names = (char **)names,
+            },
+    };
 
     rewind(temp_log);
-    output_csv_header(temp_log, ls);
+    output_csv_header(&format);
     rewind(temp_log);
 
     char buffer[128];
@@ -383,20 +413,24 @@ void test_log_state_csv_mixed_fields(void)
     ss->iter = 7;
     ss->total_internal_energy = -1.23;
     ss->overpotential = 0.9;
-    ls->overpot_precision = 4;
-    ls->csv_framenum = 3;
-    ls->csv_field_count = 3;
-    ls->csv_field_funcs = malloc(3 * sizeof(CsvFieldFuncPtr));
-    ls->csv_field_funcs[0] = csv_field_map[0].get_value; // get_iter
-    ls->csv_field_funcs[1] = csv_field_map[2].get_value; // get_energy
-    ls->csv_field_funcs[2] = csv_field_map[4].get_value; // get_overpotential
-    ls->csv_fields = malloc(3 * sizeof(char *));
-    ls->csv_fields[0] = dup_str("iter");
-    ls->csv_fields[1] = dup_str("energy");
-    ls->csv_fields[2] = dup_str("overpotential");
+
+    char *names[] = {"iter", "energy", "overpotential"};
+    CsvFieldFuncPtr funcs[] = {csv_field_map[0].get_value, csv_field_map[2].get_value,
+                               csv_field_map[4].get_value};
+    OutputFormat format = {
+        .type = OUTPUT_FORMAT_CSV,
+        .csv =
+            {
+                .file = temp_log,
+                .field_count = 3,
+                .field_funcs = (CsvFieldFuncPtr *)funcs,
+                .field_names = (char **)names,
+                .frame_num = 3,
+            },
+    };
 
     rewind(temp_log);
-    log_state_csv(temp_log, ss, ls);
+    log_state_csv(&format, 6, 4, ss);
     rewind(temp_log);
 
     char buffer[256];
@@ -409,13 +443,22 @@ void test_log_state_csv_mixed_fields(void)
 void test_output_csv_header_many_fields(void)
 {
     int n = 10;
-    ls->csv_field_count = n;
-    ls->csv_fields = malloc((size_t)n * sizeof(char *));
+
+    char **names = malloc((size_t)n * sizeof(char *));
     for (int i = 0; i < n; ++i) {
         char name[16];
         sprintf(name, "field%d", i);
-        ls->csv_fields[i] = dup_str(name);
+        names[i] = dup_str(name);
     }
+    OutputFormat out_formats[] = {{
+        .type = OUTPUT_FORMAT_CSV,
+        .csv =
+            {
+                .field_count = n,
+                .field_names = names,
+            },
+    }};
+    ls->out_formats = out_formats;
 
     rewind(temp_log);
     output_csv_header(temp_log, ls);
@@ -474,7 +517,18 @@ void test_log_mc_steps_basic_coordless(void)
     int coord = -1;
 
     rewind(temp_log);
-    log_mc_steps(temp_log, iter, sys_energy, deltaE, performed, uvw1, uvw2, coord);
+    StepData step_data = {.iter = iter,
+                          .sys_energy = sys_energy,
+                          .uvw1 = uvw1,
+                          .uvw2 = uvw2,
+                          .mc =
+                              {
+                                  .performed = performed,
+                                  .deltaE = deltaE,
+
+                              },
+                          .coord = coord};
+    log_mc_steps(temp_log, &step_data);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -494,7 +548,18 @@ void test_log_mc_steps_basic_coord(void)
     int coord = 9;
 
     rewind(temp_log);
-    log_mc_steps(temp_log, iter, sys_energy, deltaE, performed, uvw1, uvw2, coord);
+    StepData step_data = {.iter = iter,
+                          .sys_energy = sys_energy,
+                          .uvw1 = uvw1,
+                          .uvw2 = uvw2,
+                          .mc =
+                              {
+                                  .performed = performed,
+                                  .deltaE = deltaE,
+
+                              },
+                          .coord = coord};
+    log_mc_steps(temp_log, &step_data);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -540,7 +605,18 @@ void test_log_kmc_steps_basic_coord(void)
     int coord = 2;
 
     rewind(temp_log);
-    log_kmc_steps(temp_log, iter, sim_time, 6, sys_energy, uvw1, uvw2, is_evap, coord);
+    StepData step_data = {.iter = iter,
+                          .sys_energy = sys_energy,
+                          .uvw1 = uvw1,
+                          .uvw2 = uvw2,
+                          .kmc =
+                              {
+                                  .sim_time = sim_time,
+                                  .is_evap = is_evap,
+
+                              },
+                          .coord = coord};
+    log_kmc_steps(temp_log, &step_data, 6);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -560,7 +636,18 @@ void test_log_kmc_steps_evap(void)
     int coord = -1;
 
     rewind(temp_log);
-    log_kmc_steps(temp_log, iter, sim_time, 6, sys_energy, uvw1, uvw2, is_evap, coord);
+    StepData step_data = {.iter = iter,
+                          .sys_energy = sys_energy,
+                          .uvw1 = uvw1,
+                          .uvw2 = uvw2,
+                          .kmc =
+                              {
+                                  .sim_time = sim_time,
+                                  .is_evap = is_evap,
+
+                              },
+                          .coord = coord};
+    log_kmc_steps(temp_log, &step_data, 6);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -579,8 +666,18 @@ void test_log_kmc_steps_evap_coord(void)
     int is_evap = 1;
     int coord = 8;
 
+    StepData step_data = {
+        .flavor = FLAVOR_KMC,
+        .iter = iter,
+        .sys_energy = sys_energy,
+        .uvw1 = uvw1,
+        .uvw2 = uvw2,
+        .coord = coord,
+        .kmc = {.is_evap = is_evap, .sim_time = sim_time},
+    };
+
     rewind(temp_log);
-    log_kmc_steps(temp_log, iter, sim_time, 6, sys_energy, uvw1, uvw2, is_evap, coord);
+    log_kmc_steps(temp_log, &step_data, 6);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -635,8 +732,7 @@ void test_input_logging_basic(void)
     ss->temperature = 300.0;
     ss->overpotential = 0.5;
     ls->sim_log = temp_log;
-    ls->output_state_csv = 0;
-    ls->output_xyz = 0;
+    ls->out_formats = NULL;
 
     struct SimulationConfig inputs = {
         .flavor = FLAVOR_KMC,
@@ -720,63 +816,6 @@ void test_write_xyz_file_creates_file_and_content(void)
 
 void test_write_logs_increments_framenums(void)
 {
-    ls->sim_log = temp_log;
-    ls->state_csv = temp_log;
-    strncpy(ls->xyz_prefix, "test_xyz", sizeof(ls->xyz_prefix));
-    strncpy(ls->xyz_suffix, "mysuffix", sizeof(ls->xyz_suffix));
-    ls->xyz_stripped = 0;
-    ls->csv_framenum = 0;
-    ls->xyz_framenum = 0;
-    ls->framenum = 0;
-    ss->atom_cnt = 1;
-    ss->iter = 1;
-    ss->elapsed_stime = 1.0;
-    ss->temperature = 1.0;
-    ss->overpotential = 1.0;
-    ss->total_internal_energy = 1.0;
-    ss->atom_arr = malloc(sizeof(Atom *));
-    ss->atom_arr[0] = malloc(sizeof(Atom));
-    ss->atom_arr[0]->type = 0;
-    ss->atom_arr[0]->cartesian[0] = 0.0;
-    ss->atom_arr[0]->cartesian[1] = 0.0;
-    ss->atom_arr[0]->cartesian[2] = 0.0;
-    se->atom_names = malloc(sizeof(char *));
-    se->atom_names[0] = dup_str("Ag");
-    se->num_transition_vectors = 1;
-    se->simbox_vectors_cart[0][0] = 1.0;
-    se->simbox_vectors_cart[0][1] = 0.0;
-    se->simbox_vectors_cart[0][2] = 0.0;
-    se->simbox_vectors_cart[1][0] = 0.0;
-    se->simbox_vectors_cart[1][1] = 1.0;
-    se->simbox_vectors_cart[1][2] = 0.0;
-    se->simbox_vectors_cart[2][0] = 0.0;
-    se->simbox_vectors_cart[2][1] = 0.0;
-    se->simbox_vectors_cart[2][2] = 1.0;
-    se->simbox_origin_cart[0] = 0.0;
-    se->simbox_origin_cart[1] = 0.0;
-    se->simbox_origin_cart[2] = 0.0;
-
-    write_logs(1, 1, ss, se, ls);
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->framenum, "frame number");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->csv_framenum, "csv frame number");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->xyz_framenum, "xyz frame number");
-    // Clean up xyz file
-    char filename[520];
-    sprintf(filename, "%s_%d_%s.xyz", ls->xyz_prefix, 0, ls->xyz_suffix);
-    remove(filename);
-}
-
-void test_output_if_passed_checkpoint_triggers_write_logs(void)
-{
-    ls->sim_log = temp_log;
-    ls->state_csv = temp_log;
-    strncpy(ls->xyz_prefix, "test_xyz", sizeof(ls->xyz_prefix));
-    strncpy(ls->xyz_suffix, "mysuffix", sizeof(ls->xyz_suffix));
-    ls->xyz_stripped = 0;
-    ls->csv_framenum = 0;
-    ls->xyz_framenum = 0;
-    ls->framenum = 0;
     ss->atom_cnt = 1;
     ss->iter = 10;
     ss->elapsed_stime = 1.0;
@@ -789,6 +828,7 @@ void test_output_if_passed_checkpoint_triggers_write_logs(void)
     ss->atom_arr[0]->cartesian[0] = 0.0;
     ss->atom_arr[0]->cartesian[1] = 0.0;
     ss->atom_arr[0]->cartesian[2] = 0.0;
+
     se->atom_names = malloc(sizeof(char *));
     se->atom_names[0] = dup_str("Ag");
     se->num_transition_vectors = 1;
@@ -804,29 +844,139 @@ void test_output_if_passed_checkpoint_triggers_write_logs(void)
     se->simbox_origin_cart[0] = 0.0;
     se->simbox_origin_cart[1] = 0.0;
     se->simbox_origin_cart[2] = 0.0;
-    ls->output_state_csv = 1;
-    ls->output_xyz = 1;
-    ls->csv_schedule.mode = OUTPUT_SCHEDULE_LIST_ITERATION;
-    double csv_list[1] = {10};
-    ls->csv_schedule.list = csv_list;
-    ls->csv_schedule.list_len = 1;
-    ls->csv_schedule.list_idx = 0;
-    ls->next_csv_checkpoint = 10;
-    ls->xyz_schedule.mode = OUTPUT_SCHEDULE_LIST_ITERATION;
-    double xyz_list[1] = {10};
-    ls->xyz_schedule.list = xyz_list;
-    ls->xyz_schedule.list_len = 1;
-    ls->xyz_schedule.list_idx = 0;
-    ls->next_xyz_checkpoint = 10;
 
-    output_on_schedule(ss, se, ls);
+    ls->sim_log = temp_log;
+    ls->out_formats_cnt = 2;
+    // ls->out_formats = malloc(ls->out_formats_cnt * sizeof(OutputFormat));
+    double list = {10.};
+    double list2 = {20.};
+    OutputFormat out_formats[2] = {{
+                                       .type = OUTPUT_FORMAT_CSV,
+                                       .is_active = 1,
+                                       .should_log_now = 0,
+                                       .csv =
+                                           {
+                                               .file = temp_log,
+                                               .schedule =
+                                                   {
+                                                       .mode = OUTPUT_SCHEDULE_LIST_ITERATION,
+                                                       .list = &list,
+                                                       .list_len = 1,
+                                                       .list_idx = 0,
+                                                   },
+                                               .frame_num = 1,
+                                               .field_count = 0,
+                                           },
+                                   },
+                                   {.type = OUTPUT_FORMAT_XYZ,
+                                    .is_active = 1,
+                                    .should_log_now = 0,
+                                    .xyz = {
+                                        .schedule =
+                                            {
+                                                .mode = OUTPUT_SCHEDULE_LIST_ITERATION,
+                                                .list = &list2,
+                                                .list_len = 1,
+                                                .list_idx = 0,
+                                            },
+                                        .prefix = "test_xyz",
+                                        .suffix = "mysuffix",
+                                        .frame_num = 0,
+                                        .stripped = false,
+                                    }}};
+
+    write_logs(NULL, ss, se, ls);
 
     TEST_ASSERT_EQUAL_INT(1, ls->framenum);
-    TEST_ASSERT_EQUAL_INT(1, ls->csv_framenum);
-    TEST_ASSERT_EQUAL_INT(1, ls->xyz_framenum);
+    TEST_ASSERT_EQUAL_INT(1, ls->out_formats[0].csv.frame_num);
+    TEST_ASSERT_EQUAL_INT(1, ls->out_formats[1].xyz.frame_num);
     // Clean up xyz file
     char filename[520];
-    sprintf(filename, "%s_%d_%s.xyz", ls->xyz_prefix, 0, ls->xyz_suffix);
+    sprintf(filename, "%s_%d_%s.xyz", ls->out_formats[1].xyz.prefix, 0,
+            ls->out_formats[1].xyz.suffix);
+    remove(filename);
+}
+
+void test_output_if_passed_checkpoint_triggers_write_logs(void)
+{
+    ss->atom_cnt = 1;
+    ss->iter = 10;
+    ss->elapsed_stime = 1.0;
+    ss->temperature = 1.0;
+    ss->overpotential = 1.0;
+    ss->total_internal_energy = 1.0;
+    ss->atom_arr = malloc(sizeof(Atom *));
+    ss->atom_arr[0] = malloc(sizeof(Atom));
+    ss->atom_arr[0]->type = 0;
+    ss->atom_arr[0]->cartesian[0] = 0.0;
+    ss->atom_arr[0]->cartesian[1] = 0.0;
+    ss->atom_arr[0]->cartesian[2] = 0.0;
+
+    se->atom_names = malloc(sizeof(char *));
+    se->atom_names[0] = dup_str("Ag");
+    se->num_transition_vectors = 1;
+    se->simbox_vectors_cart[0][0] = 1.0;
+    se->simbox_vectors_cart[0][1] = 0.0;
+    se->simbox_vectors_cart[0][2] = 0.0;
+    se->simbox_vectors_cart[1][0] = 0.0;
+    se->simbox_vectors_cart[1][1] = 1.0;
+    se->simbox_vectors_cart[1][2] = 0.0;
+    se->simbox_vectors_cart[2][0] = 0.0;
+    se->simbox_vectors_cart[2][1] = 0.0;
+    se->simbox_vectors_cart[2][2] = 1.0;
+    se->simbox_origin_cart[0] = 0.0;
+    se->simbox_origin_cart[1] = 0.0;
+    se->simbox_origin_cart[2] = 0.0;
+
+    ls->sim_log = temp_log;
+    ls->out_formats_cnt = 2;
+    // ls->out_formats = malloc(ls->out_formats_cnt * sizeof(OutputFormat));
+    double list = {10.};
+    double list2 = {20.};
+    OutputFormat out_formats[2] = {{
+                                       .type = OUTPUT_FORMAT_CSV,
+                                       .is_active = 1,
+                                       .should_log_now = 0,
+                                       .csv =
+                                           {
+                                               .file = temp_log,
+                                               .schedule =
+                                                   {
+                                                       .mode = OUTPUT_SCHEDULE_LIST_ITERATION,
+                                                       .list = &list,
+                                                       .list_len = 1,
+                                                       .list_idx = 0,
+                                                   },
+                                               .frame_num = 1,
+                                               .field_count = 0,
+                                           },
+                                   },
+                                   {.type = OUTPUT_FORMAT_XYZ,
+                                    .is_active = 1,
+                                    .should_log_now = 0,
+                                    .xyz = {
+                                        .schedule =
+                                            {
+                                                .mode = OUTPUT_SCHEDULE_LIST_ITERATION,
+                                                .list = &list2,
+                                                .list_len = 1,
+                                                .list_idx = 0,
+                                            },
+                                        .prefix = "test_xyz",
+                                        .suffix = "mysuffix",
+                                        .frame_num = 0,
+                                        .stripped = false,
+                                    }}};
+
+    output_on_schedule(NULL, ss, se, ls);
+
+    TEST_ASSERT_EQUAL_INT(1, ls->framenum);
+    TEST_ASSERT_EQUAL_INT(1, ls->out_formats[0].csv.frame_num);
+    TEST_ASSERT_EQUAL_INT(1, ls->out_formats[1].xyz.frame_num);
+    // Clean up xyz file
+    char filename[520];
+    sprintf(filename, "%s_%d_%s.xyz", ls->out_formats[1].xyz.prefix, 0,
+            ls->out_formats[1].xyz.suffix);
     remove(filename);
 }
 
