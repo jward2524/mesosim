@@ -73,7 +73,7 @@ void safe_log(FILE *stream, const char *fmt, ...)
 
 void open_log_files(struct LoggingState *ls, unsigned flavor)
 {
-    for (int i = 0; i < ls->out_formats_cnt; i) {
+    for (int i = 0; i < ls->out_formats_cnt; i++) {
         OutputFormat *format = &(ls->out_formats[i]);
         if (format->type == OUTPUT_FORMAT_CSV) {
             format->csv.file = fopen(format->csv.filename, "w+");
@@ -566,7 +566,7 @@ void output_csv_header(OutputFormat *format)
     }
 }
 
-void log_state_csv(OutputFormat *format, double stime_precision, double overpot_precision,
+void log_state_csv(OutputFormat *format, int stime_precision, int overpot_precision,
                    struct SimulationState *ss)
 {
     if (format->type != OUTPUT_FORMAT_CSV) {
@@ -610,7 +610,7 @@ void output_kmc_steps_header(FILE *csv_file, const bool with_coord)
 // iteration number, simulation time, system energy (per atom?), x1, y1, z1, x2, y2, z2
 // and atom ids at some point
 void log_kmc_steps(FILE *csv_file, const StepData *step_data, bool with_coord,
-                   double sim_time_precision)
+                   int sim_time_precision)
 {
     safe_log(csv_file, "%lu,", step_data->iter);
     safe_log(csv_file, "%.*le,", sim_time_precision, step_data->kmc.sim_time);
@@ -660,7 +660,8 @@ void log_mc_steps(FILE *csv_file, const StepData *step_data, bool with_coord)
  * @param mode
  * @param checkpoint
  */
-void write_xyz_suffix(OutputScheduleMode mode, long int iteration, double sim_time, char *suffix)
+void write_xyz_suffix(OutputScheduleMode mode, long unsigned int iteration, double sim_time,
+                      char *suffix)
 {
     if ((mode == OUTPUT_SCHEDULE_INTERVAL_ITERATION) || (mode == OUTPUT_SCHEDULE_LIST_ITERATION)) {
         snprintf(suffix, BUFFER_SIZE, "i%lu", iteration);
@@ -670,7 +671,7 @@ void write_xyz_suffix(OutputScheduleMode mode, long int iteration, double sim_ti
     return;
 }
 
-bool write_xyz_file(OutputFormat *format, struct SimulationState *ss, struct SimulationEnv *se)
+void write_xyz_file(OutputFormat *format, struct SimulationState *ss, struct SimulationEnv *se)
 {
     bool is_extended = 1;
 
@@ -683,7 +684,7 @@ bool write_xyz_file(OutputFormat *format, struct SimulationState *ss, struct Sim
 
     char filename_full[BUFFER_SIZE];
     int n = snprintf(filename_full, BUFFER_SIZE, "%s_%d_%s.xyz", format->xyz.prefix,
-                     format->xyz.prefix, format->xyz.suffix);
+                     format->xyz.frame_num, format->xyz.suffix);
     if ((size_t)n >= BUFFER_SIZE) {
         fprintf(stderr, "Error - Output filename too long (>%zu): %s_%d_%s.xyz\n", BUFFER_SIZE,
                 format->xyz.prefix, format->xyz.frame_num, format->xyz.suffix);
@@ -758,7 +759,7 @@ bool write_xyz_file(OutputFormat *format, struct SimulationState *ss, struct Sim
 #endif
 
     format->xyz.frame_num++;
-    return true;
+    return;
 }
 
 static int check_and_advance_checkpoint(OutputSchedule *sched, bool *state,
@@ -818,8 +819,8 @@ static int check_and_advance_checkpoint(OutputSchedule *sched, bool *state,
     return checkpoint_reached;
 }
 
-void write_steps_csv(FILE *steps_file, StepData *step_data, int flavor, bool with_coord,
-                     double stime_precision)
+void write_steps_csv(FILE *steps_file, const StepData *step_data, unsigned flavor, bool with_coord,
+                     int stime_precision)
 {
     switch (flavor) {
     case FLAVOR_KMC:
@@ -848,11 +849,11 @@ void write_logs(const StepData *step_data, struct SimulationState *ss, struct Si
         OutputFormat *format = &(ls->out_formats[i]);
         switch (format->type) {
         case OUTPUT_FORMAT_CSV:
-            log_state_csv(&format, ls->stime_precision, ls->overpot_precision, ss);
+            log_state_csv(format, ls->stime_precision, ls->overpot_precision, ss);
             break;
         case OUTPUT_FORMAT_XYZ:
             // suffix is expected to be updated by caller
-            write_xyz_file(&format, ss, se);
+            write_xyz_file(format, ss, se);
             break;
         case OUTPUT_FORMAT_STEPS_CSV:
             // steps csv is written to every step
@@ -889,13 +890,13 @@ void output_on_schedule(StepData *step_data, struct SimulationState *ss, struct 
         case OUTPUT_FORMAT_CSV:
             write = check_and_advance_checkpoint(&format->csv.schedule, &format->is_active, ss);
             if (write) {
-                log_state_csv(&format, ls->stime_precision, ls->overpot_precision, ss);
+                log_state_csv(format, ls->stime_precision, ls->overpot_precision, ss);
             }
             break;
         case OUTPUT_FORMAT_XYZ:
             write = check_and_advance_checkpoint(&format->xyz.schedule, &format->is_active, ss);
             if (write) {
-                write_xyz_file(&format, ss, se);
+                write_xyz_file(format, ss, se);
             }
             break;
         case OUTPUT_FORMAT_STEPS_CSV:

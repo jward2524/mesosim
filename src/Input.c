@@ -582,6 +582,12 @@ static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *
 
     ls->out_formats =
         realloc(ls->out_formats, (size_t)(ls->out_formats_cnt + 1) * sizeof(OutputFormat));
+    if (ls->out_formats == NULL) {
+        fprintf(stderr, "Couldn't allocate memory for output formats: %s", strerror(errno));
+        return INPUT_ERR_ALLOC;
+    }
+
+    memset(&ls->out_formats[ls->out_formats_cnt], 0, sizeof(OutputFormat));
     ls->out_formats_cnt++;
 
     if (strcmp(argv[1], "csv") == 0) {
@@ -990,8 +996,8 @@ void finalize_nne(const ParseContext *p_ctx, struct SimulationConfig *inputs)
 void finalize_csv_fields(struct LoggingState *ls, unsigned int flavor)
 {
 
-    for (int i = 0; i < ls->out_formats_cnt; i++) {
-        OutputFormat *format = &ls->out_formats[i];
+    for (int o = 0; o < ls->out_formats_cnt; o++) {
+        OutputFormat *format = &ls->out_formats[o];
         if (format->type != OUTPUT_FORMAT_CSV) {
             continue;
         }

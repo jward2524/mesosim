@@ -62,7 +62,7 @@ void test_process_in_file_cluster(void)
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, inputs.nn_energy[3], "nn energy shell 2 idx 0");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, inputs.nn_energy[4], "nn energy shell 2 idx 1");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, inputs.nn_energy[5], "nn energy shell 2 idx 2");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->csv_framenum, "frame number");
+
     TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, inputs.lattice_type, "lattice type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(GEOMETRY_CLUSTER, inputs.geometry, "geometry type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(32, inputs.geometry_param, "cluster radius");
@@ -81,14 +81,21 @@ void test_process_in_file_cluster(void)
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, inputs.run_stime, "simulation max runtime");
     TEST_ASSERT_EQUAL_INT_MESSAGE(2000, inputs.final_iteration, "simulation max iteration");
 
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_state_csv, "output state csv");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->csv_schedule.interval, "csv log interval");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., ls->next_csv_checkpoint, "csv log checkpoint");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_steps_csv, "output steps csv");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, ls->out_formats_cnt, "number of output formats");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_CSV, ls->out_formats[0].type,
+                                  "output 0 format type");
+    OutputFormat *format = &ls->out_formats[0];
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, format->csv.frame_num, "frame number");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., format->csv.schedule.interval, "csv log interval");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., format->csv.schedule.next_checkpoint,
+                                     "csv log checkpoint");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, format->csv.schedule.mode,
                                   "logging analysis type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_xyz, "output xyz");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->xyz_stripped, "stripped xyz");
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_XYZ, ls->out_formats[1].type,
+                                  "output 1 format type");
+    format = &ls->out_formats[1];
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, format->xyz.stripped, "stripped xyz");
 }
 
 void test_process_in_file_mc(void)
@@ -111,9 +118,6 @@ void test_process_in_file_mc(void)
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, inputs.nn_energy[0], "nn energy shell 1 idx 0");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, inputs.nn_energy[1], "nn energy shell 1 idx 1");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, inputs.nn_energy[2], "nn energy shell 1 idx 2");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode,
-                                  "logging analysis type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->csv_framenum, "frame number");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, inputs.lattice_type, "lattice type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(GEOMETRY_CLUSTER, inputs.geometry, "geometry type");
     TEST_ASSERT_EQUAL_INT_MESSAGE(32, inputs.geometry_param, "cluster radius");
@@ -131,11 +135,17 @@ void test_process_in_file_mc(void)
                                   "simulation end type");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, inputs.run_stime, "simulation max runtime");
     TEST_ASSERT_EQUAL_INT_MESSAGE(2, inputs.final_iteration, "simulation max iteration");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->csv_schedule.interval, "log interval");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., ls->next_csv_checkpoint, "log checkpoint");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_steps_csv, "output iter csv");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->output_state_csv, "output state csv");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls->output_xyz, "output xyz");
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->out_formats_cnt, "number of output formats");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_CSV, ls->out_formats[0].type,
+                                  "output 0 format type");
+    OutputFormat *format = &ls->out_formats[0];
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, format->csv.schedule.mode,
+                                  "logging analysis type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, format->csv.frame_num, "frame number");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., format->csv.schedule.interval, "log interval");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., format->csv.schedule.next_checkpoint, "log checkpoint");
 }
 
 void test_process_xyz_file(void)
@@ -172,7 +182,6 @@ void test_process_xyz_file(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(190, ss->iter, "Iteration");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.3, ss->elapsed_stime, "Time");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(7.65, ss->total_internal_energy, "Energy");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls->xyz_framenum, "Frame");
 
     // 0 Ag -256.000000 -96.000000 -96.000000
     // double cart[3] = {-256, -96, -96};
@@ -454,6 +463,7 @@ void test_output_csv_header_many_fields(void)
         .type = OUTPUT_FORMAT_CSV,
         .csv =
             {
+                .file = temp_log,
                 .field_count = n,
                 .field_names = names,
             },
@@ -461,7 +471,7 @@ void test_output_csv_header_many_fields(void)
     ls->out_formats = out_formats;
 
     rewind(temp_log);
-    output_csv_header(temp_log, ls);
+    output_csv_header(&out_formats[0]);
     rewind(temp_log);
 
     char buffer[512];
@@ -512,23 +522,20 @@ void test_log_mc_steps_basic_coordless(void)
     double sys_energy = 4.56;
     double deltaE = -0.12;
     int performed = 1;
-    int uvw1[3] = {1, 2, 3};
-    int uvw2[3] = {4, 5, 6};
-    int coord = -1;
 
     rewind(temp_log);
     StepData step_data = {.iter = iter,
                           .sys_energy = sys_energy,
-                          .uvw1 = uvw1,
-                          .uvw2 = uvw2,
+                          .uvw1 = {1, 2, 3},
+                          .uvw2 = {4, 5, 6},
                           .mc =
                               {
                                   .performed = performed,
                                   .deltaE = deltaE,
 
                               },
-                          .coord = coord};
-    log_mc_steps(temp_log, &step_data);
+                          .coord = 1};
+    log_mc_steps(temp_log, &step_data, false);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -543,15 +550,13 @@ void test_log_mc_steps_basic_coord(void)
     double sys_energy = 4.56;
     double deltaE = -0.12;
     int performed = 1;
-    int uvw1[3] = {1, 2, 3};
-    int uvw2[3] = {4, 5, 6};
     int coord = 9;
 
     rewind(temp_log);
     StepData step_data = {.iter = iter,
                           .sys_energy = sys_energy,
-                          .uvw1 = uvw1,
-                          .uvw2 = uvw2,
+                          .uvw1 = {1, 2, 3},
+                          .uvw2 = {4, 5, 6},
                           .mc =
                               {
                                   .performed = performed,
@@ -559,7 +564,7 @@ void test_log_mc_steps_basic_coord(void)
 
                               },
                           .coord = coord};
-    log_mc_steps(temp_log, &step_data);
+    log_mc_steps(temp_log, &step_data, true);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -599,16 +604,14 @@ void test_log_kmc_steps_basic_coord(void)
     unsigned long int iter = 42;
     double sim_time = 0.5;
     double sys_energy = 7.89;
-    int uvw1[3] = {7, 8, 9};
-    int uvw2[3] = {10, 11, 12};
     int is_evap = 0;
     int coord = 2;
 
     rewind(temp_log);
     StepData step_data = {.iter = iter,
                           .sys_energy = sys_energy,
-                          .uvw1 = uvw1,
-                          .uvw2 = uvw2,
+                          .uvw1 = {7, 8, 9},
+                          .uvw2 = {10, 11, 12},
                           .kmc =
                               {
                                   .sim_time = sim_time,
@@ -616,7 +619,7 @@ void test_log_kmc_steps_basic_coord(void)
 
                               },
                           .coord = coord};
-    log_kmc_steps(temp_log, &step_data, 6);
+    log_kmc_steps(temp_log, &step_data, true, 6);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -630,16 +633,14 @@ void test_log_kmc_steps_evap(void)
     unsigned long int iter = 99;
     double sim_time = 1.23;
     double sys_energy = -2.34;
-    int uvw1[3] = {3, 2, 1};
-    int uvw2[3] = {0, 0, 0};
     int is_evap = 1;
     int coord = -1;
 
     rewind(temp_log);
     StepData step_data = {.iter = iter,
                           .sys_energy = sys_energy,
-                          .uvw1 = uvw1,
-                          .uvw2 = uvw2,
+                          .uvw1 = {3, 2, 1},
+                          .uvw2 = {0, 0, 0},
                           .kmc =
                               {
                                   .sim_time = sim_time,
@@ -647,7 +648,7 @@ void test_log_kmc_steps_evap(void)
 
                               },
                           .coord = coord};
-    log_kmc_steps(temp_log, &step_data, 6);
+    log_kmc_steps(temp_log, &step_data, false, 6);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -661,8 +662,6 @@ void test_log_kmc_steps_evap_coord(void)
     unsigned long int iter = 99;
     double sim_time = 1.23;
     double sys_energy = -2.34;
-    int uvw1[3] = {3, 2, 1};
-    int uvw2[3] = {0, 0, 0};
     int is_evap = 1;
     int coord = 8;
 
@@ -670,14 +669,14 @@ void test_log_kmc_steps_evap_coord(void)
         .flavor = FLAVOR_KMC,
         .iter = iter,
         .sys_energy = sys_energy,
-        .uvw1 = uvw1,
-        .uvw2 = uvw2,
+        .uvw1 = {3, 2, 1},
+        .uvw2 = {0, 0, 0},
         .coord = coord,
         .kmc = {.is_evap = is_evap, .sim_time = sim_time},
     };
 
     rewind(temp_log);
-    log_kmc_steps(temp_log, &step_data, 6);
+    log_kmc_steps(temp_log, &step_data, true, 6);
     rewind(temp_log);
     char buffer[128];
     char *ret = fgets(buffer, sizeof(buffer), temp_log);
@@ -689,18 +688,18 @@ void test_log_kmc_steps_evap_coord(void)
 void test_write_xyz_suffix_iteration(void)
 {
     char suffix[256];
-    write_xyz_suffix(suffix, OUTPUT_SCHEDULE_INTERVAL_ITERATION, 1234);
+    write_xyz_suffix(OUTPUT_SCHEDULE_INTERVAL_ITERATION, 1234, 1, suffix);
     TEST_ASSERT_EQUAL_STRING_MESSAGE("i1234", suffix, "Suffix for iteration mode");
-    write_xyz_suffix(suffix, OUTPUT_SCHEDULE_LIST_ITERATION, 5678);
+    write_xyz_suffix(OUTPUT_SCHEDULE_LIST_ITERATION, 5678, 1, suffix);
     TEST_ASSERT_EQUAL_STRING_MESSAGE("i5678", suffix, "Suffix for list iteration mode");
 }
 
 void test_write_xyz_suffix_time(void)
 {
     char suffix[256];
-    write_xyz_suffix(suffix, OUTPUT_SCHEDULE_INTERVAL_TIME, 1.2345);
+    write_xyz_suffix(OUTPUT_SCHEDULE_INTERVAL_TIME, 1, 1.2345, suffix);
     TEST_ASSERT_EQUAL_STRING_MESSAGE("t1.2345", suffix, "Suffix for time mode");
-    write_xyz_suffix(suffix, OUTPUT_SCHEDULE_LIST_TIME, 0.0001);
+    write_xyz_suffix(OUTPUT_SCHEDULE_LIST_TIME, 1, 0.0001, suffix);
     TEST_ASSERT_EQUAL_STRING_MESSAGE("t0.0001", suffix, "Suffix for list time mode");
 }
 
@@ -766,8 +765,7 @@ void test_input_logging_basic(void)
 // TODO: write_xyz and write_logs tests need simulation variables to be initialized
 void test_write_xyz_file_creates_file_and_content(void)
 {
-    char prefix[] = "test_xyz_output";
-    char suffix[] = "mysuffix";
+    char prefix[256] = "test_xyz_output";
     int frame_num = 1;
     int stripped = 0;
     ss->atom_cnt = 1;
@@ -797,10 +795,26 @@ void test_write_xyz_file_creates_file_and_content(void)
     se->simbox_origin_cart[0] = 0.0;
     se->simbox_origin_cart[1] = 0.0;
     se->simbox_origin_cart[2] = 0.0;
+    char suffix[256] = "i1";
 
-    bool result = write_xyz_file(prefix, frame_num, suffix, stripped, ss, se);
+    OutputFormat format = {
+        .type = OUTPUT_FORMAT_XYZ,
+        .xyz =
+            {
+                .prefix = "test_xyz_output",
+                .suffix = "i1",
+                .frame_num = frame_num,
+                .stripped = stripped,
+                .schedule =
+                    {
+                        .mode = OUTPUT_SCHEDULE_INTERVAL_ITERATION,
+                        .interval = 1.0,
+                    },
+            },
+    };
 
-    TEST_ASSERT_TRUE(result);
+    write_xyz_file(&format, ss, se);
+
     char filename[520];
     sprintf(filename, "%s_%d_%s.xyz", prefix, frame_num, suffix);
     FILE *f = fopen(filename, "r");
@@ -853,7 +867,6 @@ void test_write_logs_increments_framenums(void)
     OutputFormat out_formats[2] = {{
                                        .type = OUTPUT_FORMAT_CSV,
                                        .is_active = 1,
-                                       .should_log_now = 0,
                                        .csv =
                                            {
                                                .file = temp_log,
@@ -870,7 +883,6 @@ void test_write_logs_increments_framenums(void)
                                    },
                                    {.type = OUTPUT_FORMAT_XYZ,
                                     .is_active = 1,
-                                    .should_log_now = 0,
                                     .xyz = {
                                         .schedule =
                                             {
@@ -884,6 +896,8 @@ void test_write_logs_increments_framenums(void)
                                         .frame_num = 0,
                                         .stripped = false,
                                     }}};
+
+    ls->out_formats = (OutputFormat *)&out_formats;
 
     write_logs(NULL, ss, se, ls);
 
@@ -936,7 +950,6 @@ void test_output_if_passed_checkpoint_triggers_write_logs(void)
     OutputFormat out_formats[2] = {{
                                        .type = OUTPUT_FORMAT_CSV,
                                        .is_active = 1,
-                                       .should_log_now = 0,
                                        .csv =
                                            {
                                                .file = temp_log,
@@ -953,7 +966,6 @@ void test_output_if_passed_checkpoint_triggers_write_logs(void)
                                    },
                                    {.type = OUTPUT_FORMAT_XYZ,
                                     .is_active = 1,
-                                    .should_log_now = 0,
                                     .xyz = {
                                         .schedule =
                                             {
@@ -967,6 +979,8 @@ void test_output_if_passed_checkpoint_triggers_write_logs(void)
                                         .frame_num = 0,
                                         .stripped = false,
                                     }}};
+
+    ls->out_formats = (OutputFormat *)&out_formats;
 
     output_on_schedule(NULL, ss, se, ls);
 
