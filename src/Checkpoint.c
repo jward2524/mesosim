@@ -617,6 +617,16 @@ CheckpointStatus read_output_format_array(uint8_t *payload, size_t *total_bytes_
 void apply_logging_payload_to_loggingstate(const CheckpointLoggingPayload *payload,
                                            struct LoggingState *ls)
 {
+    if (!payload || !ls) {
+        return;
+    }
+
+    ls->framenum = payload->framenum;
+    ls->verbose = payload->verbose;
+    ls->verbose_interval = payload->verbose_interval;
+    ls->increment_precision = payload->increment_precision;
+    ls->stime_precision = payload->stime_precision;
+    ls->overpot_precision = payload->overpot_precision;
 }
 
 void apply_output_format_array_to_loggingstate(const CheckpointOutputFormatArrPayload *arr_payload,

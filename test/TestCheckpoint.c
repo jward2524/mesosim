@@ -362,6 +362,33 @@ void test_apply_env_payload_to_config_restores_selected_env_scalars(void)
                                   "lattice type should restore from the payload");
 }
 
+void test_apply_logging_payload_restores_selected_logging_scalars(void)
+{
+    CheckpointLoggingPayload payload = {0};
+    struct LoggingState ls = {0};
+
+    payload.framenum = 17;
+    payload.verbose = 1;
+    payload.verbose_interval = 250u;
+    payload.increment_precision = 3;
+    payload.stime_precision = 4;
+    payload.overpot_precision = 5;
+
+    apply_logging_payload_to_loggingstate(&payload, &ls);
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(17, ls.framenum, "frame number should restore from payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls.verbose, "verbose flag should restore from payload");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(250u, (unsigned int)ls.verbose_interval,
+                                   "verbose interval should restore from payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls.increment_precision,
+                                  "increment precision should restore from payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(4, ls.stime_precision,
+                                  "stime precision should restore from payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(5, ls.overpot_precision,
+                                  "overpotential precision should restore from payload");
+    TEST_ASSERT_NULL_MESSAGE(ls.sim_log, "sim_log should not be modified by the helper");
+}
+
 void test_checkpoint_save_and_load_env_arrays_and_atom_names(void)
 {
     // Round-trip the env arrays that are serialized separately from the scalar payload.
@@ -1725,37 +1752,50 @@ int main(void)
     UNITY_BEGIN();
 
     RUN_TEST(test_checkpoint_checksum32_is_deterministic);
+
     RUN_TEST(test_fill_state_payload_copies_selected_state_scalars);
     RUN_TEST(test_apply_state_payload_to_simstate_restores_selected_state_scalars);
+
     RUN_TEST(test_fill_env_payload_copies_selected_env_scalars);
-    RUN_TEST(test_fill_logging_payload_copies_selected_logging_scalars);
-    RUN_TEST(test_fill_logging_payload_copies_logging_edge_values);
     RUN_TEST(test_apply_env_payload_to_config_restores_selected_env_scalars);
+
     RUN_TEST(test_checkpoint_save_and_load_env_arrays_and_atom_names);
     RUN_TEST(test_checkpoint_load_rejects_corrupted_env_atom_names_header);
+
     RUN_TEST(test_fill_atom_payload_copies_selected_atom_fields);
     RUN_TEST(test_apply_atom_payload_restores_selected_atom_fields);
     RUN_TEST(test_write_atom_array_serializes_atom_payloads);
     RUN_TEST(test_read_atom_array_parses_atom_payloads);
     RUN_TEST(test_read_atom_array_rejects_corrupted_magic);
+
+    RUN_TEST(test_fill_logging_payload_copies_selected_logging_scalars);
+    RUN_TEST(test_fill_logging_payload_copies_logging_edge_values);
+    RUN_TEST(test_apply_logging_payload_restores_selected_logging_scalars);
+
     RUN_TEST(test_validate_array_header_accepts_valid_header);
     RUN_TEST(test_validate_array_header_rejects_invalid_magic);
+
     RUN_TEST(test_checkpoint_header_has_valid_checksum_accepts_matching_payload);
     RUN_TEST(test_checkpoint_header_has_valid_checksum_rejects_corrupted_payload);
+
     RUN_TEST(test_read_array_parses_double_array_payload);
     RUN_TEST(test_read_array_rejects_corrupted_magic_without_consuming_bytes);
+
     RUN_TEST(test_write_array_header_into_payload_writes_expected_header_bytes);
     RUN_TEST(test_write_array_header_into_payload_rejects_null_output_buffer);
     RUN_TEST(test_write_array_serializes_double_array_payload);
     RUN_TEST(test_write_array_rejects_null_payload_destination);
+
     RUN_TEST(test_checkpoint_header_magic_helpers);
     RUN_TEST(test_checkpoint_header_init_and_finalize);
     RUN_TEST(test_checkpoint_header_write_and_read_round_trip);
+
     RUN_TEST(test_checkpoint_save_and_load_header_only);
     RUN_TEST(test_checkpoint_save_and_load_state_scalars);
     RUN_TEST(test_checkpoint_save_and_load_env_scalars);
     RUN_TEST(test_checkpoint_save_and_load_state_and_env);
     RUN_TEST(test_checkpoint_save_and_load_atom_round_trip);
+
     RUN_TEST(test_checkpoint_load_missing_file_returns_error);
     RUN_TEST(test_checkpoint_load_corrupted_payload_returns_error);
     RUN_TEST(test_checkpoint_rebuild_zones_and_rates_from_atoms);
