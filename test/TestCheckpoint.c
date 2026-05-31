@@ -229,6 +229,67 @@ void test_fill_env_payload_copies_selected_env_scalars(void)
                                   "lattice type should copy into the payload");
 }
 
+void test_fill_logging_payload_copies_selected_logging_scalars(void)
+{
+    // Copy a representative logging state into the compact payload and verify every scalar field.
+    struct LoggingState ls = {0};
+    CheckpointLoggingPayload payload = {0};
+
+    ls.sim_log = NULL;
+    ls.framenum = 17;
+    ls.verbose = 1;
+    ls.verbose_interval = 250ul;
+    ls.increment_precision = 3;
+    ls.stime_precision = 4;
+    ls.overpot_precision = 5;
+
+    fill_logging_payload(&payload, &ls);
+
+    // Mutate the source after copying so the payload is the only thing under test.
+    ls.framenum = 99;
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(17, payload.framenum, "frame number should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, payload.verbose, "verbose flag should copy into payload");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(250u, (unsigned int)payload.verbose_interval,
+                                   "verbose interval should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, payload.increment_precision,
+                                  "increment precision should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(4, payload.stime_precision,
+                                  "stime precision should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(5, payload.overpot_precision,
+                                  "overpotential precision should copy into payload");
+    TEST_ASSERT_NOT_EQUAL_INT_MESSAGE(ls.framenum, payload.framenum,
+                                      "payload should keep the copied frame number");
+}
+
+void test_fill_logging_payload_copies_logging_edge_values(void)
+{
+    // Use a different mix of values to make sure the helper copies each scalar independently.
+    struct LoggingState ls = {0};
+    CheckpointLoggingPayload payload = {0};
+
+    ls.framenum = -8;
+    ls.verbose = 0;
+    ls.verbose_interval = 1000000ul;
+    ls.increment_precision = -2;
+    ls.stime_precision = 0;
+    ls.overpot_precision = 12;
+
+    fill_logging_payload(&payload, &ls);
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(-8, payload.framenum,
+                                  "frame number should copy even when negative");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, payload.verbose, "verbose flag should copy exactly");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(1000000u, (unsigned int)payload.verbose_interval,
+                                   "verbose interval should copy exactly");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(-2, payload.increment_precision,
+                                  "increment precision should copy exactly");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, payload.stime_precision,
+                                  "stime precision should copy exactly");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(12, payload.overpot_precision,
+                                  "overpotential precision should copy exactly");
+}
+
 void test_apply_env_payload_to_config_restores_selected_env_scalars(void)
 {
     // The config begins with different values so the restore step has visible work to do.
@@ -1667,6 +1728,8 @@ int main(void)
     RUN_TEST(test_fill_state_payload_copies_selected_state_scalars);
     RUN_TEST(test_apply_state_payload_to_simstate_restores_selected_state_scalars);
     RUN_TEST(test_fill_env_payload_copies_selected_env_scalars);
+    RUN_TEST(test_fill_logging_payload_copies_selected_logging_scalars);
+    RUN_TEST(test_fill_logging_payload_copies_logging_edge_values);
     RUN_TEST(test_apply_env_payload_to_config_restores_selected_env_scalars);
     RUN_TEST(test_checkpoint_save_and_load_env_arrays_and_atom_names);
     RUN_TEST(test_checkpoint_load_rejects_corrupted_env_atom_names_header);

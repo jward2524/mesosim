@@ -604,6 +604,16 @@ CheckpointStatus read_output_format_array(uint8_t *payload, size_t *total_bytes_
     return CHECKPOINT_ERROR;
 }
 
+void apply_logging_payload_to_loggingstate(const CheckpointLoggingPayload *payload,
+                                           struct LoggingState *ls)
+{
+}
+
+void apply_output_format_array_to_loggingstate(const CheckpointOutputFormatArrPayload *arr_payload,
+                                               struct LoggingState *ls)
+{
+}
+
 /**
  * @brief Create rolling 32-bit checksum for checkpoint file to ensure no corruption
  *
@@ -700,16 +710,6 @@ CheckpointStatus checkpoint_header_read(FILE *file, CheckpointHeader *header)
     }
 
     return CHECKPOINT_OK;
-}
-
-void apply_logging_payload_to_loggingstate(const CheckpointLoggingPayload *payload,
-                                           struct LoggingState *ls)
-{
-}
-
-void apply_output_format_array_to_loggingstate(const CheckpointOutputFormatArrPayload *arr_payload,
-                                               struct LoggingState *ls)
-{
 }
 
 /**

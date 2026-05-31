@@ -132,7 +132,7 @@ void lattice2int(double fcoords[3], int coords[3], double epsilon)
         double u = fcoords[dim_idx];
         int comp = (int)round(u);
         int res = int_check(u, comp, epsilon);
-        assert(res == 1);
+        assert(res == 1); // TODO: change to a true failure
         coords[dim_idx] = comp;
     }
 }
