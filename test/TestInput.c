@@ -169,30 +169,40 @@ void test_parse_input_cluster_nns_file_success(void)
                                      "Overpotential ramp rate");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.2, inputs.max_overpotential, "Maximum overpotential");
 
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, ls->out_formats_cnt, "Number of output formats");
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->out_formats, "Output formats array should not be null");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_CSV, ls->out_formats[0].type,
+                                  "First output type should be CSV");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_XYZ, ls->out_formats[1].type,
+                                  "Second output type should be XYZ");
+
     // Output CSV command
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "State CSV output flag");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", ls->csv_filename, "CSV filename");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode,
+    OutputFormat *csv_format = &ls->out_formats[0];
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", csv_format->csv.filename,
+                                     "CSV filename");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, csv_format->csv.schedule.mode,
                                   "CSV schedule mode");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->csv_schedule.interval, "CSV interval value");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, csv_format->csv.schedule.interval,
+                                     "CSV interval value");
     // Check next_log_checkpoint for interval iteration mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_csv_checkpoint,
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, csv_format->csv.schedule.next_checkpoint,
                                      "CSV next_csv_checkpoint should match first checkpoint");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(4, ls->csv_field_count, "CSV field count");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", ls->csv_fields[2], "CSV field 2");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("temperature", ls->csv_fields[3], "CSV field 3");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(4, csv_format->csv.field_count, "CSV field count");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", csv_format->csv.field_names[0], "CSV field 0");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("time", csv_format->csv.field_names[1], "CSV field 1");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", csv_format->csv.field_names[2], "CSV field 2");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("temperature", csv_format->csv.field_names[3], "CSV field 3");
 
     // Output XYZ command
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
-    TEST_ASSERT_TRUE_MESSAGE(ls->xyz_stripped, "XYZ stripped flag");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->xyz_schedule.mode,
+    OutputFormat *xyz_format = &ls->out_formats[1];
+    TEST_ASSERT_TRUE_MESSAGE(xyz_format->xyz.stripped, "XYZ stripped flag");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", xyz_format->xyz.prefix,
+                                     "XYZ filename prefix");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, xyz_format->xyz.schedule.mode,
                                   "XYZ schedule mode");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(500, ls->xyz_schedule.interval, "XYZ interval value");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(500, xyz_format->xyz.schedule.interval, "XYZ interval value");
     // Check next_log_checkpoint for interval time mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(500, ls->next_xyz_checkpoint,
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(500, xyz_format->xyz.schedule.next_checkpoint,
                                      "XYZ next_xyz_checkpoint should match first checkpoint");
 
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293.0, inputs.temperature, "Temperature value");
@@ -202,8 +212,6 @@ void test_parse_input_cluster_nns_file_success(void)
                                   "Simulation end type");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(2000U, (unsigned int)inputs.final_iteration,
                                    "Final iteration value");
-
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when not set");
 }
 
 void test_parse_input_multi_command_unknown_mid_file_fails(void)
@@ -552,22 +560,26 @@ void test_output_csv_interval_iteration_success(void)
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "CSV output flag");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", ls->csv_filename, "CSV filename");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, ls->csv_schedule.mode,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->out_formats_cnt, "Number of output formats");
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->out_formats, "Output formats array should not be null");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_CSV, ls->out_formats[0].type,
+                                  "First output type should be CSV");
+
+    OutputFormat *format = &ls->out_formats[0];
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", format->csv.filename,
+                                     "CSV filename");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, format->csv.schedule.mode,
                                   "CSV schedule iteration interval mode");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->csv_schedule.interval, "CSV interval value");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, format->csv.schedule.interval, "CSV interval value");
     // Check next_log_checkpoint for interval iteration mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, ls->next_csv_checkpoint,
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200.0, format->csv.schedule.next_checkpoint,
                                      "CSV next_csv_checkpoint should match first checkpoint");
-    TEST_ASSERT_NULL_MESSAGE(ls->csv_schedule.list, "CSV list value in interval mode");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(4, ls->csv_field_count, "CSV field count");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", ls->csv_fields[2], "CSV field 2");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("temperature", ls->csv_fields[3], "CSV field 3");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_xyz, "XYZ output flag when only CSV output");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when not set");
+    TEST_ASSERT_NULL_MESSAGE(format->csv.schedule.list, "CSV list value in interval mode");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(4, format->csv.field_count, "CSV field count");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", format->csv.field_names[0], "CSV field 0");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("time", format->csv.field_names[1], "CSV field 1");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", format->csv.field_names[2], "CSV field 2");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("temperature", format->csv.field_names[3], "CSV field 3");
 }
 
 void test_output_csv_list_time_success(void)
@@ -580,25 +592,32 @@ void test_output_csv_list_time_success(void)
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "CSV output flag");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", ls->csv_filename, "CSV filename");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_LIST_TIME, ls->csv_schedule.mode,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->out_formats_cnt, "Number of output formats");
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->out_formats, "Output formats array should not be null");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_CSV, ls->out_formats[0].type,
+                                  "First output type should be CSV");
+
+    OutputFormat *format = &ls->out_formats[0];
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.csv", format->csv.filename,
+                                     "CSV filename");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_LIST_TIME, format->csv.schedule.mode,
                                   "CSV list time schedule mode");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls->csv_schedule.list_len, "CSV schedule list length");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, ls->csv_schedule.interval,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, format->csv.schedule.list_len, "CSV schedule list length");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, format->csv.schedule.interval,
                                      "CSV interval value in list mode");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->csv_schedule.list[0], "CSV schedule list value 0");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, ls->csv_schedule.list[1], "CSV schedule list value 1");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.3, ls->csv_schedule.list[2], "CSV schedule list value 2");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, format->csv.schedule.list[0],
+                                     "CSV schedule list value 0");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, format->csv.schedule.list[1],
+                                     "CSV schedule list value 1");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.3, format->csv.schedule.list[2],
+                                     "CSV schedule list value 2");
     // Check next_log_checkpoint for list time mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, ls->next_csv_checkpoint,
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.1, format->csv.schedule.next_checkpoint,
                                      "CSV next_checkpoint should match first checkpoint in list");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls->csv_field_count, "CSV field count");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", ls->csv_fields[0], "CSV field 0");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("time", ls->csv_fields[1], "CSV field 1");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", ls->csv_fields[2], "CSV field 2");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_xyz, "XYZ output flag when only CSV output");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, format->csv.field_count, "CSV field count");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("iter", format->csv.field_names[0], "CSV field 0");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("time", format->csv.field_names[1], "CSV field 1");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("energy", format->csv.field_names[2], "CSV field 2");
 }
 
 void test_output_xyz_interval_time_success(void)
@@ -610,17 +629,21 @@ void test_output_xyz_interval_time_success(void)
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->out_formats_cnt, "Number of output formats");
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->out_formats, "Output formats array should not be null");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_XYZ, ls->out_formats[0].type,
+                                  "First output type should be XYZ");
+
+    OutputFormat *format = &ls->out_formats[0];
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", format->xyz.prefix,
+                                     "XYZ filename prefix");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, format->xyz.schedule.mode,
                                   "XYZ schedule interval time mode");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->xyz_schedule.interval, "XYZ interval value");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, format->xyz.schedule.interval, "XYZ interval value");
     // Check next_log_checkpoint for interval time mode
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, ls->next_xyz_checkpoint,
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.5, format->xyz.schedule.next_checkpoint,
                                      "XYZ next_xyz_checkpoint should match first checkpoint");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_state_csv, "CSV output flag when only XYZ output");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
-    TEST_ASSERT_FALSE_MESSAGE(ls->xyz_stripped, "XYZ stripped flag should be false by default");
+    TEST_ASSERT_FALSE_MESSAGE(format->xyz.stripped, "XYZ stripped flag should be false by default");
 }
 
 void test_output_xyz_stripped_success(void)
@@ -632,17 +655,21 @@ void test_output_xyz_stripped_success(void)
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_xyz, "XYZ output flag");
-    TEST_ASSERT_TRUE_MESSAGE(ls->xyz_stripped,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->out_formats_cnt, "Number of output formats");
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->out_formats, "Output formats array should not be null");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_XYZ, ls->out_formats[0].type,
+                                  "First output type should be XYZ");
+
+    OutputFormat *format = &ls->out_formats[0];
+    TEST_ASSERT_TRUE_MESSAGE(format->xyz.stripped,
                              "XYZ stripped flag should be true when 'stripped' is present");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", ls->xyz_prefix, "XYZ filename prefix");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, ls->xyz_schedule.mode,
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster", format->xyz.prefix,
+                                     "XYZ filename prefix");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_TIME, format->xyz.schedule.mode,
                                   "XYZ schedule interval time mode");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, ls->xyz_schedule.interval, "XYZ interval value");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, ls->next_xyz_checkpoint,
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, format->xyz.schedule.interval, "XYZ interval value");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.2, format->xyz.schedule.next_checkpoint,
                                      "XYZ next_xyz_checkpoint should match first checkpoint");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_state_csv, "CSV output flag when only XYZ output");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
 }
 
 void test_output_iter_default_filename_success(void)
@@ -654,17 +681,22 @@ void test_output_iter_default_filename_success(void)
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_steps_csv,
-                             "Iteration CSV output flag should be set for 'output iter'");
-    TEST_ASSERT_TRUE_MESSAGE(strlen(ls->steps_filename) > 0,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->out_formats_cnt, "Number of output formats");
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->out_formats, "Output formats array should not be null");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_STEPS_CSV, ls->out_formats[0].type,
+                                  "First output type should be a steps csv");
+
+    OutputFormat *format = &ls->out_formats[0];
+    TEST_ASSERT_TRUE_MESSAGE(strlen(format->steps.filename) > 0,
                              "Default steps filename should be set");
     // Should end with _steps.csv
-    size_t len = strlen(ls->steps_filename);
-    TEST_ASSERT_TRUE_MESSAGE(len > 10 && strcmp(ls->steps_filename + len - 10, "_steps.csv") == 0,
+    size_t len = strlen(format->steps.filename);
+    TEST_ASSERT_TRUE_MESSAGE(len > 10 &&
+                                 strcmp(format->steps.filename + len - 10, "_steps.csv") == 0,
                              "Default steps filename should end with _steps.csv");
 }
 
-void test_output_iter_default_filename_coord_success(void)
+void test_output_steps_default_filename_coord_success(void)
 {
     const char *input = "output steps coord\n";
     ParseContext ctx = {0};
@@ -673,18 +705,23 @@ void test_output_iter_default_filename_coord_success(void)
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_steps_csv,
-                             "Iteration CSV output flag should be set for 'output iter'");
-    TEST_ASSERT_TRUE_MESSAGE(strlen(ls->steps_filename) > 0,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->out_formats_cnt, "Number of output formats");
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->out_formats, "Output formats array should not be null");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_STEPS_CSV, ls->out_formats[0].type,
+                                  "First output type should be a steps csv");
+
+    OutputFormat *format = &ls->out_formats[0];
+    TEST_ASSERT_TRUE_MESSAGE(strlen(format->steps.filename) > 0,
                              "Default steps filename should be set");
-    TEST_ASSERT_TRUE_MESSAGE(ls->steps_coord, "Steps CSV coordination");
+    TEST_ASSERT_TRUE_MESSAGE(format->steps.with_coordination, "Steps CSV coordination");
     // Should end with _steps.csv
-    size_t len = strlen(ls->steps_filename);
-    TEST_ASSERT_TRUE_MESSAGE(len > 10 && strcmp(ls->steps_filename + len - 10, "_steps.csv") == 0,
+    size_t len = strlen(format->steps.filename);
+    TEST_ASSERT_TRUE_MESSAGE(len > 10 &&
+                                 strcmp(format->steps.filename + len - 10, "_steps.csv") == 0,
                              "Default steps filename should end with _steps.csv");
 }
 
-void test_output_iter_with_filename_success(void)
+void test_output_steps_with_filename_success(void)
 {
     const char *input = "output steps my_steps.csv\n";
     ParseContext ctx = {0};
@@ -693,14 +730,17 @@ void test_output_iter_with_filename_success(void)
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(
-        ls->output_steps_csv,
-        "Iteration CSV output flag should be set for 'output iter' with filename");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("my_steps.csv", ls->steps_filename,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->out_formats_cnt, "Number of output formats");
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->out_formats, "Output formats array should not be null");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_STEPS_CSV, ls->out_formats[0].type,
+                                  "First output type should be a steps csv");
+
+    OutputFormat *format = &ls->out_formats[0];
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("my_steps.csv", format->steps.filename,
                                      "Steps filename should match provided filename");
 }
 
-void test_output_iter_with_filename_coord_success(void)
+void test_output_steps_with_filename_coord_success(void)
 {
     const char *input = "output steps my_steps.csv coord\n";
     ParseContext ctx = {0};
@@ -709,15 +749,18 @@ void test_output_iter_with_filename_coord_success(void)
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
-    TEST_ASSERT_TRUE_MESSAGE(
-        ls->output_steps_csv,
-        "Iteration CSV output flag should be set for 'output iter' with filename");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("my_steps.csv", ls->steps_filename,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->out_formats_cnt, "Number of output formats");
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->out_formats, "Output formats array should not be null");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_STEPS_CSV, ls->out_formats[0].type,
+                                  "First output type should be a steps csv");
+
+    OutputFormat *format = &ls->out_formats[0];
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("my_steps.csv", format->steps.filename,
                                      "Steps filename should match provided filename");
-    TEST_ASSERT_TRUE_MESSAGE(ls->steps_coord, "Steps csv coord flag");
+    TEST_ASSERT_TRUE_MESSAGE(format->steps.with_coordination, "Steps csv coord flag");
 }
 
-void test_output_iter_with_filename_and_extra_args_fails(void)
+void test_output_steps_with_filename_and_extra_args_fails(void)
 {
     const char *input = "output steps my_steps.csv extra\n";
     ParseContext ctx = {0};
@@ -795,14 +838,21 @@ void test_output_csv_default_filename_time_success(void)
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->out_formats_cnt, "Number of output formats");
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->out_formats, "Output formats array should not be null");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_CSV, ls->out_formats[0].type,
+                                  "First output type should be CSV");
+
+    OutputFormat *format = &ls->out_formats[0];
+
     // Extract the time from the filename, which should be of the form "[time].csv"
-    TEST_ASSERT_NOT_NULL_MESSAGE(ls->csv_filename, "CSV filename should not be NULL");
-    const char *dot = strrchr(ls->csv_filename, '.');
+    TEST_ASSERT_NOT_NULL_MESSAGE(format->csv.filename, "CSV filename should not be NULL");
+    const char *dot = strrchr(format->csv.filename, '.');
     TEST_ASSERT_NOT_NULL_MESSAGE(dot, "CSV filename should contain a dot");
-    size_t len = (size_t)(dot - ls->csv_filename);
+    size_t len = (size_t)(dot - format->csv.filename);
     char time_part[32];
     TEST_ASSERT_TRUE_MESSAGE(len < sizeof(time_part), "Time part too long");
-    strncpy(time_part, ls->csv_filename, len);
+    strncpy(time_part, format->csv.filename, len);
     time_part[len] = '\0';
     char *endptr;
     long file_time = strtol(time_part, &endptr, 10);
@@ -818,10 +868,6 @@ void test_output_csv_default_filename_time_success(void)
     snprintf(deviation_msg, sizeof(deviation_msg),
              "CSV filename time deviation should be <= %ld second(s)", max_deviation);
     TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
-
-    TEST_ASSERT_TRUE_MESSAGE(ls->output_state_csv, "CSV output flag");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_xyz, "XYZ output flag when only CSV output");
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
 }
 
 void test_output_xyz_default_prefix_time_success(void)
@@ -834,14 +880,21 @@ void test_output_xyz_default_prefix_time_success(void)
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->out_formats_cnt, "Number of output formats");
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls->out_formats, "Output formats array should not be null");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_XYZ, ls->out_formats[0].type,
+                                  "First output type should be XYZ");
+
+    OutputFormat *format = &ls->out_formats[0];
+
     // Extract the time from the prefix, which should be of the form "[time].xyz"
-    TEST_ASSERT_NOT_NULL_MESSAGE(ls->xyz_prefix, "XYZ prefix should not be NULL");
-    const char *dot = strrchr(ls->xyz_prefix, '.');
+    TEST_ASSERT_NOT_NULL_MESSAGE(format->xyz.prefix, "XYZ prefix should not be NULL");
+    const char *dot = strrchr(format->xyz.prefix, '.');
     TEST_ASSERT_NOT_NULL_MESSAGE(dot, "XYZ prefix should contain a dot");
-    size_t len = (size_t)(dot - ls->xyz_prefix);
+    size_t len = (size_t)(dot - format->xyz.prefix);
     char time_part[32];
     TEST_ASSERT_TRUE_MESSAGE(len < sizeof(time_part), "Time part too long");
-    strncpy(time_part, ls->xyz_prefix, len);
+    strncpy(time_part, format->xyz.prefix, len);
     time_part[len] = '\0';
     char *endptr;
     long file_time = strtol(time_part, &endptr, 10);
@@ -857,8 +910,7 @@ void test_output_xyz_default_prefix_time_success(void)
     snprintf(deviation_msg, sizeof(deviation_msg),
              "XYZ prefix time deviation should be <= %ld second(s)", max_deviation);
     TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
-    TEST_ASSERT_FALSE_MESSAGE(ls->output_steps_csv, "Iteration CSV output flag when only CSV");
-    TEST_ASSERT_FALSE_MESSAGE(ls->xyz_stripped, "XYZ stripped flag should be false by default");
+    TEST_ASSERT_FALSE_MESSAGE(format->xyz.stripped, "XYZ stripped flag should be false by default");
 }
 
 void test_output_unrecognized_field_fails(void)
@@ -1641,8 +1693,8 @@ int main(void)
     RUN_TEST(test_output_csv_list_time_success);
     RUN_TEST(test_output_xyz_interval_time_success);
     RUN_TEST(test_output_iter_default_filename_success);
-    RUN_TEST(test_output_iter_with_filename_success);
-    RUN_TEST(test_output_iter_with_filename_and_extra_args_fails);
+    RUN_TEST(test_output_steps_with_filename_success);
+    RUN_TEST(test_output_steps_with_filename_and_extra_args_fails);
     RUN_TEST(test_output_invalid_mode_fails);
     RUN_TEST(test_output_missing_fields_keyword_fails);
     RUN_TEST(test_output_fields_empty_fails);
