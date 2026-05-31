@@ -31,6 +31,9 @@ struct NNECmd {
 
 // needs to be cleaned after use - [some] functions clean only after error
 typedef struct {
+    // array that holds flags for whether required commands were provided
+    int *cmd_present;
+
     struct NNECmd *nne_cmds;
     int nne_cmd_count;
 
@@ -41,9 +44,6 @@ typedef struct {
     bool *dissolution_raw;
     int dissolution_count;
     int dissolution_lineno;
-
-    // array that holds flags for whether required commands were provided
-    int *cmd_present;
 } ParseContext;
 
 /* ================= Command Table =============== */

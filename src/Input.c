@@ -162,6 +162,7 @@ static InputErrorFlag cmd_dissolution(int argc, char **argv, int line, ParseCont
 static InputErrorFlag cmd_nnlevels(int argc, char **argv, int line, ParseContext *p_ctx,
                                    struct SimulationConfig *inputs, struct LoggingState *ls)
 {
+    // TODO: this is redundant since nne command can track levels
     (void)line;
     (void)p_ctx;
     (void)ls;
@@ -346,7 +347,7 @@ static InputErrorFlag cmd_struct(int argc, char **argv, int line, ParseContext *
 /* === Helpers for cmd_output === */
 
 static InputErrorFlag parse_output_schedule(int argc, char **argv, int *pidx, OutputSchedule *sched,
-                                            double *next_log_checkpoint, int expect_fields)
+                                            int expect_fields)
 {
     // TODO: forbid time-based schedules for MC simulations
     int idx = *pidx;
@@ -378,7 +379,7 @@ static InputErrorFlag parse_output_schedule(int argc, char **argv, int *pidx, Ou
         sched->interval = val;
         sched->list = NULL;
         sched->list_len = 0;
-        *next_log_checkpoint = val;
+        sched->next_checkpoint = val;
         idx++;
     } else if (strcmp(argv[idx], "list") == 0) {
         idx++;
@@ -429,7 +430,7 @@ static InputErrorFlag parse_output_schedule(int argc, char **argv, int *pidx, Ou
         sched->list_len = list_count;
         sched->list_idx = 0;
         sched->interval = 0;
-        *next_log_checkpoint = sched->list[0];
+        sched->next_checkpoint = sched->list[0];
         idx = list_start + list_count;
     } else {
         fprintf(stderr, "Input error - output expects 'interval' or 'list'\n");
@@ -441,20 +442,21 @@ static InputErrorFlag parse_output_schedule(int argc, char **argv, int *pidx, Ou
 
 static InputErrorFlag parse_output_csv(int argc, char **argv, struct LoggingState *ls)
 {
-    ls->output_state_csv = true;
     int idx = 2;
+
+    OutputFormat *format = &(ls->out_formats[ls->out_formats_cnt - 1]);
+    format->type = OUTPUT_FORMAT_CSV;
 
     // if filename is present and not a schedule keyword, use it; else generate default
     if (idx < argc && strcmp(argv[idx], "interval") != 0 && strcmp(argv[idx], "list") != 0) {
-        snprintf(ls->csv_filename, sizeof(ls->csv_filename), "%s", argv[idx]);
+        snprintf(format->csv.filename, sizeof(format->csv.filename), "%s", argv[idx]);
         idx++;
     } else {
         // generate default filename: [time in seconds].csv
         time_t now = time(NULL);
-        snprintf(ls->csv_filename, sizeof(ls->csv_filename), "%ld.csv", (long)now);
+        snprintf(format->csv.filename, sizeof(format->csv.filename), "%ld.csv", (long)now);
     }
-    InputErrorFlag err =
-        parse_output_schedule(argc, argv, &idx, &ls->csv_schedule, &ls->next_csv_checkpoint, 1);
+    InputErrorFlag err = parse_output_schedule(argc, argv, &idx, &format->csv.schedule, 1);
     if (err != INPUT_ERR_NONE) {
         return err;
     }
@@ -472,8 +474,8 @@ static InputErrorFlag parse_output_csv(int argc, char **argv, struct LoggingStat
         return INPUT_ERR_COUNT_MISMATCH;
     }
 
-    ls->csv_fields = (char **)malloc(sizeof(char *) * (size_t)field_count);
-    if (!ls->csv_fields) {
+    format->csv.field_names = (char **)malloc(sizeof(char *) * (size_t)field_count);
+    if (!format->csv.field_names) {
         fprintf(stderr, "Couldn't allocate memory for csv fields: %s", strerror(errno));
         return INPUT_ERR_ALLOC;
     }
@@ -483,7 +485,7 @@ static InputErrorFlag parse_output_csv(int argc, char **argv, struct LoggingStat
         for (size_t j = 0; j < CSV_FIELD_FUNCS_COUNT; j++) {
             if (strcmp(argv[idx + i], csv_field_map[j].name) == 0) {
                 supported_field = 1;
-                ls->csv_fields[i] = dup_str(argv[idx + i]);
+                format->csv.field_names[i] = dup_str(argv[idx + i]);
                 break;
             }
         }
@@ -492,33 +494,34 @@ static InputErrorFlag parse_output_csv(int argc, char **argv, struct LoggingStat
             return INPUT_ERR_INVALID_ARG;
         }
     }
-    ls->csv_field_count = field_count;
+    format->csv.field_count = field_count;
     return INPUT_ERR_NONE;
 }
 
 static InputErrorFlag parse_output_xyz(int argc, char **argv, struct LoggingState *ls)
 {
-    ls->output_xyz = true;
     int idx = 2;
+
+    OutputFormat *format = &(ls->out_formats[ls->out_formats_cnt - 1]);
+    format->type = OUTPUT_FORMAT_XYZ;
 
     // Check for optional 'stripped' parameter
     if (idx < argc && strcmp(argv[idx], "stripped") == 0) {
-        ls->xyz_stripped = true;
+        format->xyz.stripped = true;
         idx++;
     }
 
     // if prefix is present and not a schedule keyword, use it; else generate default
     if (idx < argc && strcmp(argv[idx], "interval") != 0 && strcmp(argv[idx], "list") != 0) {
-        snprintf(ls->xyz_prefix, sizeof(ls->xyz_prefix), "%s", argv[idx]);
+        snprintf(format->xyz.prefix, sizeof(format->xyz.prefix), "%s", argv[idx]);
         idx++;
     } else {
         // generate default prefix: [time].xyz
         time_t now = time(NULL);
-        snprintf(ls->xyz_prefix, sizeof(ls->xyz_prefix), "%ld.xyz", (long)now);
+        snprintf(format->xyz.prefix, sizeof(format->xyz.prefix), "%ld.xyz", (long)now);
     }
 
-    InputErrorFlag err =
-        parse_output_schedule(argc, argv, &idx, &ls->xyz_schedule, &ls->next_xyz_checkpoint, 0);
+    InputErrorFlag err = parse_output_schedule(argc, argv, &idx, &format->xyz.schedule, 0);
     if (err != INPUT_ERR_NONE) {
         return err;
     }
@@ -534,22 +537,25 @@ static InputErrorFlag parse_output_xyz(int argc, char **argv, struct LoggingStat
 
 static InputErrorFlag parse_steps_csv(int argc, char **argv, struct LoggingState *ls)
 {
-    ls->output_steps_csv = true;
     int idx = 2;
+
+    OutputFormat *format = &(ls->out_formats[ls->out_formats_cnt - 1]);
+    format->type = OUTPUT_FORMAT_STEPS_CSV;
 
     // if filename is present, use it; else generate default
     if (idx < argc) {
-        snprintf(ls->steps_filename, sizeof(ls->steps_filename), "%s", argv[idx]);
+        snprintf(format->steps.filename, sizeof(format->steps.filename), "%s", argv[idx]);
         idx++;
     } else {
         // generate default filename: [time in seconds]_iter.csv
         time_t now = time(NULL);
-        snprintf(ls->steps_filename, sizeof(ls->steps_filename), "%ld_steps.csv", (long)now);
+        snprintf(format->steps.filename, sizeof(format->steps.filename), "%ld_steps.csv",
+                 (long)now);
     }
 
     // Check for optional 'coord' parameter
     if (idx < argc && strcmp(argv[idx], "coord") == 0) {
-        ls->steps_coord = true;
+        format->steps.coordination = true;
         idx++;
     }
 
@@ -573,6 +579,11 @@ static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *
         fprintf(stderr, "Input error - output command expects at least 1 argument\n");
         return INPUT_ERR_COUNT_MISMATCH;
     }
+
+    ls->out_formats =
+        realloc(ls->out_formats, (size_t)(ls->out_formats_cnt + 1) * sizeof(OutputFormat));
+    ls->out_formats_cnt++;
+
     if (strcmp(argv[1], "csv") == 0) {
         return parse_output_csv(argc, argv, ls);
     } else if (strcmp(argv[1], "xyz") == 0) {
@@ -975,33 +986,42 @@ void finalize_nne(const ParseContext *p_ctx, struct SimulationConfig *inputs)
 }
 
 // check that all fields specified in csv output are supported by the specified flavor
+// populate field_funcs arrays based on names of fields
 void finalize_csv_fields(struct LoggingState *ls, unsigned int flavor)
 {
-    ls->csv_field_funcs =
-        (CsvFieldFuncPtr *)malloc(sizeof(CsvFieldFuncPtr *) * (size_t)ls->csv_field_count);
-    if (!ls->csv_field_funcs) {
-        fprintf(stderr, "Couldn't allocate memory for csv fields: %s", strerror(errno));
-        clean_and_error(INPUT_ERR_ALLOC);
-    }
 
-    char *flavor_name = flavor == 1 ? "KMC" : (flavor == 2 ? "MC" : "Undefined");
+    for (int i = 0; i < ls->out_formats_cnt; i++) {
+        OutputFormat *format = &ls->out_formats[i];
+        if (format->type != OUTPUT_FORMAT_CSV) {
+            continue;
+        }
 
-    // iterate over user-specified csv fields
-    for (int i = 0; i < ls->csv_field_count; ++i) {
-        const char *field_name = ls->csv_fields[i];
+        format->csv.field_funcs =
+            (CsvFieldFuncPtr *)malloc(sizeof(CsvFieldFuncPtr *) * (size_t)format->csv.field_count);
+        if (!format->csv.field_funcs) {
+            fprintf(stderr, "Couldn't allocate memory for csv fields: %s", strerror(errno));
+            clean_and_error(INPUT_ERR_ALLOC);
+        }
 
-        // check field name against supported fields
-        for (size_t j = 0; j < CSV_FIELD_FUNCS_COUNT; j++) {
-            if (strcmp(field_name, csv_field_map[j].name) == 0) {
-                // if generally supported, check if supported for this flavor
-                if ((csv_field_map[j].flavor != FLAVOR_UNDEFINED) &&
-                    (csv_field_map[j].flavor != flavor)) {
-                    fprintf(stderr, "Input error - field '%s' is not supported for flavor %s\n",
-                            field_name, flavor_name);
-                    clean_and_error(INPUT_ERR_INVALID_ARG);
+        char *flavor_name = flavor == 1 ? "KMC" : (flavor == 2 ? "MC" : "Undefined");
+
+        // iterate over user-specified csv fields
+        for (int i = 0; i < format->csv.field_count; ++i) {
+            const char *field_name = format->csv.field_names[i];
+
+            // check field name against supported fields
+            for (size_t j = 0; j < CSV_FIELD_FUNCS_COUNT; j++) {
+                if (strcmp(field_name, csv_field_map[j].name) == 0) {
+                    // if generally supported, check if supported for this flavor
+                    if ((csv_field_map[j].flavor != FLAVOR_UNDEFINED) &&
+                        (csv_field_map[j].flavor != flavor)) {
+                        fprintf(stderr, "Input error - field '%s' is not supported for flavor %s\n",
+                                field_name, flavor_name);
+                        clean_and_error(INPUT_ERR_INVALID_ARG);
+                    }
+                    format->csv.field_funcs[i] = csv_field_map[j].get_value;
+                    break;
                 }
-                ls->csv_field_funcs[i] = csv_field_map[j].get_value;
-                break;
             }
         }
     }
@@ -1060,7 +1080,8 @@ void validate_input_values(const struct SimulationConfig *inputs)
     }
 }
 
-void finalize_config(const ParseContext *p_ctx, struct SimulationConfig *inputs, struct LoggingState *ls)
+void finalize_config(const ParseContext *p_ctx, struct SimulationConfig *inputs,
+                     struct LoggingState *ls)
 {
     finalize_atom_dependent(p_ctx, inputs);
     finalize_nne(p_ctx, inputs);
