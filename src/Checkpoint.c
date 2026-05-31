@@ -451,6 +451,8 @@ void read_env_arrays(uint8_t *payload, size_t *total_bytes_read,
 
 void apply_env_arrays(CheckpointEnvArrPayload *arr_payload, struct SimulationEnv *se)
 {
+    // copying the malloc'd pointers in arr_payload to SimulationEnv
+
     se->substrate_composition = arr_payload->substrate_composition;
     // se->atoms_per_nn_level = arr_payload->atoms_per_nn_level;
     se->nn_energy = arr_payload->nn_energy;
@@ -580,10 +582,18 @@ typedef struct {
     int filler;
 } CheckpointOutputFormatPayload;
 
-CheckpointStatus fill_logging_payload(CheckpointLoggingPayload *payload,
-                                      const struct LoggingState *ls)
+void fill_logging_payload(CheckpointLoggingPayload *payload, const struct LoggingState *ls)
 {
-    return CHECKPOINT_ERROR;
+    if (!payload || !ls) {
+        return;
+    }
+
+    payload->framenum = ls->framenum;
+    payload->verbose = ls->verbose;
+    payload->verbose_interval = ls->verbose_interval;
+    payload->increment_precision = ls->increment_precision;
+    payload->stime_precision = ls->stime_precision;
+    payload->overpot_precision = ls->overpot_precision;
 }
 
 CheckpointStatus fill_output_format_array_payload(CheckpointOutputFormatArrPayload *arr_payload,

@@ -1,5 +1,5 @@
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef STATE_H
+#define STATE_H
 
 #include "Geometry.h"
 #include <stdbool.h> // bool
@@ -255,4 +255,4 @@ struct LoggingState {
     int out_formats_cnt;
 };
 
-#endif // COMMON_H
+#endif // STATE_H

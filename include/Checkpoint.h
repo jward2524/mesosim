@@ -143,8 +143,7 @@ typedef struct {
     int overpot_precision;
 } CheckpointLoggingPayload;
 
-CheckpointStatus fill_logging_payload(CheckpointLoggingPayload *payload,
-                                      const struct LoggingState *ls);
+void fill_logging_payload(CheckpointLoggingPayload *payload, const struct LoggingState *ls);
 
 void fill_env_payload(CheckpointEnvPayload *payload, const struct SimulationEnv *se);
 void apply_env_payload_to_config(const CheckpointEnvPayload *payload,
