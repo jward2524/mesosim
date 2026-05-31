@@ -572,6 +572,38 @@ CheckpointStatus apply_atom_array(const CheckpointAtomPayload *atom_payload_arr,
     return CHECKPOINT_OK;
 }
 
+typedef struct {
+    int filler;
+} CheckpointOutputFormatArrPayload;
+
+typedef struct {
+    int filler;
+} CheckpointOutputFormatPayload;
+
+CheckpointStatus fill_logging_payload(CheckpointLoggingPayload *payload,
+                                      const struct LoggingState *ls)
+{
+    return CHECKPOINT_ERROR;
+}
+
+CheckpointStatus fill_output_format_array_payload(CheckpointOutputFormatArrPayload *arr_payload,
+                                                  const struct LoggingState *ls)
+{
+    return CHECKPOINT_ERROR;
+}
+
+CheckpointStatus write_output_format_array(const CheckpointOutputFormatArrPayload *arr_payload,
+                                           uint8_t **p_payload, uint32_t *p_payload_bytes)
+{
+    return CHECKPOINT_ERROR;
+}
+
+CheckpointStatus read_output_format_array(uint8_t *payload, size_t *total_bytes_read,
+                                          CheckpointOutputFormatArrPayload *arr_payload)
+{
+    return CHECKPOINT_ERROR;
+}
+
 /**
  * @brief Create rolling 32-bit checksum for checkpoint file to ensure no corruption
  *
@@ -670,6 +702,16 @@ CheckpointStatus checkpoint_header_read(FILE *file, CheckpointHeader *header)
     return CHECKPOINT_OK;
 }
 
+void apply_logging_payload_to_loggingstate(const CheckpointLoggingPayload *payload,
+                                           struct LoggingState *ls)
+{
+}
+
+void apply_output_format_array_to_loggingstate(const CheckpointOutputFormatArrPayload *arr_payload,
+                                               struct LoggingState *ls)
+{
+}
+
 /**
  * @brief Save a checkpoint file with a header and payload containing the simulation state and
  * environment.
@@ -682,7 +724,7 @@ CheckpointStatus checkpoint_header_read(FILE *file, CheckpointHeader *header)
  * @return CheckpointStatus
  */
 CheckpointStatus checkpoint_save(const char *path, const struct SimulationState *ss,
-                                 const struct SimulationEnv *se)
+                                 const struct SimulationEnv *se, const struct LoggingState *ls)
 {
     // create temporary file with the same filename plus a .tmp suffix so interrupted writes do
     // not replace the previous checkpoint.
@@ -704,7 +746,7 @@ CheckpointStatus checkpoint_save(const char *path, const struct SimulationState 
     CheckpointStatus status;
 
     /* ---- Add primitives to payload ---- */
-    CheckpointStatePayload state_payload;
+    CheckpointStatePayload state_payload = {0};
     if (ss) {
         header.has_ss = 1;
         fill_state_payload(&state_payload, ss);
@@ -717,7 +759,7 @@ CheckpointStatus checkpoint_save(const char *path, const struct SimulationState 
         }
     }
 
-    CheckpointEnvPayload env_payload;
+    CheckpointEnvPayload env_payload = {0};
     if (se) {
         header.has_se = 1;
         fill_env_payload(&env_payload, se);
@@ -730,12 +772,34 @@ CheckpointStatus checkpoint_save(const char *path, const struct SimulationState 
         }
     }
 
+    // TODO: logging state
+    CheckpointLoggingPayload logging_payload = {0};
+    if (ls) {
+        header.has_ls = 1;
+        fill_logging_payload(&logging_payload, ls);
+        status =
+            append_to_payload(&logging_payload, sizeof(logging_payload), &payload, &payload_bytes);
+        if (status != CHECKPOINT_OK) {
+            fprintf(stderr, "Checkpoint error: failed to build logging payload for %s\n",
+                    temp_path);
+            fclose(tmp_file);
+            remove(temp_path);
+            return status;
+        }
+    }
+
     /* ---- Add arrays to payload ---- */
-    CheckpointEnvArrPayload env_arr_payload;
+    CheckpointEnvArrPayload env_arr_payload = {0};
     if (se) {
         fill_env_array_payload(&env_arr_payload, se);
         write_env_arrays(&env_arr_payload, &payload, &payload_bytes);
         free(env_arr_payload.n_atom_names_str);
+    }
+
+    CheckpointOutputFormatArrPayload output_format_arr_payload = {0};
+    if (ls) {
+        fill_output_format_array_payload(&output_format_arr_payload, ls);
+        write_output_format_array(&output_format_arr_payload, &payload, &payload_bytes);
     }
 
     // if state is present and has atoms, include atom count and array in payload.
@@ -744,6 +808,8 @@ CheckpointStatus checkpoint_save(const char *path, const struct SimulationState 
         write_atom_array((const Atom **)ss->atom_arr, (uint32_t)ss->atom_cnt, &payload,
                          &payload_bytes);
     }
+
+    // TODO: add out_formats array to payload
 
     /* ---- Compute checksum ---- */
     // compute checksum over the combined payload
@@ -854,7 +920,7 @@ CheckpointStatus verify_payload_size(FILE *file, CheckpointHeader *header)
  * @return CheckpointStatus
  */
 CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,
-                                 struct SimulationEnv *se)
+                                 struct SimulationEnv *se, const struct LoggingState *ls)
 {
 
     // load the checkpoint file
@@ -972,11 +1038,39 @@ CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,
         payload_ptr += sizeof(CheckpointEnvPayload);
     }
 
+    // logging payload
+    CheckpointLoggingPayload logging_payload = {0};
+    if (header.has_ls && !ls) {
+        fprintf(stderr,
+                "Checkpoint error: no SimulationEnv object provided to load env payload from "
+                "checkpoint %s\n",
+                path);
+        free(payload);
+        return CHECKPOINT_ERROR;
+    }
+    if (header.has_ls) {
+        if (payload_ptr + sizeof(CheckpointLoggingPayload) > payload + header.payload_bytes) {
+            fprintf(stderr, "Checkpoint error: payload too small for env payload in %s\n", path);
+            free(payload);
+            return CHECKPOINT_ERROR;
+        }
+        memcpy(&logging_payload, payload_ptr, sizeof(CheckpointLoggingPayload));
+        payload_ptr += sizeof(CheckpointLoggingPayload);
+    }
+
     // SimEnv arrays
     CheckpointEnvArrPayload env_arr_payload = {0};
     if (header.has_se) {
         size_t bytes_read;
         read_env_arrays(payload_ptr, &bytes_read, &env_arr_payload);
+        payload_ptr += bytes_read;
+    }
+
+    // output format arrays
+    CheckpointOutputFormatArrPayload output_format_arr_payload = {0};
+    if (header.has_ls) {
+        size_t bytes_read;
+        read_output_format_array(payload_ptr, &bytes_read, &output_format_arr_payload);
         payload_ptr += bytes_read;
     }
 
@@ -1008,6 +1102,7 @@ CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,
 
         apply_env_arrays(&env_arr_payload, se);
     }
+    // TODO: apply logging payload and output format arrays
     if (header.has_ss && header.has_se) {
         allocate_simulation_arrays(ss, se);
         if (header.has_atoms) {

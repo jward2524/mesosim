@@ -69,7 +69,7 @@ typedef struct SEAP {
     int n_is_soluble;
     char **atom_names;
     int n_atom_names;
-    int *n_atom_names_str;
+    int *n_atom_names_str; // size of each string in atom_names
 } CheckpointEnvArrPayload;
 
 #pragma pack(push, 1)
@@ -105,6 +105,7 @@ typedef struct {
     uint8_t has_ss;
     uint8_t has_se;
     uint8_t has_atoms;
+    uint8_t has_ls;
     // end of header or placeholder for future features
     uint32_t reserved0;
 } CheckpointHeader;
@@ -112,9 +113,9 @@ typedef struct {
 
 // ENHANCE: macro for functions exposed only for testing
 CheckpointStatus checkpoint_save(const char *path, const struct SimulationState *ss,
-                                 const struct SimulationEnv *se);
+                                 const struct SimulationEnv *se, const struct LoggingState *ls);
 CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,
-                                 struct SimulationEnv *se);
+                                 struct SimulationEnv *se, const struct LoggingState *ls);
 
 uint32_t checkpoint_checksum32(const void *data, size_t size);
 void checkpoint_header_set_magic(CheckpointHeader *header);
@@ -132,6 +133,18 @@ CheckpointStatus checkpoint_header_read(FILE *file, CheckpointHeader *header);
 void fill_state_payload(CheckpointStatePayload *payload, const struct SimulationState *ss);
 void apply_state_payload_to_simstate(const CheckpointStatePayload *payload,
                                      struct SimulationState *ss);
+
+typedef struct {
+    int framenum;
+    int verbose;
+    unsigned long verbose_interval;
+    int increment_precision;
+    int stime_precision;
+    int overpot_precision;
+} CheckpointLoggingPayload;
+
+CheckpointStatus fill_logging_payload(CheckpointLoggingPayload *payload,
+                                      const struct LoggingState *ls);
 
 void fill_env_payload(CheckpointEnvPayload *payload, const struct SimulationEnv *se);
 void apply_env_payload_to_config(const CheckpointEnvPayload *payload,

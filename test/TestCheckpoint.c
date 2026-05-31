@@ -313,9 +313,9 @@ void test_checkpoint_save_and_load_env_arrays_and_atom_names(void)
     se_save.flavor = FLAVOR_KMC;
     se_save.lattice_type = FCC;
     se_save.rand_seed = 24680u;
-    se_save.system_size_x = 8;
-    se_save.system_size_y = 9;
-    se_save.system_size_z = 10;
+    se_save.system_size_x = 20;
+    se_save.system_size_y = 20;
+    se_save.system_size_z = 20;
     se_save.overpotential_ramp_rate = 0.015;
     se_save.max_overpotential = 1.5;
     se_save.dissolution = 1;
@@ -349,12 +349,12 @@ void test_checkpoint_save_and_load_env_arrays_and_atom_names(void)
         memcpy(se_save.atom_names[i], names[i], name_len);
     }
 
-    save_status = checkpoint_save(temp_checkpoint_path, NULL, &se_save);
+    save_status = checkpoint_save(temp_checkpoint_path, NULL, &se_save, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "env array checkpoint should save successfully");
 
     // Load into a blank env so the test can verify the restore path repopulates every array.
-    load_status = checkpoint_load(temp_checkpoint_path, NULL, &se_load);
+    load_status = checkpoint_load(temp_checkpoint_path, NULL, &se_load, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
                                   "env array checkpoint should load successfully");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(FLAVOR_KMC, se_load.flavor, "flavor should restore");
@@ -399,9 +399,9 @@ void test_checkpoint_load_rejects_corrupted_env_atom_names_header(void)
     se.flavor = FLAVOR_MC;
     se.lattice_type = BCC;
     se.rand_seed = 123u;
-    se.system_size_x = 4;
-    se.system_size_y = 5;
-    se.system_size_z = 6;
+    se.system_size_x = 20;
+    se.system_size_y = 20;
+    se.system_size_z = 20;
     se.overpotential_ramp_rate = 0.01;
     se.max_overpotential = 1.0;
     se.dissolution = 1;
@@ -431,7 +431,7 @@ void test_checkpoint_load_rejects_corrupted_env_atom_names_header(void)
         memcpy(se.atom_names[i], names[i], name_len);
     }
 
-    save_status = checkpoint_save(temp_checkpoint_path, NULL, &se);
+    save_status = checkpoint_save(temp_checkpoint_path, NULL, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "baseline env array checkpoint should save successfully");
 
@@ -448,7 +448,7 @@ void test_checkpoint_load_rejects_corrupted_env_atom_names_header(void)
                                   "atom names header should be overwritten");
     fclose(file);
 
-    load_status = checkpoint_load(temp_checkpoint_path, NULL, &se);
+    load_status = checkpoint_load(temp_checkpoint_path, NULL, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_ERROR, load_status,
                                   "corrupted atom names header should fail to load");
 
@@ -1260,11 +1260,11 @@ void test_checkpoint_save_and_load_header_only(void)
     CheckpointStatus save_status;
     CheckpointStatus load_status;
 
-    save_status = checkpoint_save(temp_checkpoint_path, NULL, NULL);
+    save_status = checkpoint_save(temp_checkpoint_path, NULL, NULL, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "header-only checkpoint should save successfully");
 
-    load_status = checkpoint_load(temp_checkpoint_path, NULL, NULL);
+    load_status = checkpoint_load(temp_checkpoint_path, NULL, NULL, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
                                   "header-only checkpoint should load successfully");
 }
@@ -1289,13 +1289,13 @@ void test_checkpoint_save_and_load_state_scalars(void)
     ss.overpotential = 0.8;
     ss.total_atoms_dissolved = 7;
 
-    save_status = checkpoint_save(temp_checkpoint_path, &ss, NULL);
+    save_status = checkpoint_save(temp_checkpoint_path, &ss, NULL, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "state scalar checkpoint should save successfully");
 
     memset(&ss, 0, sizeof(ss));
 
-    load_status = checkpoint_load(temp_checkpoint_path, &ss, NULL);
+    load_status = checkpoint_load(temp_checkpoint_path, &ss, NULL, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
                                   "state scalar checkpoint should load successfully");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(42u, ss.iter, "iteration counter should restore");
@@ -1338,13 +1338,13 @@ void test_checkpoint_save_and_load_env_scalars(void)
     se.overpotential_ramp_rate = 0.01;
     se.max_overpotential = 1.0;
 
-    save_status = checkpoint_save(temp_checkpoint_path, NULL, &se);
+    save_status = checkpoint_save(temp_checkpoint_path, NULL, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "env scalar checkpoint should save successfully");
 
     memset(&se, 0, sizeof(se));
 
-    load_status = checkpoint_load(temp_checkpoint_path, NULL, &se);
+    load_status = checkpoint_load(temp_checkpoint_path, NULL, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
                                   "env scalar checkpoint should load successfully");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(FLAVOR_KMC, se.flavor, "flavor should restore");
@@ -1400,14 +1400,14 @@ void test_checkpoint_save_and_load_state_and_env(void)
     se.overpotential_ramp_rate = 0.01;
     se.max_overpotential = 1.0;
 
-    save_status = checkpoint_save(temp_checkpoint_path, &ss, &se);
+    save_status = checkpoint_save(temp_checkpoint_path, &ss, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "combined state+env checkpoint should save successfully");
 
     memset(&ss, 0, sizeof(ss));
     memset(&se, 0, sizeof(se));
 
-    load_status = checkpoint_load(temp_checkpoint_path, &ss, &se);
+    load_status = checkpoint_load(temp_checkpoint_path, &ss, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
                                   "combined state+env checkpoint should load successfully");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(100u, ss.iter, "iter should restore from combined checkpoint");
@@ -1469,13 +1469,13 @@ void test_checkpoint_save_and_load_atom_round_trip(void)
     ss.atom_cnt = 1;
     ss.atom_arr = atom_refs;
 
-    save_status = checkpoint_save(temp_checkpoint_path, &ss, &se);
+    save_status = checkpoint_save(temp_checkpoint_path, &ss, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "atom checkpoint should save successfully");
 
     memset(&ss, 0, sizeof(ss));
 
-    load_status = checkpoint_load(temp_checkpoint_path, &ss, &se);
+    load_status = checkpoint_load(temp_checkpoint_path, &ss, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
                                   "atom checkpoint should load successfully");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(1u, (unsigned int)ss.atom_cnt, "atom count should restore");
@@ -1496,7 +1496,7 @@ void test_checkpoint_load_missing_file_returns_error(void)
 
     remove(temp_checkpoint_path);
 
-    load_status = checkpoint_load(temp_checkpoint_path, NULL, NULL);
+    load_status = checkpoint_load(temp_checkpoint_path, NULL, NULL, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_ERROR, load_status,
                                   "loading a missing checkpoint should fail cleanly");
 }
@@ -1514,7 +1514,7 @@ void test_checkpoint_load_corrupted_payload_returns_error(void)
     ss.temperature = 273.15;
     ss.overpotential = 0.25;
 
-    save_status = checkpoint_save(temp_checkpoint_path, &ss, NULL);
+    save_status = checkpoint_save(temp_checkpoint_path, &ss, NULL, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "baseline checkpoint should save successfully");
 
@@ -1535,7 +1535,7 @@ void test_checkpoint_load_corrupted_payload_returns_error(void)
                                   "payload byte should be overwritten");
     fclose(file);
 
-    load_status = checkpoint_load(temp_checkpoint_path, &ss, NULL);
+    load_status = checkpoint_load(temp_checkpoint_path, &ss, NULL, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_ERROR, load_status,
                                   "loading a corrupted checkpoint should fail cleanly");
 }
@@ -1605,7 +1605,7 @@ void test_checkpoint_rebuild_zones_and_rates_from_atoms(void)
     }
 
     // Save the checkpoint before the restore-specific arrays are allocated.
-    save_status = checkpoint_save(temp_checkpoint_path, &ss_orig, &se);
+    save_status = checkpoint_save(temp_checkpoint_path, &ss_orig, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "checkpoint with atoms should save successfully");
 
@@ -1614,7 +1614,7 @@ void test_checkpoint_rebuild_zones_and_rates_from_atoms(void)
     TEST_ASSERT_NOT_NULL(ss_restored.zone_arr);
 
     // Load the checkpoint and let the restore path rebuild the derived structures.
-    load_status = checkpoint_load(temp_checkpoint_path, &ss_restored, &se);
+    load_status = checkpoint_load(temp_checkpoint_path, &ss_restored, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
                                   "checkpoint with atoms should load successfully");
 
