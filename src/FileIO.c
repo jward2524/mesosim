@@ -85,9 +85,9 @@ void open_log_files(struct LoggingState *ls, unsigned flavor)
                         "Failed to open steps csv file, ");
 
             if (flavor == FLAVOR_KMC) {
-                output_kmc_steps_header(format->steps.file, format->steps.coordination);
+                output_kmc_steps_header(format->steps.file, format->steps.with_coordination);
             } else if (flavor == FLAVOR_MC) {
-                output_mc_steps_header(format->steps.file, format->steps.coordination);
+                output_mc_steps_header(format->steps.file, format->steps.with_coordination);
             }
         }
     }
@@ -569,6 +569,11 @@ void output_csv_header(OutputFormat *format)
 void log_state_csv(OutputFormat *format, double stime_precision, double overpot_precision,
                    struct SimulationState *ss)
 {
+    if (format->type != OUTPUT_FORMAT_CSV) {
+        fprintf(stderr, "Error - Attempted to log csv data with non-csv output format\n");
+        clean_and_error(EXIT_FAILURE);
+    }
+
     safe_log(format->csv.file, "%d,", format->csv.frame_num);
     for (int i = 0; i < format->csv.field_count; ++i) {
         // malloc'd string, needs to be free'd when done
@@ -589,12 +594,13 @@ void log_state_csv(OutputFormat *format, double stime_precision, double overpot_
                  (i < format->csv.field_count - 1) ? "," : "\n");
         free((void *)value_str);
     }
+    format->csv.frame_num++;
 }
 
-void output_kmc_steps_header(FILE *csv_file, const bool output_coord)
+void output_kmc_steps_header(FILE *csv_file, const bool with_coord)
 {
     safe_log(csv_file, "iter,sim_time,energy,u1,v1,w1,u2,v2,w2");
-    if (output_coord) {
+    if (with_coord) {
         safe_log(csv_file, ",coordination");
     }
     safe_log(csv_file, "\n");
@@ -603,7 +609,8 @@ void output_kmc_steps_header(FILE *csv_file, const bool output_coord)
 // output to csv:
 // iteration number, simulation time, system energy (per atom?), x1, y1, z1, x2, y2, z2
 // and atom ids at some point
-void log_kmc_steps(FILE *csv_file, const StepData *step_data, double sim_time_precision)
+void log_kmc_steps(FILE *csv_file, const StepData *step_data, bool with_coord,
+                   double sim_time_precision)
 {
     safe_log(csv_file, "%lu,", step_data->iter);
     safe_log(csv_file, "%.*le,", sim_time_precision, step_data->kmc.sim_time);
@@ -614,16 +621,16 @@ void log_kmc_steps(FILE *csv_file, const StepData *step_data, double sim_time_pr
     } else {
         safe_log(csv_file, ",,");
     }
-    if (step_data->coord > 0) {
+    if (with_coord) {
         safe_log(csv_file, ",%d", step_data->coord);
     }
     safe_log(csv_file, "\n");
 }
 
-void output_mc_steps_header(FILE *csv_file, bool output_coord)
+void output_mc_steps_header(FILE *csv_file, bool with_coord)
 {
     safe_log(csv_file, "iter,energy,deltaE,performed,u1,v1,w1,u2,v2,w2");
-    if (output_coord) {
+    if (with_coord) {
         safe_log(csv_file, ",coordination");
     }
     safe_log(csv_file, "\n");
@@ -631,7 +638,7 @@ void output_mc_steps_header(FILE *csv_file, bool output_coord)
 
 // output to csv:
 // MCSS, system energy (per atom?), uvw1, uvw2
-void log_mc_steps(FILE *csv_file, const StepData *step_data)
+void log_mc_steps(FILE *csv_file, const StepData *step_data, bool with_coord)
 {
     safe_log(csv_file, "%lu,", step_data->iter);
     safe_log(csv_file, "%lf,", step_data->sys_energy);
@@ -639,22 +646,47 @@ void log_mc_steps(FILE *csv_file, const StepData *step_data)
     safe_log(csv_file, "%d,", step_data->mc.performed);
     safe_log(csv_file, "%d,%d,%d,", step_data->uvw1[0], step_data->uvw1[1], step_data->uvw1[2]);
     safe_log(csv_file, "%d,%d,%d", step_data->uvw2[0], step_data->uvw2[1], step_data->uvw2[2]);
-    if (step_data->coord > 0) {
+    if (with_coord) {
         safe_log(csv_file, ",%d", step_data->coord);
     }
     safe_log(csv_file, "\n");
 }
 
-bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, int stripped,
-                    struct SimulationState *ss, struct SimulationEnv *se)
+/**
+ * @brief creates suffix for xyz file based on output schedule mode and checkpoint value (iteration
+ * or time)
+ *
+ * @param suffix
+ * @param mode
+ * @param checkpoint
+ */
+void write_xyz_suffix(OutputScheduleMode mode, long int iteration, double sim_time, char *suffix)
+{
+    if ((mode == OUTPUT_SCHEDULE_INTERVAL_ITERATION) || (mode == OUTPUT_SCHEDULE_LIST_ITERATION)) {
+        snprintf(suffix, BUFFER_SIZE, "i%lu", iteration);
+    } else if ((mode == OUTPUT_SCHEDULE_INTERVAL_TIME) || (mode == OUTPUT_SCHEDULE_LIST_TIME)) {
+        snprintf(suffix, BUFFER_SIZE, "t%.4lf", sim_time);
+    }
+    return;
+}
+
+bool write_xyz_file(OutputFormat *format, struct SimulationState *ss, struct SimulationEnv *se)
 {
     bool is_extended = 1;
 
+    if (format->type != OUTPUT_FORMAT_XYZ) {
+        fprintf(stderr, "Error - Attempted to write xyz file with non-xyz output format\n");
+        clean_and_error(EXIT_FAILURE);
+    }
+
+    write_xyz_suffix(format->xyz.schedule.mode, ss->iter, ss->elapsed_stime, format->xyz.suffix);
+
     char filename_full[BUFFER_SIZE];
-    int n = snprintf(filename_full, BUFFER_SIZE, "%s_%d_%s.xyz", xyz_prefix, frame_num, suffix);
+    int n = snprintf(filename_full, BUFFER_SIZE, "%s_%d_%s.xyz", format->xyz.prefix,
+                     format->xyz.prefix, format->xyz.suffix);
     if ((size_t)n >= BUFFER_SIZE) {
         fprintf(stderr, "Error - Output filename too long (>%zu): %s_%d_%s.xyz\n", BUFFER_SIZE,
-                xyz_prefix, frame_num, suffix);
+                format->xyz.prefix, format->xyz.frame_num, format->xyz.suffix);
         clean_and_error(EXIT_FAILURE);
     }
     FILE *file = fopen(filename_full, "w+");
@@ -674,7 +706,7 @@ bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, int stripped,
     char *is_undercoord = (char *)malloc((size_t)ss->atom_cnt * sizeof(char));
     long strip_cnt = 0;
 
-    if (stripped) {
+    if (format->xyz.stripped) {
         for (long i = 0; i < ss->atom_cnt; ++i) {
             int coord = get_coordination(i, ss, se);
             is_undercoord[i] = (char)(coord < se->num_transition_vectors);
@@ -683,7 +715,7 @@ bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, int stripped,
     }
 
     // start with number of atoms
-    safe_log(file, "%ld\n", stripped ? strip_cnt : ss->atom_cnt);
+    safe_log(file, "%ld\n", format->xyz.stripped ? strip_cnt : ss->atom_cnt);
 
     if (is_extended) {
         // using extended XYZ format
@@ -703,14 +735,14 @@ bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, int stripped,
         safe_log(file, "Properties=id:I:1:species:S:1:pos:R:3 ");
     }
     safe_log(file, "frame=%d iteration=%lu time=%le temperature=%lf potential=%lf energy=%lf\n",
-             frame_num, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential,
+             format->xyz.frame_num, ss->iter, ss->elapsed_stime, ss->temperature, ss->overpotential,
              ss->total_internal_energy);
 
     Atom **atoms = ss->atom_arr;
     for (long i = 0; i < ss->atom_cnt; ++i) {
         // if stripped, only output atoms with < max coordination
         // what is max coordination?
-        int print = stripped ? is_undercoord[i] : 1;
+        int print = format->xyz.stripped ? is_undercoord[i] : 1;
         if (print) {
             safe_log(file, "%d %s %lf %lf %lf\n", i, se->atom_names[atoms[i]->type],
                      atoms[i]->cartesian[0], atoms[i]->cartesian[1], atoms[i]->cartesian[2]);
@@ -725,6 +757,7 @@ bool write_xyz_file(char *xyz_prefix, int frame_num, char *suffix, int stripped,
     create_coredump();
 #endif
 
+    format->xyz.frame_num++;
     return true;
 }
 
@@ -785,22 +818,17 @@ static int check_and_advance_checkpoint(OutputSchedule *sched, bool *state,
     return checkpoint_reached;
 }
 
-/**
- * @brief creates suffix for xyz file based on output schedule mode and checkpoint value (iteration
- * or time)
- *
- * @param suffix
- * @param mode
- * @param checkpoint
- */
-void write_xyz_suffix(char *suffix, OutputScheduleMode mode, double checkpoint)
+void write_steps_csv(FILE *steps_file, StepData *step_data, int flavor, bool with_coord,
+                     double stime_precision)
 {
-    if ((mode == OUTPUT_SCHEDULE_INTERVAL_ITERATION) || (mode == OUTPUT_SCHEDULE_LIST_ITERATION)) {
-        snprintf(suffix, BUFFER_SIZE, "i%lu", (unsigned long)checkpoint);
-    } else if ((mode == OUTPUT_SCHEDULE_INTERVAL_TIME) || (mode == OUTPUT_SCHEDULE_LIST_TIME)) {
-        snprintf(suffix, BUFFER_SIZE, "t%.4lf", checkpoint);
+    switch (flavor) {
+    case FLAVOR_KMC:
+        log_kmc_steps(steps_file, step_data, with_coord, stime_precision);
+        break;
+    case FLAVOR_MC:
+        log_mc_steps(steps_file, step_data, with_coord);
+        break;
     }
-    return;
 }
 
 /**
@@ -816,47 +844,29 @@ void write_logs(const StepData *step_data, struct SimulationState *ss, struct Si
                 struct LoggingState *ls)
 {
     // update framenums after, so initial logs (t=0) show frame 0
-    int logging = 0;
     for (int i = 0; i < ls->out_formats_cnt; i++) {
         OutputFormat *format = &(ls->out_formats[i]);
-        if (format->should_log_now) {
-            switch (format->type) {
-            case OUTPUT_FORMAT_CSV:
-                logging |= format->should_log_now;
-                log_state_csv(&format, ls->stime_precision, ls->overpot_precision, ss);
-                format->csv.frame_num++;
-                break;
-            case OUTPUT_FORMAT_XYZ:
-                logging |= format->should_log_now;
-                // suffix is expected to be updated by caller
-                write_xyz_file(format->xyz.prefix, format->xyz.frame_num, format->xyz.suffix,
-                               format->xyz.stripped, ss, se);
-                format->xyz.frame_num++;
-            case OUTPUT_FORMAT_STEPS_CSV:
-                // steps csv is written to every step
-                if (step_data) {
-                    switch (se->flavor) {
-                    case FLAVOR_KMC:
-                        log_kmc_steps(format->steps.file, step_data, ls->stime_precision);
-                        break;
-                    case FLAVOR_MC:
-                        log_mc_steps(format->steps.file, step_data);
-                    }
-                    break;
-                } else {
-                    fprintf(stderr, "Null pointer passed as step data to write_log\n");
-                }
+        switch (format->type) {
+        case OUTPUT_FORMAT_CSV:
+            log_state_csv(&format, ls->stime_precision, ls->overpot_precision, ss);
+            break;
+        case OUTPUT_FORMAT_XYZ:
+            // suffix is expected to be updated by caller
+            write_xyz_file(&format, ss, se);
+            break;
+        case OUTPUT_FORMAT_STEPS_CSV:
+            // steps csv is written to every step
+            if (step_data) {
+                write_steps_csv(format->steps.file, step_data, se->flavor,
+                                format->steps.with_coordination, ls->stime_precision);
             }
-            format->should_log_now = false;
+            break;
         }
     }
 
-    // if something is being logged, then output the frame to sim_log
-    if (logging) {
-        output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
-                        ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
-        ls->framenum++;
-    }
+    output_log_file(ls->sim_log, ls->framenum, ss->iter, ss->elapsed_stime, ss->temperature,
+                    ss->overpotential, ss->atom_cnt, ss->total_internal_energy);
+    ls->framenum++;
 
     return;
 }
@@ -872,21 +882,26 @@ void write_logs(const StepData *step_data, struct SimulationState *ss, struct Si
 void output_on_schedule(StepData *step_data, struct SimulationState *ss, struct SimulationEnv *se,
                         struct LoggingState *ls)
 {
+    bool write = false;
     for (int i = 0; i < ls->out_formats_cnt; i++) {
         OutputFormat *format = &(ls->out_formats[i]);
         switch (format->type) {
         case OUTPUT_FORMAT_CSV:
-            format->should_log_now =
-                check_and_advance_checkpoint(&format->csv.schedule, &format->is_active, ss);
+            write = check_and_advance_checkpoint(&format->csv.schedule, &format->is_active, ss);
+            if (write) {
+                log_state_csv(&format, ls->stime_precision, ls->overpot_precision, ss);
+            }
             break;
         case OUTPUT_FORMAT_XYZ:
-            write_xyz_suffix(format->xyz.suffix, format->xyz.schedule.mode,
-                             format->xyz.schedule.next_checkpoint);
-            format->should_log_now =
-                check_and_advance_checkpoint(&format->xyz.schedule, &format->is_active, ss);
+            write = check_and_advance_checkpoint(&format->xyz.schedule, &format->is_active, ss);
+            if (write) {
+                write_xyz_file(&format, ss, se);
+            }
             break;
         case OUTPUT_FORMAT_STEPS_CSV:
             // steps csv is written to every step, so no checkpoint to check against
+            write_steps_csv(format->steps.file, step_data, se->flavor,
+                            format->steps.with_coordination, ls->stime_precision);
             break;
         }
     }

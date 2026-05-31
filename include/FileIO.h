@@ -48,8 +48,7 @@ bool output_log_file(FILE *sim_log, int frame_num, unsigned long int iter, doubl
                      double temperature, double overpotential, long int atom_cnt,
                      double total_internal_energy);
 
-bool write_xyz_file(char *xyz_filename, int frame_num, char *suffix, int stripped,
-                    struct SimulationState *ss, struct SimulationEnv *se);
+bool write_xyz_file(OutputFormat *format, struct SimulationState *ss, struct SimulationEnv *se);
 
 void output_csv_header(OutputFormat *format);
 void log_state_csv(OutputFormat *format, double stime_precision, double overpot_precision,

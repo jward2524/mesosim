@@ -34,10 +34,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     }
     compute_transition_array(ss, se);
 
-    if (ls->output_xyz) {
-        write_xyz_suffix(ls->xyz_suffix, ls->xyz_schedule.mode, 0.);
-    }
-    write_logs(ls->output_state_csv, ls->output_xyz, ss, se, ls);
+    write_logs(NULL, ss, se, ls);
 
     // start with everything current to the current state
     // choose a transition
@@ -105,7 +102,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 old_y = ss->atom_arr[transitioning_atom_idx]->lattice[1];
                 old_z = ss->atom_arr[transitioning_atom_idx]->lattice[2];
 
-                coord = ls->steps_coord ? get_coordination(transitioning_atom_idx, ss, se) : -1;
+                coord = get_coordination(transitioning_atom_idx, ss, se);
 
                 // perform transition
                 if (transition_jump_vector != se->num_transition_vectors) {
@@ -242,14 +239,6 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
                 },
         };
 
-        if (ls->output_steps_csv) {
-            int uvw1[] = {old_x, old_y, old_z};
-            // lastxyzt will have wrong values if current step was evaporation
-            int uvw2[] = {lastxt, lastyt, lastzt};
-            log_kmc_steps(ls->steps_csv, ss->iter, ss->elapsed_stime, ls->stime_precision,
-                          ss->total_internal_energy, uvw1, uvw2, is_evaporation, coord);
-        }
-
         output_on_schedule(&step_data, ss, se, ls);
 
         // check if simulation is over
@@ -262,17 +251,11 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 
     // write elapsed_stime to mark finish
     if ((ss->final_iteration > 0) && (ss->iter >= ss->final_iteration)) {
-        if (ls->output_xyz) {
-            snprintf(ls->xyz_suffix, BUFFER_SIZE, "i%lu", (unsigned long)ss->iter);
-        }
-        write_logs(ls->output_state_csv, ls->output_xyz, ss, se, ls);
+        write_logs(NULL, ss, se, ls);
         safe_log(ls->sim_log, "Reached final iteration and terminated\n");
     }
     if ((ss->run_stime > 0) && (ss->elapsed_stime >= ss->run_stime)) {
-        if (ls->output_xyz) {
-            snprintf(ls->xyz_suffix, BUFFER_SIZE, "t%lf", ss->elapsed_stime);
-        }
-        write_logs(ls->output_state_csv, ls->output_xyz, ss, se, ls);
+        write_logs(NULL, ss, se, ls);
         safe_log(ls->sim_log, "Reached end of simulation time and terminated\n");
     }
 
@@ -281,8 +264,6 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     return 0;
 }
 
-/******************************************************************************/
-/******************************************************************************/
 // updates ss->transition_probability (weighted rate list, used to choose event)
 void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *se)
 {

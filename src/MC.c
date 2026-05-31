@@ -39,11 +39,8 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
     char suffix[BUFFER_SIZE];
     snprintf(suffix, BUFFER_SIZE, "i0");
 
-    // initial state
-    if (ls->output_xyz) {
-        write_xyz_suffix(ls->xyz_suffix, ls->xyz_schedule.mode, 0.);
-    }
-    write_logs(ls->output_state_csv, ls->output_xyz, ss, se, ls);
+    // log initial state
+    write_logs(NULL, ss, se, ls);
 
     int old_u, old_v, old_w;
     int new_u, new_v, new_w;
@@ -125,7 +122,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             // perform transition
             // duplicating what is in perform_simulation
 
-            coord = ls->steps_coord ? get_coordination(transitioning_atom_idx, ss, se) : -1;
+            coord = get_coordination(transitioning_atom_idx, ss, se);
 
             adjust_pbc(&new_u, &new_v, &new_w, se);
 
@@ -149,14 +146,6 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
             }
         }
 
-        // csv log
-        if (ls->output_steps_csv) {
-            int uvw1[] = {old_u, old_v, old_w};
-            int uvw2[] = {new_u, new_v, new_w};
-            log_mc_steps(ls->steps_csv, ss->iter, ss->total_internal_energy, deltaE, perform_flag,
-                         uvw1, uvw2, coord);
-        }
-
         StepData step_data = {
             .flavor = se->flavor,
             .iter = ss->iter,
@@ -175,10 +164,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
     }
 
     // write elapsed_stime to mark finish
-    if (ls->output_xyz) {
-        snprintf(ls->xyz_suffix, BUFFER_SIZE, "i%lu", (unsigned long)ss->iter);
-    }
-    write_logs(ls->output_state_csv, ls->output_xyz, ss, se, ls);
+    write_logs(NULL, ss, se, ls);
     safe_log(ls->sim_log, "Reached final iteration and terminated\n");
 
     printf("Finished simulation\n");

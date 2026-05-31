@@ -555,7 +555,7 @@ static InputErrorFlag parse_steps_csv(int argc, char **argv, struct LoggingState
 
     // Check for optional 'coord' parameter
     if (idx < argc && strcmp(argv[idx], "coord") == 0) {
-        format->steps.coordination = true;
+        format->steps.with_coordination = true;
         idx++;
     }
 

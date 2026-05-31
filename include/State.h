@@ -213,7 +213,7 @@ typedef enum { OUTPUT_FORMAT_CSV = 1, OUTPUT_FORMAT_XYZ, OUTPUT_FORMAT_STEPS_CSV
 typedef struct {
     int type;
     bool is_active;
-    bool should_log_now; // indicates whether this format should be logged at current iteration
+    // bool should_log_now; // indicates whether this format should be logged at current iteration
     union {
         struct {
             char filename[256];
@@ -234,7 +234,7 @@ typedef struct {
         struct {
             char filename[256];
             FILE *file;
-            int coordination;
+            bool with_coordination;
         } steps;
     };
 } OutputFormat;
