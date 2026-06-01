@@ -389,6 +389,121 @@ void test_apply_logging_payload_restores_selected_logging_scalars(void)
     TEST_ASSERT_NULL_MESSAGE(ls.sim_log, "sim_log should not be modified by the helper");
 }
 
+void test_fill_output_format_array_payload_serializes_formats(void)
+{
+    struct LoggingState ls = {0};
+    CheckpointOutputFormatArrPayload arr = {0};
+
+    const int n = 4;
+    ls.out_formats_cnt = n;
+    ls.out_formats = (OutputFormat *)malloc((size_t)n * sizeof(OutputFormat));
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls.out_formats, "out_formats should allocate");
+
+    /* CSV format entry */
+    ls.out_formats[0].type = OUTPUT_FORMAT_CSV;
+    ls.out_formats[0].is_active = true;
+    strncpy(ls.out_formats[0].csv.filename, "out.csv", sizeof(ls.out_formats[0].csv.filename));
+    ls.out_formats[0].csv.field_count = 2;
+    ls.out_formats[0].csv.frame_num = 42;
+    ls.out_formats[0].csv.schedule.mode = OUTPUT_SCHEDULE_INTERVAL_ITERATION;
+    ls.out_formats[0].csv.schedule.interval = 1.5;
+    ls.out_formats[0].csv.schedule.frame_num = 7;
+
+    /* Second CSV format entry */
+    ls.out_formats[1].type = OUTPUT_FORMAT_CSV;
+    ls.out_formats[1].is_active = false;
+    strncpy(ls.out_formats[1].csv.filename, "other.csv", sizeof(ls.out_formats[1].csv.filename));
+    ls.out_formats[1].csv.field_count = 4;
+    ls.out_formats[1].csv.frame_num = 99;
+    ls.out_formats[1].csv.schedule.mode = OUTPUT_SCHEDULE_LIST_TIME;
+    ls.out_formats[1].csv.schedule.interval = 0.25;
+    ls.out_formats[1].csv.schedule.frame_num = 11;
+
+    /* STEPS format entry */
+    ls.out_formats[2].type = OUTPUT_FORMAT_STEPS_CSV;
+    ls.out_formats[2].is_active = true;
+    strncpy(ls.out_formats[2].steps.filename, "steps.csv",
+            sizeof(ls.out_formats[2].steps.filename));
+    ls.out_formats[2].steps.with_coordination = true;
+
+    /* XYZ format entry */
+    ls.out_formats[3].type = OUTPUT_FORMAT_XYZ;
+    ls.out_formats[3].is_active = true;
+    strncpy(ls.out_formats[3].xyz.prefix, "prefix", sizeof(ls.out_formats[3].xyz.prefix));
+    strncpy(ls.out_formats[3].xyz.suffix, "suffix", sizeof(ls.out_formats[3].xyz.suffix));
+    ls.out_formats[3].xyz.frame_num = 13;
+    ls.out_formats[3].xyz.stripped = true;
+    ls.out_formats[3].xyz.schedule.mode = OUTPUT_SCHEDULE_INTERVAL_TIME;
+    ls.out_formats[3].xyz.schedule.interval = 2.5;
+    ls.out_formats[3].xyz.schedule.frame_num = 17;
+
+    CheckpointStatus status = fill_output_format_array_payload(&arr, &ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "fill should succeed");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(n, arr.n_out_formats, "n_out_formats should copy");
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[0].type, arr.formats[0].type, "csv type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[0].is_active, arr.formats[0].is_active,
+                                  "csv active");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(ls.out_formats[0].csv.filename,
+                                     arr.formats[0].data.csv.filename, "csv filename");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[0].csv.field_count,
+                                  arr.formats[0].data.csv.field_count, "csv field_count");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[0].csv.frame_num,
+                                  arr.formats[0].data.csv.frame_num, "csv frame_num");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[0].csv.schedule.mode,
+                                  arr.formats[0].data.csv.schedule.mode, "csv schedule.mode");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(ls.out_formats[0].csv.schedule.interval,
+                                     arr.formats[0].data.csv.schedule.interval,
+                                     "csv schedule.interval");
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[1].type, arr.formats[1].type, "second csv type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[1].is_active, arr.formats[1].is_active,
+                                  "second csv active");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(ls.out_formats[1].csv.filename,
+                                     arr.formats[1].data.csv.filename, "second csv filename");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[1].csv.field_count,
+                                  arr.formats[1].data.csv.field_count, "second csv field_count");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[1].csv.frame_num,
+                                  arr.formats[1].data.csv.frame_num, "second csv frame_num");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[1].csv.schedule.mode,
+                                  arr.formats[1].data.csv.schedule.mode,
+                                  "second csv schedule.mode");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(ls.out_formats[1].csv.schedule.interval,
+                                     arr.formats[1].data.csv.schedule.interval,
+                                     "second csv schedule.interval");
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[2].type, arr.formats[2].type, "steps type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[2].is_active, arr.formats[2].is_active,
+                                  "steps active");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(ls.out_formats[2].steps.filename,
+                                     arr.formats[2].data.steps.filename, "steps filename");
+    TEST_ASSERT_EQUAL_INT_MESSAGE((int)ls.out_formats[2].steps.with_coordination,
+                                  (int)arr.formats[2].data.steps.with_coordination,
+                                  "steps with_coordination");
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[3].type, arr.formats[3].type, "xyz type");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[3].is_active, arr.formats[3].is_active,
+                                  "xyz active");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(ls.out_formats[3].xyz.prefix, arr.formats[3].data.xyz.prefix,
+                                     "xyz prefix");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(ls.out_formats[3].xyz.suffix, arr.formats[3].data.xyz.suffix,
+                                     "xyz suffix");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[3].xyz.frame_num,
+                                  arr.formats[3].data.xyz.frame_num, "xyz frame_num");
+    TEST_ASSERT_EQUAL_INT_MESSAGE((int)ls.out_formats[3].xyz.stripped,
+                                  (int)arr.formats[3].data.xyz.stripped, "xyz stripped");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[3].xyz.schedule.mode,
+                                  arr.formats[3].data.xyz.schedule.mode, "xyz schedule.mode");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(ls.out_formats[3].xyz.schedule.interval,
+                                     arr.formats[3].data.xyz.schedule.interval,
+                                     "xyz schedule.interval");
+
+    free(ls.out_formats);
+    if (arr.formats) {
+        free(arr.formats);
+    }
+}
+
 void test_checkpoint_save_and_load_env_arrays_and_atom_names(void)
 {
     // Round-trip the env arrays that are serialized separately from the scalar payload.
@@ -1771,6 +1886,7 @@ int main(void)
     RUN_TEST(test_fill_logging_payload_copies_selected_logging_scalars);
     RUN_TEST(test_fill_logging_payload_copies_logging_edge_values);
     RUN_TEST(test_apply_logging_payload_restores_selected_logging_scalars);
+    RUN_TEST(test_fill_output_format_array_payload_serializes_formats);
 
     RUN_TEST(test_validate_array_header_accepts_valid_header);
     RUN_TEST(test_validate_array_header_rejects_invalid_magic);

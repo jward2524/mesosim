@@ -574,14 +574,6 @@ CheckpointStatus apply_atom_array(const CheckpointAtomPayload *atom_payload_arr,
     return CHECKPOINT_OK;
 }
 
-typedef struct {
-    int filler;
-} CheckpointOutputFormatArrPayload;
-
-typedef struct {
-    int filler;
-} CheckpointOutputFormatPayload;
-
 void fill_logging_payload(CheckpointLoggingPayload *payload, const struct LoggingState *ls)
 {
     if (!payload || !ls) {
@@ -596,10 +588,92 @@ void fill_logging_payload(CheckpointLoggingPayload *payload, const struct Loggin
     payload->overpot_precision = ls->overpot_precision;
 }
 
+static void copy_output_schedule_payload(CheckpointOutputSchedulePayload *dest,
+                                         const OutputSchedule *source)
+{
+    dest->mode = source->mode;
+    dest->interval = source->interval;
+    dest->list_len = source->list_len;
+    dest->list_idx = source->list_idx;
+    dest->next_checkpoint = source->next_checkpoint;
+    dest->frame_num = source->frame_num;
+}
+
+static void copy_output_format_csv_payload(CheckpointOutputFormatCsvPayload *dest,
+                                           const OutputFormat *source)
+{
+    copy_output_schedule_payload(&dest->schedule, &source->csv.schedule);
+    memcpy(dest->filename, source->csv.filename, sizeof(dest->filename));
+    dest->field_count = source->csv.field_count;
+    dest->frame_num = source->csv.frame_num;
+}
+
+static void copy_output_format_xyz_payload(CheckpointOutputFormatXyzPayload *dest,
+                                           const OutputFormat *source)
+{
+    copy_output_schedule_payload(&dest->schedule, &source->xyz.schedule);
+    memcpy(dest->prefix, source->xyz.prefix, sizeof(dest->prefix));
+    memcpy(dest->suffix, source->xyz.suffix, sizeof(dest->suffix));
+    dest->frame_num = source->xyz.frame_num;
+    dest->stripped = (uint8_t)source->xyz.stripped;
+}
+
+static void copy_output_format_steps_payload(CheckpointOutputFormatStepsPayload *dest,
+                                             const OutputFormat *source)
+{
+    memcpy(dest->filename, source->steps.filename, sizeof(dest->filename));
+    dest->with_coordination = (uint8_t)source->steps.with_coordination;
+}
+
 CheckpointStatus fill_output_format_array_payload(CheckpointOutputFormatArrPayload *arr_payload,
                                                   const struct LoggingState *ls)
 {
-    return CHECKPOINT_ERROR;
+    if (arr_payload == NULL || ls == NULL) {
+        return CHECKPOINT_ERROR;
+    }
+
+    arr_payload->n_out_formats = ls->out_formats_cnt;
+    if (arr_payload->n_out_formats <= 0) {
+        arr_payload->formats = NULL;
+        return CHECKPOINT_OK;
+    }
+
+    arr_payload->formats = (CheckpointOutputFormatPayload *)calloc(
+        (size_t)arr_payload->n_out_formats, sizeof(*arr_payload->formats));
+    if (arr_payload->formats == NULL) {
+        fprintf(stderr, "Checkpoint error: failed to allocate memory for output formats: %s\n",
+                strerror(errno));
+        return CHECKPOINT_ERROR;
+    }
+
+    for (int i = 0; i < arr_payload->n_out_formats; ++i) {
+        const OutputFormat *source_format = &ls->out_formats[i];
+        CheckpointOutputFormatPayload *dest_format = &arr_payload->formats[i];
+
+        dest_format->type = (uint8_t)source_format->type;
+        dest_format->is_active = (uint8_t)source_format->is_active;
+
+        switch (source_format->type) {
+        case OUTPUT_FORMAT_CSV:
+            copy_output_format_csv_payload(&dest_format->data.csv, source_format);
+            break;
+        case OUTPUT_FORMAT_XYZ:
+            copy_output_format_xyz_payload(&dest_format->data.xyz, source_format);
+            break;
+        case OUTPUT_FORMAT_STEPS_CSV:
+            copy_output_format_steps_payload(&dest_format->data.steps, source_format);
+            break;
+        default:
+            fprintf(stderr, "Checkpoint error: unsupported output format type %d\n",
+                    source_format->type);
+            free(arr_payload->formats);
+            arr_payload->formats = NULL;
+            arr_payload->n_out_formats = 0;
+            return CHECKPOINT_ERROR;
+        }
+    }
+
+    return CHECKPOINT_OK;
 }
 
 CheckpointStatus write_output_format_array(const CheckpointOutputFormatArrPayload *arr_payload,

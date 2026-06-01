@@ -144,6 +144,8 @@ typedef struct {
 } CheckpointLoggingPayload;
 
 void fill_logging_payload(CheckpointLoggingPayload *payload, const struct LoggingState *ls);
+void apply_logging_payload_to_loggingstate(const CheckpointLoggingPayload *payload,
+                                           struct LoggingState *ls);
 
 void fill_env_payload(CheckpointEnvPayload *payload, const struct SimulationEnv *se);
 void apply_env_payload_to_config(const CheckpointEnvPayload *payload,
@@ -175,5 +177,60 @@ CheckpointStatus write_array(uint16_t flag, uint32_t n, const void *arr, size_t 
 CheckpointStatus read_array(const uint8_t *payload, size_t *bytes_read, uint16_t *out_flag,
                             uint32_t *out_n, void **out_arr);
 CheckpointStatus verify_payload_size(FILE *file, CheckpointHeader *header);
+
+#pragma pack(push, 1)
+typedef struct {
+    int mode;
+    double interval;
+    int list_len;
+    int list_idx;
+    double next_checkpoint;
+    int frame_num;
+} CheckpointOutputSchedulePayload;
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+typedef struct {
+    CheckpointOutputSchedulePayload schedule;
+    char filename[256];
+    int field_count;
+    int frame_num;
+} CheckpointOutputFormatCsvPayload;
+typedef struct {
+    CheckpointOutputSchedulePayload schedule;
+    char prefix[256];
+    char suffix[256];
+    int frame_num;
+    uint8_t stripped;
+} CheckpointOutputFormatXyzPayload;
+typedef struct {
+    char filename[256];
+    uint8_t with_coordination;
+} CheckpointOutputFormatStepsPayload;
+typedef struct {
+    uint8_t type;
+    uint8_t is_active;
+    union {
+        CheckpointOutputFormatCsvPayload csv;
+        CheckpointOutputFormatXyzPayload xyz;
+        CheckpointOutputFormatStepsPayload steps;
+    } data;
+} CheckpointOutputFormatPayload;
+#pragma pack(pop)
+
+typedef struct {
+    CheckpointOutputFormatPayload *formats;
+    int n_out_formats;
+} CheckpointOutputFormatArrPayload;
+
+/* Output format array helpers */
+CheckpointStatus fill_output_format_array_payload(CheckpointOutputFormatArrPayload *arr_payload,
+                                                  const struct LoggingState *ls);
+void apply_output_format_array_to_loggingstate(const CheckpointOutputFormatArrPayload *arr_payload,
+                                               struct LoggingState *ls);
+CheckpointStatus write_output_format_array(const CheckpointOutputFormatArrPayload *arr_payload,
+                                           uint8_t **p_payload, uint32_t *p_payload_bytes);
+CheckpointStatus read_output_format_array(uint8_t *payload, size_t *total_bytes_read,
+                                          CheckpointOutputFormatArrPayload *arr_payload);
 
 #endif // CHECKPOINT_H
