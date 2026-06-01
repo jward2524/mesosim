@@ -679,7 +679,47 @@ CheckpointStatus fill_output_format_array_payload(CheckpointOutputFormatArrPaylo
 CheckpointStatus write_output_format_array(const CheckpointOutputFormatArrPayload *arr_payload,
                                            uint8_t **p_payload, uint32_t *p_payload_bytes)
 {
-    return CHECKPOINT_ERROR;
+    if (p_payload == NULL || p_payload_bytes == NULL) {
+        fprintf(stderr, "Checkpoint error: invalid output buffer for output format array\n");
+        return CHECKPOINT_ERROR;
+    }
+
+    if (arr_payload == NULL) {
+        // nothing to write
+        return CHECKPOINT_OK;
+    }
+
+    // turns any negative values into zero
+    uint32_t n = (arr_payload->n_out_formats > 0) ? (uint32_t)arr_payload->n_out_formats : 0u;
+    size_t elem_size = sizeof(CheckpointOutputFormatPayload);
+
+    if (n > 0 && arr_payload->formats == NULL) {
+        fprintf(stderr, "Checkpoint error: output format array has non-zero count but NULL data\n");
+        return CHECKPOINT_ERROR;
+    }
+
+    CheckpointStatus status =
+        write_fixed_array((uint16_t)CAF_OUTPUT_FORMATS, n, arr_payload->formats, elem_size,
+                          p_payload, p_payload_bytes);
+
+    return status;
+}
+
+static CheckpointStatus write_fixed_array(uint16_t flag, const void *arr, uint32_t n,
+                                          size_t elem_size, uint8_t **p_payload,
+                                          uint32_t *p_payload_bytes)
+{
+    if (p_payload == NULL || p_payload_bytes == NULL) {
+        fprintf(stderr, "Checkpoint error: invalid output buffer for array write\n");
+        return CHECKPOINT_ERROR;
+    }
+    if (n > 0 && arr == NULL) {
+        fprintf(stderr, "Checkpoint error: array flag %u has non-zero count but NULL data\n",
+                (unsigned)flag);
+        return CHECKPOINT_ERROR;
+    }
+    CheckpointStatus status = write_array(flag, n, arr, elem_size, p_payload, p_payload_bytes);
+    return status;
 }
 
 CheckpointStatus read_output_format_array(uint8_t *payload, size_t *total_bytes_read,

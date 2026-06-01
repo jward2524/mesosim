@@ -91,6 +91,7 @@ typedef enum CheckpointArrayFlag {
     CAF_IS_SOLUBLE,
     CAF_ATOM_NAMES,
     CAF_ATOM_NAME_STR,
+    CAF_OUTPUT_FORMATS,
     CAF_SENTINEL,
 } CheckpointArrayFlag;
 

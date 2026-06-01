@@ -504,6 +504,68 @@ void test_fill_output_format_array_payload_serializes_formats(void)
     }
 }
 
+void test_write_output_format_array_serializes_formats(void)
+{
+    struct LoggingState ls = {0};
+    CheckpointOutputFormatArrPayload arr = {0};
+    uint8_t *payload = NULL;
+    uint32_t payload_bytes = 0u;
+
+    /* Create three output formats: CSV, STEPS, XYZ to exercise variants */
+    ls.out_formats_cnt = 3;
+    ls.out_formats = (OutputFormat *)malloc((size_t)ls.out_formats_cnt * sizeof(OutputFormat));
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls.out_formats, "out_formats should allocate");
+
+    /* CSV entry */
+    ls.out_formats[0].type = OUTPUT_FORMAT_CSV;
+    ls.out_formats[0].is_active = true;
+    strncpy(ls.out_formats[0].csv.filename, "out.csv", sizeof(ls.out_formats[0].csv.filename));
+    ls.out_formats[0].csv.field_count = 2;
+
+    /* STEPS entry */
+    ls.out_formats[1].type = OUTPUT_FORMAT_STEPS_CSV;
+    ls.out_formats[1].is_active = false;
+    strncpy(ls.out_formats[1].steps.filename, "steps_out.csv",
+            sizeof(ls.out_formats[1].steps.filename));
+    ls.out_formats[1].steps.with_coordination = true;
+
+    /* XYZ entry */
+    ls.out_formats[2].type = OUTPUT_FORMAT_XYZ;
+    ls.out_formats[2].is_active = true;
+    strncpy(ls.out_formats[2].xyz.prefix, "pfx", sizeof(ls.out_formats[2].xyz.prefix));
+    strncpy(ls.out_formats[2].xyz.suffix, "sfx", sizeof(ls.out_formats[2].xyz.suffix));
+    ls.out_formats[2].xyz.frame_num = 5;
+    ls.out_formats[2].xyz.stripped = false;
+
+    CheckpointStatus status = fill_output_format_array_payload(&arr, &ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "fill should succeed");
+
+    status = write_output_format_array(&arr, &payload, &payload_bytes);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        CHECKPOINT_OK, status,
+        "write_output_format_array should succeed (TDD red expects failure)");
+    TEST_ASSERT_NOT_NULL_MESSAGE(payload, "write should allocate payload bytes");
+
+    /* At minimum we expect the array magic to be present at the start of the payload. */
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(&((const uint16_t){CHECKPOINT_ARRAY_MAGIC}), payload,
+                                     sizeof(uint16_t), "payload should start with array magic");
+
+    /* Verify the array header reports the correct number of elements */
+    const size_t header_n_offset = sizeof(uint16_t) + sizeof(uint16_t);
+    uint32_t reported_n = 0u;
+    TEST_ASSERT_TRUE_MESSAGE(payload_bytes >= header_n_offset + sizeof(uint32_t),
+                             "payload should contain complete array header");
+    memcpy(&reported_n, payload + header_n_offset, sizeof(reported_n));
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE((uint32_t)ls.out_formats_cnt, reported_n,
+                                     "array header should report correct element count");
+
+    free(payload);
+    free(ls.out_formats);
+    if (arr.formats) {
+        free(arr.formats);
+    }
+}
+
 void test_checkpoint_save_and_load_env_arrays_and_atom_names(void)
 {
     // Round-trip the env arrays that are serialized separately from the scalar payload.
@@ -1887,6 +1949,7 @@ int main(void)
     RUN_TEST(test_fill_logging_payload_copies_logging_edge_values);
     RUN_TEST(test_apply_logging_payload_restores_selected_logging_scalars);
     RUN_TEST(test_fill_output_format_array_payload_serializes_formats);
+    RUN_TEST(test_write_output_format_array_serializes_formats);
 
     RUN_TEST(test_validate_array_header_accepts_valid_header);
     RUN_TEST(test_validate_array_header_rejects_invalid_magic);
