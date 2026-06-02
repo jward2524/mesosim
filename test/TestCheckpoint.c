@@ -544,62 +544,11 @@ void test_fill_output_format_array_payload_serializes_formats(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "fill should succeed");
     TEST_ASSERT_EQUAL_INT_MESSAGE(n, arr.n_out_formats, "n_out_formats should copy");
 
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[0].type, arr.formats[0].type, "csv type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[0].is_active, arr.formats[0].is_active,
-                                  "csv active");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(ls.out_formats[0].csv.filename,
-                                     arr.formats[0].data.csv.filename, "csv filename");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[0].csv.field_count,
-                                  arr.formats[0].data.csv.field_count, "csv field_count");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[0].csv.frame_num,
-                                  arr.formats[0].data.csv.frame_num, "csv frame_num");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[0].csv.schedule.mode,
-                                  arr.formats[0].data.csv.schedule.mode, "csv schedule.mode");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(ls.out_formats[0].csv.schedule.interval,
-                                     arr.formats[0].data.csv.schedule.interval,
-                                     "csv schedule.interval");
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[1].type, arr.formats[1].type, "second csv type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[1].is_active, arr.formats[1].is_active,
-                                  "second csv active");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(ls.out_formats[1].csv.filename,
-                                     arr.formats[1].data.csv.filename, "second csv filename");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[1].csv.field_count,
-                                  arr.formats[1].data.csv.field_count, "second csv field_count");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[1].csv.frame_num,
-                                  arr.formats[1].data.csv.frame_num, "second csv frame_num");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[1].csv.schedule.mode,
-                                  arr.formats[1].data.csv.schedule.mode,
-                                  "second csv schedule.mode");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(ls.out_formats[1].csv.schedule.interval,
-                                     arr.formats[1].data.csv.schedule.interval,
-                                     "second csv schedule.interval");
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[2].type, arr.formats[2].type, "steps type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[2].is_active, arr.formats[2].is_active,
-                                  "steps active");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(ls.out_formats[2].steps.filename,
-                                     arr.formats[2].data.steps.filename, "steps filename");
-    TEST_ASSERT_EQUAL_INT_MESSAGE((int)ls.out_formats[2].steps.with_coordination,
-                                  (int)arr.formats[2].data.steps.with_coordination,
-                                  "steps with_coordination");
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[3].type, arr.formats[3].type, "xyz type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[3].is_active, arr.formats[3].is_active,
-                                  "xyz active");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(ls.out_formats[3].xyz.prefix, arr.formats[3].data.xyz.prefix,
-                                     "xyz prefix");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(ls.out_formats[3].xyz.suffix, arr.formats[3].data.xyz.suffix,
-                                     "xyz suffix");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[3].xyz.frame_num,
-                                  arr.formats[3].data.xyz.frame_num, "xyz frame_num");
-    TEST_ASSERT_EQUAL_INT_MESSAGE((int)ls.out_formats[3].xyz.stripped,
-                                  (int)arr.formats[3].data.xyz.stripped, "xyz stripped");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(ls.out_formats[3].xyz.schedule.mode,
-                                  arr.formats[3].data.xyz.schedule.mode, "xyz schedule.mode");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(ls.out_formats[3].xyz.schedule.interval,
-                                     arr.formats[3].data.xyz.schedule.interval,
-                                     "xyz schedule.interval");
+    for (int i = 0; i < n; ++i) {
+        char message[64];
+        snprintf(message, sizeof(message), "filled output format %d should match", i);
+        assert_output_format_matches_runtime(&ls.out_formats[i], &arr.formats[i], message);
+    }
 
     free(ls.out_formats);
     if (arr.formats) {
