@@ -1,8 +1,8 @@
 /**
  * @file Random.c
  * @author Luis Granadillo
- * @brief Random number generator implementation adapted from Numerical Recipes in C for reentrant
- * use and better properties than built-in rand().
+ * @brief Random number generator implementation adapted from 'Numerical Recipes in C++' (3rd
+ * edition) for reentrant use and better properties than the built-in rand().
  * @version 0.1
  * @date 2026-06-01
  *
@@ -10,90 +10,85 @@
  *
  */
 
-#define IA 16807
-#define IM 2147483647
-#define AM (1.0 / IM)
-#define IQ 127773
-#define IR 2836
-#define NTAB 32
-#define NDIV (1 + (IM - 1) / NTAB)
-#define EPS 1.2e-7 // TODO: use a C macro, like FLT_EPSILON
-#define RNMX (1.0 - EPS)
-
-// ENHANCE: consider implementing a more modern generator, like xoshiro256** or PCG, for better
-// performance and statistical properties
-// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
-
-// TODO: create one function for seeding the generator and one for generating random numbers
-// both require the state? so it is updated and used reentrantly
+#include "Random.h"
+#include <limits.h>
 
 /**
- * @brief ran1 from Numerical Recipes in C (Ch. 7.1), adapted to use a pointer for the seed
+ * @brief Initialize the random state with a seed value, then run the generator a few times to mix
+ * the state.
  *
- * @param idum
- * @return float
+ * @param j seed value to initialize the generator
+ * @param state pointer to the random state struct to initialize
  */
-float ran1(long *idum)
+void sran(unsigned long long j, RandomState *state)
 {
-    /* “Minimal” random number generator of Park and Miller with Bays-Durham shuffle and added
-    safeguards. Returns a uniform random deviate between 0.0 and 1.0 (exclusive of the endpoint
-    values). Call with idum a negative integer to initialize; thereafter, do not alter idum between
-    successive deviates in a sequence. RNMX should approximate the largest floating value that is
-    less than 1. */
-    // TODO: change return type to double and update constants accordingly
-    int j;
-    long k;
-    float temp; // TODO: change to double
+    state->v = 4101842887655102017ULL;
+    state->w = 1;
 
-    // these retain their values between calls to maintain the state of the generator
-    // TODO: expose a structure for the generator state for reentrant use
-    static long iy = 0;
-    static long iv[NTAB];
-
-    // Initialize when iy is zero
-    if (*idum <= 0 || !iy) {
-        // Be sure to prevent idum = 0.
-        if (-(*idum) < 1) {
-            *idum = 1;
-        } else {
-            *idum = -(*idum);
-        }
-
-        // Load the shuffle table(after 8 warm-ups).
-        for (j = NTAB + 7; j >= 0; j--) {
-            k = (*idum) / IQ;
-            *idum = IA * (*idum - k * IQ) - IR * k;
-            if (*idum < 0) {
-                *idum += IM;
-            }
-            if (j < NTAB) {
-                iv[j] = *idum;
-            }
-        }
-        iy = iv[0];
+    if (j == 0) {
+        // seed of 0 is not allowed for this generator, so replace it with a large nonzero value
+        // in this case, all 1 bits
+        j = ULONG_LONG_MAX;
     }
 
-    // Start here when not initializing.
-    k = (*idum) / IQ;
+    // avalanche step from MumurHash3, based on suggestion from
+    // www.numerical.recipes/forumarchive/index.php/t-2267.html
+    j ^= j >> 33;
+    j *= 0xff51afd7ed558ccdULL;
+    j ^= j >> 33;
+    j *= 0xc4ceb9fe1a85ec53ULL;
+    j ^= j >> 33;
 
-    // Compute idum = (IA * idum) % IM without overflows by Schrage’s method.
-    *idum = IA * (*idum - k * IQ) - IR * k;
+    state->u = j ^ state->v;
+    ran(state);
+    state->v = state->u;
+    ran(state);
+    state->w = state->v;
+    ran(state);
+}
 
-    if (*idum < 0) {
-        *idum += IM;
-    }
+/**
+ * @brief Combined random number generator, produces a random positive integer ranging from 1? to
+ * ULONG_LONG_MAX (usually 2^64-1). Implementation of Ran (Ch. 7.1) from Numerical Recipes in C++
+ * (3rd edition), adapted for reentrant use. Described by [A1_l(C3) + A3_r] ^ B1
+ *
+ * @param state pointer to the random state struct
+ * @return random integer in the range [1?, ULONG_LONG_MAX?]
+ */
+unsigned long long ran(RandomState *state)
+{
+    // u: LCG moduluo 2^64 with A-C set C3 (Ch. 7.1.2 C)
+    state->u = state->u * 2862933555777941757LL + 7046029254386353087LL;
 
-    // Will be in the range 0..NTAB - 1.
-    j = iy / NDIV;
+    // v: 64-bit xorshift with A3 triples (Ch. 7.1.2 A)
+    state->v ^= state->v >> 17;
+    state->v ^= state->v << 31;
+    state->v ^= state->v >> 8;
 
-    // Output previously stored value and refill the shuffle table.
-    iy = iv[j];
-    iv[j] = *idum;
-    temp = AM * iy;
-    if (temp > RNMX) {
-        // Because users don’t expect endpoint values.
-        return RNMX;
-    } else {
-        return temp;
-    }
+    // w: multiply-with-carry with multiplier B1 (Ch. 7.1.2 B) and 32-bit base
+    state->w = 4294957665U * (state->w & 0xffffffff) + (state->w >> 32);
+
+    // composed: 64-bit xorshift with A1 triples (Ch. 7.1.2 A) on u
+    // x = A1(C3)
+    unsigned long long x = state->u ^ (state->u << 21);
+    x ^= x >> 35;
+    x ^= x << 4;
+
+    // combine the outputs of the three generators with + and ^ (Ch. 7.1.3)
+    return (x + state->v) ^ state->w;
+}
+
+/**
+ * @brief Return a random floating point number in the range [0, 1) using the ran() generator
+ *
+ * @param state pointer to the random state struct
+ * @return random floating-point number in the range [0, 1)
+ */
+double dran(RandomState *state)
+{
+    // divide by 2^64 + 1 to get a double in the range [0, 1)
+    // division is expensive relative to multiplication, so multiply by the pre-computed reciprocal
+    // of 2^64 (written with 18 significant digits, even though the limit of double precision is ~16
+    // digits)
+    return 5.42101086242752217e-20 * ran(state);
 }
