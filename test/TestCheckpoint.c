@@ -35,6 +35,109 @@ static void build_array_header(uint8_t *buffer, uint16_t flag, uint32_t n)
     memcpy(buffer + sizeof(uint16_t) + sizeof(uint16_t), &n, sizeof(uint32_t));
 }
 
+static void assert_output_schedule_matches(const CheckpointOutputSchedulePayload *expected,
+                                           const CheckpointOutputSchedulePayload *actual,
+                                           const char *context)
+{
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->mode, actual->mode, context);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(expected->interval, actual->interval, context);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->list_len, actual->list_len, context);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->list_idx, actual->list_idx, context);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(expected->next_checkpoint, actual->next_checkpoint, context);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->frame_num, actual->frame_num, context);
+}
+
+static void assert_output_format_payload_matches(const CheckpointOutputFormatPayload *expected,
+                                                 const CheckpointOutputFormatPayload *actual,
+                                                 const char *context)
+{
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->type, actual->type, context);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->is_active, actual->is_active, context);
+
+    switch (expected->type) {
+    case OUTPUT_FORMAT_CSV:
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(expected->data.csv.filename, actual->data.csv.filename,
+                                         context);
+        assert_output_schedule_matches(&expected->data.csv.schedule, &actual->data.csv.schedule,
+                                       context);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(expected->data.csv.field_count, actual->data.csv.field_count,
+                                      context);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(expected->data.csv.frame_num, actual->data.csv.frame_num,
+                                      context);
+        break;
+    case OUTPUT_FORMAT_XYZ:
+        assert_output_schedule_matches(&expected->data.xyz.schedule, &actual->data.xyz.schedule,
+                                       context);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(expected->data.xyz.prefix, actual->data.xyz.prefix,
+                                         context);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(expected->data.xyz.suffix, actual->data.xyz.suffix,
+                                         context);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(expected->data.xyz.frame_num, actual->data.xyz.frame_num,
+                                      context);
+        TEST_ASSERT_EQUAL_INT_MESSAGE((int)expected->data.xyz.stripped,
+                                      (int)actual->data.xyz.stripped, context);
+        break;
+    case OUTPUT_FORMAT_STEPS_CSV:
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(expected->data.steps.filename, actual->data.steps.filename,
+                                         context);
+        TEST_ASSERT_EQUAL_INT_MESSAGE((int)expected->data.steps.with_coordination,
+                                      (int)actual->data.steps.with_coordination, context);
+        break;
+    default:
+        TEST_FAIL_MESSAGE("unexpected output format type in round-trip test");
+    }
+}
+
+static void build_output_format_payload(const OutputFormat *source,
+                                        CheckpointOutputFormatPayload *dest)
+{
+    memset(dest, 0, sizeof(*dest));
+    dest->type = (uint8_t)source->type;
+    dest->is_active = (uint8_t)source->is_active;
+
+    switch (source->type) {
+    case OUTPUT_FORMAT_CSV:
+        memcpy(dest->data.csv.filename, source->csv.filename, sizeof(dest->data.csv.filename));
+        dest->data.csv.schedule.mode = source->csv.schedule.mode;
+        dest->data.csv.schedule.interval = source->csv.schedule.interval;
+        dest->data.csv.schedule.list_len = source->csv.schedule.list_len;
+        dest->data.csv.schedule.list_idx = source->csv.schedule.list_idx;
+        dest->data.csv.schedule.next_checkpoint = source->csv.schedule.next_checkpoint;
+        dest->data.csv.schedule.frame_num = source->csv.schedule.frame_num;
+        dest->data.csv.field_count = source->csv.field_count;
+        dest->data.csv.frame_num = source->csv.frame_num;
+        break;
+    case OUTPUT_FORMAT_XYZ:
+        memcpy(dest->data.xyz.prefix, source->xyz.prefix, sizeof(dest->data.xyz.prefix));
+        memcpy(dest->data.xyz.suffix, source->xyz.suffix, sizeof(dest->data.xyz.suffix));
+        dest->data.xyz.schedule.mode = source->xyz.schedule.mode;
+        dest->data.xyz.schedule.interval = source->xyz.schedule.interval;
+        dest->data.xyz.schedule.list_len = source->xyz.schedule.list_len;
+        dest->data.xyz.schedule.list_idx = source->xyz.schedule.list_idx;
+        dest->data.xyz.schedule.next_checkpoint = source->xyz.schedule.next_checkpoint;
+        dest->data.xyz.schedule.frame_num = source->xyz.schedule.frame_num;
+        dest->data.xyz.frame_num = source->xyz.frame_num;
+        dest->data.xyz.stripped = (uint8_t)source->xyz.stripped;
+        break;
+    case OUTPUT_FORMAT_STEPS_CSV:
+        memcpy(dest->data.steps.filename, source->steps.filename,
+               sizeof(dest->data.steps.filename));
+        dest->data.steps.with_coordination = (uint8_t)source->steps.with_coordination;
+        break;
+    default:
+        TEST_FAIL_MESSAGE("unexpected output format type in round-trip test");
+    }
+}
+
+static void assert_output_format_matches_runtime(const OutputFormat *expected,
+                                                 const CheckpointOutputFormatPayload *actual,
+                                                 const char *context)
+{
+    CheckpointOutputFormatPayload expected_payload = {0};
+    build_output_format_payload(expected, &expected_payload);
+    assert_output_format_payload_matches(&expected_payload, actual, context);
+}
+
 void test_checkpoint_checksum32_is_deterministic(void)
 {
     // Use the same input twice to prove the checksum is stable, then flip one byte to prove it
@@ -559,6 +662,105 @@ void test_write_output_format_array_serializes_formats(void)
     TEST_ASSERT_EQUAL_UINT32_MESSAGE((uint32_t)ls.out_formats_cnt, reported_n,
                                      "array header should report correct element count");
 
+    free(payload);
+    free(ls.out_formats);
+    if (arr.formats) {
+        free(arr.formats);
+    }
+}
+
+void test_read_output_format_array_parses_written_payload(void)
+{
+    struct LoggingState ls = {0};
+    CheckpointOutputFormatArrPayload arr = {0};
+    CheckpointOutputFormatArrPayload parsed = {0};
+    uint8_t *payload = NULL;
+    uint32_t payload_bytes = 0u;
+    size_t bytes_read = 0u;
+
+    ls.out_formats_cnt = 2;
+    ls.out_formats = (OutputFormat *)malloc((size_t)ls.out_formats_cnt * sizeof(OutputFormat));
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls.out_formats, "out_formats should allocate");
+
+    ls.out_formats[0].type = OUTPUT_FORMAT_CSV;
+    ls.out_formats[0].is_active = true;
+    strncpy(ls.out_formats[0].csv.filename, "read1.csv", sizeof(ls.out_formats[0].csv.filename));
+    ls.out_formats[0].csv.field_count = 3;
+
+    ls.out_formats[1].type = OUTPUT_FORMAT_XYZ;
+    ls.out_formats[1].is_active = false;
+    strncpy(ls.out_formats[1].xyz.prefix, "rpx", sizeof(ls.out_formats[1].xyz.prefix));
+    strncpy(ls.out_formats[1].xyz.suffix, "rsx", sizeof(ls.out_formats[1].xyz.suffix));
+
+    CheckpointStatus status = fill_output_format_array_payload(&arr, &ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "fill should succeed");
+
+    status = write_output_format_array(&arr, &payload, &payload_bytes);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "write should succeed");
+    TEST_ASSERT_NOT_NULL_MESSAGE(payload, "payload should be allocated");
+
+    status = read_output_format_array(payload, &bytes_read, &parsed);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status,
+                                  "read should succeed (TDD red expects failure)");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE((unsigned)arr.n_out_formats, (unsigned)parsed.n_out_formats,
+                                   "parsed count should match");
+
+    if (parsed.formats) {
+        free(parsed.formats);
+    }
+    free(payload);
+    free(ls.out_formats);
+    if (arr.formats) {
+        free(arr.formats);
+    }
+}
+
+void test_read_output_format_array_round_trip(void)
+{
+    struct LoggingState ls = {0};
+    CheckpointOutputFormatArrPayload arr = {0};
+    CheckpointOutputFormatArrPayload parsed = {0};
+    uint8_t *payload = NULL;
+    uint32_t payload_bytes = 0u;
+    size_t bytes_read = 0u;
+
+    ls.out_formats_cnt = 2;
+    ls.out_formats = (OutputFormat *)malloc((size_t)ls.out_formats_cnt * sizeof(OutputFormat));
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls.out_formats, "out_formats should allocate");
+
+    ls.out_formats[0].type = OUTPUT_FORMAT_STEPS_CSV;
+    ls.out_formats[0].is_active = true;
+    strncpy(ls.out_formats[0].steps.filename, "round_steps.csv",
+            sizeof(ls.out_formats[0].steps.filename));
+    ls.out_formats[0].steps.with_coordination = false;
+
+    ls.out_formats[1].type = OUTPUT_FORMAT_CSV;
+    ls.out_formats[1].is_active = true;
+    strncpy(ls.out_formats[1].csv.filename, "round.csv", sizeof(ls.out_formats[1].csv.filename));
+    ls.out_formats[1].csv.field_count = 1;
+
+    CheckpointStatus status = fill_output_format_array_payload(&arr, &ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "fill should succeed");
+
+    status = write_output_format_array(&arr, &payload, &payload_bytes);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "write should succeed");
+    TEST_ASSERT_NOT_NULL_MESSAGE(payload, "payload should be allocated");
+
+    status = read_output_format_array(payload, &bytes_read, &parsed);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status,
+                                  "read should succeed (TDD red expects failure)");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE((unsigned)arr.n_out_formats, (unsigned)parsed.n_out_formats,
+                                   "parsed count should match");
+
+    for (int i = 0; i < arr.n_out_formats; ++i) {
+        char message[64];
+        snprintf(message, sizeof(message), "output format %d should round-trip", i);
+        assert_output_format_payload_matches(&arr.formats[i], &parsed.formats[i], message);
+    }
+
+    if (parsed.formats) {
+        free(parsed.formats);
+    }
     free(payload);
     free(ls.out_formats);
     if (arr.formats) {
@@ -1950,6 +2152,8 @@ int main(void)
     RUN_TEST(test_apply_logging_payload_restores_selected_logging_scalars);
     RUN_TEST(test_fill_output_format_array_payload_serializes_formats);
     RUN_TEST(test_write_output_format_array_serializes_formats);
+    RUN_TEST(test_read_output_format_array_parses_written_payload);
+    RUN_TEST(test_read_output_format_array_round_trip);
 
     RUN_TEST(test_validate_array_header_accepts_valid_header);
     RUN_TEST(test_validate_array_header_rejects_invalid_magic);

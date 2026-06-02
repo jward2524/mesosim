@@ -228,6 +228,37 @@ CheckpointStatus write_array(uint16_t flag, uint32_t n, const void *arr, size_t 
     return status;
 }
 
+static bool array_flag_elem_size(uint16_t flag, size_t *elem_size)
+{
+    if (elem_size == NULL) {
+        return false;
+    }
+
+    switch (flag) {
+    case CAF_ATOMS:
+        *elem_size = sizeof(CheckpointAtomPayload);
+        return true;
+    case CAF_SUBSTRATE_COMPOSITION:
+    case CAF_NN_ENERGY:
+        *elem_size = sizeof(double);
+        return true;
+    case CAF_IS_SOLUBLE:
+        *elem_size = sizeof(bool);
+        return true;
+    case CAF_OUTPUT_FORMATS:
+        *elem_size = sizeof(CheckpointOutputFormatPayload);
+        return true;
+    case CAF_ATOM_NAME_STR:
+        *elem_size = sizeof(char);
+        return true;
+    case CAF_ATOM_NAMES:
+        *elem_size = sizeof(char *);
+        return true;
+    default:
+        return false;
+    }
+}
+
 void write_env_arrays(const CheckpointEnvArrPayload *arr_payload, uint8_t **p_payload,
                       uint32_t *p_payload_bytes)
 {
@@ -303,29 +334,12 @@ CheckpointStatus read_array(const uint8_t *payload, size_t *bytes_read, uint16_t
     }
     *bytes_read = CHECKPOINT_ARRAY_MAGIC_SIZE + sizeof(*out_flag) + sizeof(*out_n);
 
-    size_t elem_size;
-    switch (*out_flag) {
-    case CAF_ATOMS:
-        elem_size = sizeof(CheckpointAtomPayload);
-        break;
-    case CAF_SUBSTRATE_COMPOSITION:
-        elem_size = sizeof(double);
-        break;
-    case CAF_NN_ENERGY:
-        elem_size = sizeof(double);
-        break;
-    case CAF_IS_SOLUBLE:
-        elem_size = sizeof(bool);
-        break;
-    case CAF_ATOM_NAMES:
+    size_t elem_size = 0;
+    if (*out_flag == CAF_ATOM_NAMES) {
         // caller needs to handle this separately since it's an array of strings
-        elem_size = sizeof(char *);
         return CHECKPOINT_OK;
-        break;
-    case CAF_ATOM_NAME_STR:
-        elem_size = sizeof(char);
-        break;
-    default:
+    }
+    if (!array_flag_elem_size(*out_flag, &elem_size)) {
         fprintf(stderr, "Checkpoint error: unknown array flag: %u\n", *out_flag);
         return CHECKPOINT_ERROR;
     }
@@ -676,6 +690,23 @@ CheckpointStatus fill_output_format_array_payload(CheckpointOutputFormatArrPaylo
     return CHECKPOINT_OK;
 }
 
+static CheckpointStatus write_fixed_array(uint16_t flag, uint32_t n, const void *arr,
+                                          size_t elem_size, uint8_t **p_payload,
+                                          uint32_t *p_payload_bytes)
+{
+    if (p_payload == NULL || p_payload_bytes == NULL) {
+        fprintf(stderr, "Checkpoint error: invalid output buffer for array write\n");
+        return CHECKPOINT_ERROR;
+    }
+    if (n > 0 && arr == NULL) {
+        fprintf(stderr, "Checkpoint error: array flag %u has non-zero count but NULL data\n",
+                (unsigned)flag);
+        return CHECKPOINT_ERROR;
+    }
+    CheckpointStatus status = write_array(flag, n, arr, elem_size, p_payload, p_payload_bytes);
+    return status;
+}
+
 CheckpointStatus write_output_format_array(const CheckpointOutputFormatArrPayload *arr_payload,
                                            uint8_t **p_payload, uint32_t *p_payload_bytes)
 {
@@ -705,27 +736,33 @@ CheckpointStatus write_output_format_array(const CheckpointOutputFormatArrPayloa
     return status;
 }
 
-static CheckpointStatus write_fixed_array(uint16_t flag, const void *arr, uint32_t n,
-                                          size_t elem_size, uint8_t **p_payload,
-                                          uint32_t *p_payload_bytes)
-{
-    if (p_payload == NULL || p_payload_bytes == NULL) {
-        fprintf(stderr, "Checkpoint error: invalid output buffer for array write\n");
-        return CHECKPOINT_ERROR;
-    }
-    if (n > 0 && arr == NULL) {
-        fprintf(stderr, "Checkpoint error: array flag %u has non-zero count but NULL data\n",
-                (unsigned)flag);
-        return CHECKPOINT_ERROR;
-    }
-    CheckpointStatus status = write_array(flag, n, arr, elem_size, p_payload, p_payload_bytes);
-    return status;
-}
-
 CheckpointStatus read_output_format_array(uint8_t *payload, size_t *total_bytes_read,
                                           CheckpointOutputFormatArrPayload *arr_payload)
 {
-    return CHECKPOINT_ERROR;
+    if (payload == NULL || total_bytes_read == NULL || arr_payload == NULL) {
+        fprintf(stderr, "Checkpoint error: invalid input for output format array read\n");
+        return CHECKPOINT_ERROR;
+    }
+
+    uint32_t n = 0;
+    uint16_t flag = 0;
+    CheckpointStatus status =
+        read_array(payload, total_bytes_read, &flag, &n, (void **)&arr_payload->formats);
+    if (status != CHECKPOINT_OK) {
+        fprintf(stderr, "Checkpoint error: failed to read output format array header\n");
+        return status;
+    }
+
+    if (flag != CAF_OUTPUT_FORMATS) {
+        fprintf(stderr, "Checkpoint error: expected output format array flag %u, got %u\n",
+                CAF_OUTPUT_FORMATS, flag);
+        free(arr_payload->formats);
+        arr_payload->formats = NULL;
+        return CHECKPOINT_ERROR;
+    }
+
+    arr_payload->n_out_formats = (int)n;
+    return CHECKPOINT_OK;
 }
 
 void apply_logging_payload_to_loggingstate(const CheckpointLoggingPayload *payload,
