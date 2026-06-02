@@ -1054,10 +1054,12 @@ CheckpointStatus checkpoint_save(const char *path, const struct SimulationState 
         free(env_arr_payload.n_atom_names_str);
     }
 
+    // write output formats array even if it is empty
     CheckpointOutputFormatArrPayload output_format_arr_payload = {0};
     if (ls) {
         fill_output_format_array_payload(&output_format_arr_payload, ls);
         write_output_format_array(&output_format_arr_payload, &payload, &payload_bytes);
+        free(output_format_arr_payload.formats);
     }
 
     // if state is present and has atoms, include atom count and array in payload.
@@ -1066,8 +1068,6 @@ CheckpointStatus checkpoint_save(const char *path, const struct SimulationState 
         write_atom_array((const Atom **)ss->atom_arr, (uint32_t)ss->atom_cnt, &payload,
                          &payload_bytes);
     }
-
-    // TODO: add out_formats array to payload
 
     /* ---- Compute checksum ---- */
     // compute checksum over the combined payload
@@ -1178,7 +1178,7 @@ CheckpointStatus verify_payload_size(FILE *file, CheckpointHeader *header)
  * @return CheckpointStatus
  */
 CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,
-                                 struct SimulationEnv *se, const struct LoggingState *ls)
+                                 struct SimulationEnv *se, struct LoggingState *ls)
 {
 
     // load the checkpoint file
@@ -1360,7 +1360,12 @@ CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,
 
         apply_env_arrays(&env_arr_payload, se);
     }
-    // TODO: apply logging payload and output format arrays
+
+    if (header.has_ls) {
+        apply_logging_payload_to_loggingstate(&logging_payload, ls);
+        apply_output_format_array_payload_to_loggingstate(&output_format_arr_payload, ls);
+    }
+
     if (header.has_ss && header.has_se) {
         allocate_simulation_arrays(ss, se);
         if (header.has_atoms) {

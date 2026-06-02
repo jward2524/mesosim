@@ -116,7 +116,7 @@ typedef struct {
 CheckpointStatus checkpoint_save(const char *path, const struct SimulationState *ss,
                                  const struct SimulationEnv *se, const struct LoggingState *ls);
 CheckpointStatus checkpoint_load(const char *path, struct SimulationState *ss,
-                                 struct SimulationEnv *se, const struct LoggingState *ls);
+                                 struct SimulationEnv *se, struct LoggingState *ls);
 
 uint32_t checkpoint_checksum32(const void *data, size_t size);
 void checkpoint_header_set_magic(CheckpointHeader *header);

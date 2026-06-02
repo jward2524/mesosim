@@ -138,6 +138,19 @@ static void assert_output_format_matches_runtime(const OutputFormat *expected,
     assert_output_format_payload_matches(&expected_payload, actual, context);
 }
 
+static void assert_output_format_matches_runtime_round_trip(const OutputFormat *expected,
+                                                            const OutputFormat *actual,
+                                                            const char *message)
+{
+    CheckpointOutputFormatPayload expected_payload = {0};
+    build_output_format_payload(expected, &expected_payload);
+
+    CheckpointOutputFormatPayload actual_payload = {0};
+    build_output_format_payload(actual, &actual_payload);
+
+    assert_output_format_payload_matches(&expected_payload, &actual_payload, message);
+}
+
 void test_checkpoint_checksum32_is_deterministic(void)
 {
     // Use the same input twice to prove the checksum is stable, then flip one byte to prove it
@@ -593,9 +606,8 @@ void test_write_output_format_array_serializes_formats(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "fill should succeed");
 
     status = write_output_format_array(&arr, &payload, &payload_bytes);
-    TEST_ASSERT_EQUAL_INT_MESSAGE(
-        CHECKPOINT_OK, status,
-        "write_output_format_array should succeed (TDD red expects failure)");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status,
+                                  "write_output_format_array should succeed");
     TEST_ASSERT_NOT_NULL_MESSAGE(payload, "write should allocate payload bytes");
 
     /* At minimum we expect the array magic to be present at the start of the payload. */
@@ -649,8 +661,7 @@ void test_read_output_format_array_parses_written_payload(void)
     TEST_ASSERT_NOT_NULL_MESSAGE(payload, "payload should be allocated");
 
     status = read_output_format_array(payload, &bytes_read, &parsed);
-    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status,
-                                  "read should succeed (TDD red expects failure)");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "read should succeed");
     TEST_ASSERT_EQUAL_UINT_MESSAGE((unsigned)arr.n_out_formats, (unsigned)parsed.n_out_formats,
                                    "parsed count should match");
 
@@ -696,8 +707,7 @@ void test_read_output_format_array_round_trip(void)
     TEST_ASSERT_NOT_NULL_MESSAGE(payload, "payload should be allocated");
 
     status = read_output_format_array(payload, &bytes_read, &parsed);
-    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status,
-                                  "read should succeed (TDD red expects failure)");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "read should succeed");
     TEST_ASSERT_EQUAL_UINT_MESSAGE((unsigned)arr.n_out_formats, (unsigned)parsed.n_out_formats,
                                    "parsed count should match");
 
@@ -1946,6 +1956,145 @@ void test_checkpoint_save_and_load_atom_round_trip(void)
     free(ss.atom_arr);
 }
 
+void test_checkpoint_save_and_load_logging_scalars_success(void)
+{
+    struct LoggingState ls = {0};
+    CheckpointStatus save_status;
+    CheckpointStatus load_status;
+
+    ls.framenum = 17;
+    ls.verbose = 1;
+    ls.verbose_interval = 250ul;
+    ls.increment_precision = 3;
+    ls.stime_precision = 4;
+    ls.overpot_precision = 5;
+    ls.out_formats_cnt = 0;
+    ls.out_formats = NULL;
+
+    save_status = checkpoint_save(temp_checkpoint_path, NULL, NULL, &ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
+                                  "checkpoint should save successfully with null state/env");
+
+    memset(&ls, 0, sizeof(ls));
+
+    load_status = checkpoint_load(temp_checkpoint_path, NULL, NULL, &ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
+                                  "checkpoint should load successfully with null state/env");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(17, ls.framenum, "frame number should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls.verbose, "verbose flag should copy into payload");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(250u, (unsigned int)ls.verbose_interval,
+                                   "verbose interval should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls.increment_precision,
+                                  "increment precision should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(4, ls.stime_precision,
+                                  "stime precision should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(5, ls.overpot_precision,
+                                  "overpotential precision should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls.out_formats_cnt,
+                                  "output formats count should copy into payload");
+    TEST_ASSERT_NULL_MESSAGE(ls.out_formats, "output formats pointer should copy into payload");
+}
+
+void test_checkpoint_save_and_load_logging_scalars_null_payload(void)
+{
+    // A null logging state pointer should cause the helpers to skip the payload without error.
+    CheckpointStatus save_status;
+    CheckpointStatus load_status;
+
+    save_status = checkpoint_save(temp_checkpoint_path, NULL, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
+                                  "checkpoint should save successfully with null logging state");
+
+    load_status = checkpoint_load(temp_checkpoint_path, NULL, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
+                                  "checkpoint should load successfully with null logging state");
+}
+
+void test_checkpoint_save_and_load_logging_formats_success(void)
+{
+    struct LoggingState save_ls = {0};
+    CheckpointStatus save_status;
+    CheckpointStatus load_status;
+
+    const int n = 4;
+    save_ls.out_formats_cnt = n;
+    save_ls.out_formats = (OutputFormat *)malloc((size_t)n * sizeof(OutputFormat));
+    TEST_ASSERT_NOT_NULL_MESSAGE(save_ls.out_formats, "out_formats should allocate");
+
+    /* CSV format entry */
+    save_ls.out_formats[0].type = OUTPUT_FORMAT_CSV;
+    save_ls.out_formats[0].is_active = true;
+    strncpy(save_ls.out_formats[0].csv.filename, "out.csv",
+            sizeof(save_ls.out_formats[0].csv.filename));
+    save_ls.out_formats[0].csv.field_count = 2;
+    save_ls.out_formats[0].csv.frame_num = 42;
+    save_ls.out_formats[0].csv.schedule.mode = OUTPUT_SCHEDULE_INTERVAL_ITERATION;
+    save_ls.out_formats[0].csv.schedule.interval = 1.5;
+    save_ls.out_formats[0].csv.schedule.frame_num = 7;
+
+    /* Second CSV format entry */
+    save_ls.out_formats[1].type = OUTPUT_FORMAT_CSV;
+    save_ls.out_formats[1].is_active = false;
+    strncpy(save_ls.out_formats[1].csv.filename, "other.csv",
+            sizeof(save_ls.out_formats[1].csv.filename));
+    save_ls.out_formats[1].csv.field_count = 4;
+    save_ls.out_formats[1].csv.frame_num = 99;
+    save_ls.out_formats[1].csv.schedule.mode = OUTPUT_SCHEDULE_LIST_TIME;
+    save_ls.out_formats[1].csv.schedule.interval = 0.25;
+    save_ls.out_formats[1].csv.schedule.frame_num = 11;
+
+    /* STEPS format entry */
+    save_ls.out_formats[2].type = OUTPUT_FORMAT_STEPS_CSV;
+    save_ls.out_formats[2].is_active = true;
+    strncpy(save_ls.out_formats[2].steps.filename, "steps.csv",
+            sizeof(save_ls.out_formats[2].steps.filename));
+    save_ls.out_formats[2].steps.with_coordination = true;
+
+    /* XYZ format entry */
+    save_ls.out_formats[3].type = OUTPUT_FORMAT_XYZ;
+    save_ls.out_formats[3].is_active = true;
+    strncpy(save_ls.out_formats[3].xyz.prefix, "prefix", sizeof(save_ls.out_formats[3].xyz.prefix));
+    strncpy(save_ls.out_formats[3].xyz.suffix, "suffix", sizeof(save_ls.out_formats[3].xyz.suffix));
+    save_ls.out_formats[3].xyz.frame_num = 13;
+    save_ls.out_formats[3].xyz.stripped = true;
+    save_ls.out_formats[3].xyz.schedule.mode = OUTPUT_SCHEDULE_INTERVAL_TIME;
+    save_ls.out_formats[3].xyz.schedule.interval = 2.5;
+    save_ls.out_formats[3].xyz.schedule.frame_num = 17;
+
+    save_status = checkpoint_save(temp_checkpoint_path, NULL, NULL, &save_ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
+                                  "checkpoint should save successfully with null state/env");
+
+    struct LoggingState load_ls = {0};
+
+    load_status = checkpoint_load(temp_checkpoint_path, NULL, NULL, &load_ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
+                                  "checkpoint should load successfully with null state/env");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, load_ls.framenum, "frame number should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, load_ls.verbose, "verbose flag should copy into payload");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(0, (unsigned int)load_ls.verbose_interval,
+                                   "verbose interval should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, load_ls.increment_precision,
+                                  "increment precision should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, load_ls.stime_precision,
+                                  "stime precision should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, load_ls.overpot_precision,
+                                  "overpotential precision should copy into payload");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(n, load_ls.out_formats_cnt,
+                                  "output formats count should copy into payload");
+    TEST_ASSERT_NOT_NULL_MESSAGE(load_ls.out_formats,
+                                 "output formats pointer should copy into payload");
+
+    for (int i = 0; i < n; ++i) {
+        char message[64];
+        snprintf(message, sizeof(message), "filled output format %d should match", i);
+        assert_output_format_matches_runtime_round_trip(&save_ls.out_formats[i],
+                                                        &load_ls.out_formats[i], message);
+    }
+
+    free(save_ls.out_formats);
+}
+
 void test_checkpoint_load_missing_file_returns_error(void)
 {
     // Loading a missing path should fail cleanly rather than crashing or creating files.
@@ -2168,6 +2317,9 @@ int main(void)
     RUN_TEST(test_checkpoint_save_and_load_env_scalars);
     RUN_TEST(test_checkpoint_save_and_load_state_and_env);
     RUN_TEST(test_checkpoint_save_and_load_atom_round_trip);
+    RUN_TEST(test_checkpoint_save_and_load_logging_scalars_success);
+    RUN_TEST(test_checkpoint_save_and_load_logging_scalars_null_payload);
+    RUN_TEST(test_checkpoint_save_and_load_logging_formats_success);
 
     RUN_TEST(test_checkpoint_load_missing_file_returns_error);
     RUN_TEST(test_checkpoint_load_corrupted_payload_returns_error);
