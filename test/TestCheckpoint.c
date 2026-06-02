@@ -717,6 +717,47 @@ void test_read_output_format_array_round_trip(void)
     }
 }
 
+void test_apply_output_format_array_payload_restores_formats(void)
+{
+    struct LoggingState ls = {0};
+    CheckpointOutputFormatArrPayload arr = {0};
+
+    arr.n_out_formats = 3;
+    arr.formats = (CheckpointOutputFormatPayload *)malloc((size_t)arr.n_out_formats *
+                                                          sizeof(CheckpointOutputFormatPayload));
+    TEST_ASSERT_NOT_NULL_MESSAGE(arr.formats, "formats array should allocate");
+
+    arr.formats[0].type = OUTPUT_FORMAT_CSV;
+    arr.formats[0].is_active = true;
+    strncpy(arr.formats[0].data.csv.filename, "applied.csv",
+            sizeof(arr.formats[0].data.csv.filename));
+    arr.formats[0].data.csv.field_count = 5;
+
+    arr.formats[1].type = OUTPUT_FORMAT_XYZ;
+    arr.formats[1].is_active = false;
+    strncpy(arr.formats[1].data.xyz.prefix, "apx", sizeof(arr.formats[1].data.xyz.prefix));
+    strncpy(arr.formats[1].data.xyz.suffix, "asx", sizeof(arr.formats[1].data.xyz.suffix));
+    arr.formats[1].data.xyz.frame_num = 88;
+    arr.formats[1].data.xyz.stripped = true;
+
+    arr.formats[0].type = OUTPUT_FORMAT_STEPS_CSV;
+    arr.formats[0].is_active = true;
+    strncpy(arr.formats[0].data.steps.filename, "applied_steps.csv",
+            sizeof(arr.formats[0].data.steps.filename));
+    arr.formats[0].data.steps.with_coordination = 0;
+
+    apply_output_format_array_payload_to_loggingstate(&arr, &ls);
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, ls.out_formats_cnt,
+                                  "output format count should restore from payload");
+    assert_output_format_matches_runtime(&ls.out_formats[0], &arr.formats[0],
+                                         "first output format should restore");
+    assert_output_format_matches_runtime(&ls.out_formats[1], &arr.formats[1],
+                                         "second output format should restore");
+
+    free(arr.formats);
+}
+
 void test_checkpoint_save_and_load_env_arrays_and_atom_names(void)
 {
     // Round-trip the env arrays that are serialized separately from the scalar payload.

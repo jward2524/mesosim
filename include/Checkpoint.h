@@ -227,8 +227,8 @@ typedef struct {
 /* Output format array helpers */
 CheckpointStatus fill_output_format_array_payload(CheckpointOutputFormatArrPayload *arr_payload,
                                                   const struct LoggingState *ls);
-void apply_output_format_array_to_loggingstate(const CheckpointOutputFormatArrPayload *arr_payload,
-                                               struct LoggingState *ls);
+void apply_output_format_array_payload_to_loggingstate(
+    const CheckpointOutputFormatArrPayload *arr_payload, struct LoggingState *ls);
 CheckpointStatus write_output_format_array(const CheckpointOutputFormatArrPayload *arr_payload,
                                            uint8_t **p_payload, uint32_t *p_payload_bytes);
 CheckpointStatus read_output_format_array(uint8_t *payload, size_t *total_bytes_read,

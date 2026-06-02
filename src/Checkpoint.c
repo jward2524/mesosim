@@ -780,9 +780,96 @@ void apply_logging_payload_to_loggingstate(const CheckpointLoggingPayload *paylo
     ls->overpot_precision = payload->overpot_precision;
 }
 
-void apply_output_format_array_to_loggingstate(const CheckpointOutputFormatArrPayload *arr_payload,
-                                               struct LoggingState *ls)
+static void copy_payload_schedule_to_output(OutputSchedule *dest,
+                                            const CheckpointOutputSchedulePayload *source)
 {
+    dest->mode = source->mode;
+    dest->interval = source->interval;
+    dest->list_len = source->list_len;
+    dest->list_idx = source->list_idx;
+    dest->next_checkpoint = source->next_checkpoint;
+    dest->frame_num = source->frame_num;
+}
+
+static void
+apply_format_csv_payload_to_outputformat(const CheckpointOutputFormatCsvPayload *csv_payload,
+                                         OutputFormat *format)
+{
+    copy_payload_schedule_to_output(&format->csv.schedule, &csv_payload->schedule);
+    memcpy(format->csv.filename, csv_payload->filename, sizeof(format->csv.filename));
+    format->csv.field_count = csv_payload->field_count;
+    format->csv.frame_num = csv_payload->frame_num;
+    format->csv.field_count = csv_payload->field_count;
+    format->csv.frame_num = csv_payload->frame_num;
+}
+
+static void
+apply_format_xyz_payload_to_outputformat(const CheckpointOutputFormatXyzPayload *xyz_payload,
+                                         OutputFormat *format)
+{
+    copy_payload_schedule_to_output(&format->xyz.schedule, &xyz_payload->schedule);
+    memcpy(format->xyz.prefix, xyz_payload->prefix, sizeof(format->xyz.prefix));
+    memcpy(format->xyz.suffix, xyz_payload->suffix, sizeof(format->xyz.suffix));
+    format->xyz.frame_num = xyz_payload->frame_num;
+    format->xyz.stripped = (bool)xyz_payload->stripped;
+}
+
+static void
+apply_format_steps_payload_to_outputformat(const CheckpointOutputFormatStepsPayload *steps_payload,
+                                           OutputFormat *format)
+{
+    memcpy(format->steps.filename, steps_payload->filename, sizeof(format->steps.filename));
+    format->steps.with_coordination = (bool)steps_payload->with_coordination;
+}
+
+void apply_output_format_array_payload_to_loggingstate(
+    const CheckpointOutputFormatArrPayload *arr_payload, struct LoggingState *ls)
+{
+    if (arr_payload == NULL || ls == NULL) {
+        return;
+    }
+
+    ls->out_formats_cnt = arr_payload->n_out_formats;
+    if (ls->out_formats_cnt <= 0) {
+        ls->out_formats = NULL;
+        return;
+    }
+
+    ls->out_formats = (OutputFormat *)calloc((size_t)ls->out_formats_cnt, sizeof(*ls->out_formats));
+    if (ls->out_formats == NULL) {
+        fprintf(stderr,
+                "Checkpoint error: failed to allocate memory for output formats in apply: %s\n",
+                strerror(errno));
+        ls->out_formats_cnt = 0;
+        return;
+    }
+
+    for (int i = 0; i < arr_payload->n_out_formats; ++i) {
+        const CheckpointOutputFormatPayload *source_format = &arr_payload->formats[i];
+        OutputFormat *dest_format = &ls->out_formats[i];
+
+        dest_format->type = (OutputFormatType)source_format->type;
+        dest_format->is_active = (bool)source_format->is_active;
+
+        switch (dest_format->type) {
+        case OUTPUT_FORMAT_CSV:
+            apply_format_csv_payload_to_outputformat(&source_format->data.csv, dest_format);
+            break;
+        case OUTPUT_FORMAT_XYZ:
+            apply_format_xyz_payload_to_outputformat(&source_format->data.xyz, dest_format);
+            break;
+        case OUTPUT_FORMAT_STEPS_CSV:
+            apply_format_steps_payload_to_outputformat(&source_format->data.steps, dest_format);
+            break;
+        default:
+            fprintf(stderr, "Checkpoint error: unsupported output format type %d in apply\n",
+                    dest_format->type);
+            free(ls->out_formats);
+            ls->out_formats = NULL;
+            ls->out_formats_cnt = 0;
+            return;
+        }
+    }
 }
 
 /**
