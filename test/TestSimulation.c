@@ -43,6 +43,9 @@ void test_simulation(void)
     TEST_PASS();
 }
 
+// TODO: add test for number of files produced and number of lines in csv files and values in csv
+// files
+
 // TODO: test individual function in Simulation.c
 // add_to/remove_from_transition_array cases: removed transition is [only one in list, last in list,
 // first in list, middle of list, first in rate list, last in rate list, middle of rate list, only

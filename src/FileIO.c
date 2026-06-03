@@ -762,11 +762,14 @@ void write_xyz_file(OutputFormat *format, struct SimulationState *ss, struct Sim
     return;
 }
 
-static int check_and_advance_checkpoint(OutputSchedule *sched, bool *state,
+static int check_and_advance_checkpoint(OutputSchedule *sched, unsigned flavor, bool *state,
                                         struct SimulationState *ss)
 {
     OutputScheduleMode mode = sched->mode;
-    int iter_reached = fabs(sched->next_checkpoint - (double)ss->iter) < FABS_TOL;
+
+    unsigned long int iter = flavor == FLAVOR_MC ? ss->mmc_steps : ss->iter;
+
+    int iter_reached = fabs(sched->next_checkpoint - (double)iter) < FABS_TOL;
     int stime_reached = ss->elapsed_stime >= sched->next_checkpoint;
 
     int checkpoint_reached = (mode == OUTPUT_SCHEDULE_INTERVAL_ITERATION && iter_reached) ||
@@ -888,13 +891,15 @@ void output_on_schedule(StepData *step_data, struct SimulationState *ss, struct 
         OutputFormat *format = &(ls->out_formats[i]);
         switch (format->type) {
         case OUTPUT_FORMAT_CSV:
-            write = check_and_advance_checkpoint(&format->csv.schedule, &format->is_active, ss);
+            write = check_and_advance_checkpoint(&format->csv.schedule, se->flavor,
+                                                 &format->is_active, ss);
             if (write) {
                 log_state_csv(format, ls->stime_precision, ls->overpot_precision, ss);
             }
             break;
         case OUTPUT_FORMAT_XYZ:
-            write = check_and_advance_checkpoint(&format->xyz.schedule, &format->is_active, ss);
+            write = check_and_advance_checkpoint(&format->xyz.schedule, se->flavor,
+                                                 &format->is_active, ss);
             if (write) {
                 write_xyz_file(format, ss, se);
             }
@@ -906,6 +911,5 @@ void output_on_schedule(StepData *step_data, struct SimulationState *ss, struct 
             break;
         }
     }
-    write_logs(step_data, ss, se, ls);
     return;
 }
