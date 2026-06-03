@@ -753,7 +753,7 @@ void write_xyz_file(OutputFormat *format, struct SimulationState *ss, struct Sim
     fclose(file);
 
 #if (!defined(NDEBUG)) && defined(DUMP_CORE)
-    fprintf(stderr, "Creating core dump for frame %d\n", frame_num);
+    fprintf(stderr, "Creating core dump for frame %d\n", format->xyz.frame_num);
     fflush(stderr);
     create_coredump();
 #endif

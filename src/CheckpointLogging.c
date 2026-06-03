@@ -260,6 +260,7 @@ void unpack_output_format_array(const OutFormatArrPayload *arr_payload, struct L
         dest_format->type = (OutputFormatType)source_format->type;
         dest_format->is_active = (bool)source_format->is_active;
 
+        // TODO: re-open files and move fpointers to the correct positions
         switch (dest_format->type) {
         case OUTPUT_FORMAT_CSV:
             apply_format_csv_payload_to_outputformat(&source_format->data.csv, dest_format);

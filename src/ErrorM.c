@@ -82,7 +82,7 @@ void create_coredump(void)
         char gcore_str[64];
         snprintf(attach_str, sizeof(attach_str), "attach %d", parent_pid);
         snprintf(gcore_str, sizeof(gcore_str), "generate-core-file core%d.%d",
-                 (*gp_log_state)->xyz_framenum, parent_pid);
+                 (*gp_log_state)->framenum, parent_pid);
 
         // execute gcore from PATH, with argv[] parameters
         // execlp(const char *file, const char *arg, ..., NULL);

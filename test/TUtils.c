@@ -1,4 +1,5 @@
 #include "TUtils.h"
+#include "CheckpointUtils.h"
 #include "State.h"
 #include "unity.h"
 #include <errno.h>
@@ -45,4 +46,126 @@ void close_if_exists(FILE **file)
         fclose(*file);
         *file = NULL;
     }
+}
+
+void build_array_header(uint8_t *buffer, uint16_t flag, uint32_t n)
+{
+    memcpy(buffer, &((const uint16_t){CHECKPOINT_ARRAY_MAGIC}), sizeof(uint16_t));
+    memcpy(buffer + sizeof(uint16_t), &flag, sizeof(uint16_t));
+    memcpy(buffer + sizeof(uint16_t) + sizeof(uint16_t), &n, sizeof(uint32_t));
+}
+
+static void build_output_format_payload(const OutputFormat *source,
+                                        OutFormatPayload *dest)
+{
+    memset(dest, 0, sizeof(*dest));
+    dest->type = (uint8_t)source->type;
+    dest->is_active = (uint8_t)source->is_active;
+
+    switch (source->type) {
+    case OUTPUT_FORMAT_CSV:
+        memcpy(dest->data.csv.filename, source->csv.filename, sizeof(dest->data.csv.filename));
+        dest->data.csv.schedule.mode = source->csv.schedule.mode;
+        dest->data.csv.schedule.interval = source->csv.schedule.interval;
+        dest->data.csv.schedule.list_len = source->csv.schedule.list_len;
+        dest->data.csv.schedule.list_idx = source->csv.schedule.list_idx;
+        dest->data.csv.schedule.next_checkpoint = source->csv.schedule.next_checkpoint;
+        dest->data.csv.schedule.frame_num = source->csv.schedule.frame_num;
+        dest->data.csv.field_count = source->csv.field_count;
+        dest->data.csv.frame_num = source->csv.frame_num;
+        break;
+    case OUTPUT_FORMAT_XYZ:
+        memcpy(dest->data.xyz.prefix, source->xyz.prefix, sizeof(dest->data.xyz.prefix));
+        memcpy(dest->data.xyz.suffix, source->xyz.suffix, sizeof(dest->data.xyz.suffix));
+        dest->data.xyz.schedule.mode = source->xyz.schedule.mode;
+        dest->data.xyz.schedule.interval = source->xyz.schedule.interval;
+        dest->data.xyz.schedule.list_len = source->xyz.schedule.list_len;
+        dest->data.xyz.schedule.list_idx = source->xyz.schedule.list_idx;
+        dest->data.xyz.schedule.next_checkpoint = source->xyz.schedule.next_checkpoint;
+        dest->data.xyz.schedule.frame_num = source->xyz.schedule.frame_num;
+        dest->data.xyz.frame_num = source->xyz.frame_num;
+        dest->data.xyz.stripped = (uint8_t)source->xyz.stripped;
+        break;
+    case OUTPUT_FORMAT_STEPS_CSV:
+        memcpy(dest->data.steps.filename, source->steps.filename,
+               sizeof(dest->data.steps.filename));
+        dest->data.steps.with_coordination = (uint8_t)source->steps.with_coordination;
+        break;
+    default:
+        TEST_FAIL_MESSAGE("unexpected output format type in round-trip test");
+    }
+}
+
+static void assert_output_schedule_matches(const OutSchedPayload *expected,
+                                           const OutSchedPayload *actual, const char *context)
+{
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->mode, actual->mode, context);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(expected->interval, actual->interval, context);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->list_len, actual->list_len, context);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->list_idx, actual->list_idx, context);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(expected->next_checkpoint, actual->next_checkpoint, context);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->frame_num, actual->frame_num, context);
+}
+
+void assert_output_format_payload_matches(const OutFormatPayload *expected,
+                                          const OutFormatPayload *actual,
+                                          const char *context)
+{
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->type, actual->type, context);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(expected->is_active, actual->is_active, context);
+
+    switch (expected->type) {
+    case OUTPUT_FORMAT_CSV:
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(expected->data.csv.filename, actual->data.csv.filename,
+                                         context);
+        assert_output_schedule_matches(&expected->data.csv.schedule, &actual->data.csv.schedule,
+                                       context);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(expected->data.csv.field_count, actual->data.csv.field_count,
+                                      context);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(expected->data.csv.frame_num, actual->data.csv.frame_num,
+                                      context);
+        break;
+    case OUTPUT_FORMAT_XYZ:
+        assert_output_schedule_matches(&expected->data.xyz.schedule, &actual->data.xyz.schedule,
+                                       context);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(expected->data.xyz.prefix, actual->data.xyz.prefix,
+                                         context);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(expected->data.xyz.suffix, actual->data.xyz.suffix,
+                                         context);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(expected->data.xyz.frame_num, actual->data.xyz.frame_num,
+                                      context);
+        TEST_ASSERT_EQUAL_INT_MESSAGE((int)expected->data.xyz.stripped,
+                                      (int)actual->data.xyz.stripped, context);
+        break;
+    case OUTPUT_FORMAT_STEPS_CSV:
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(expected->data.steps.filename, actual->data.steps.filename,
+                                         context);
+        TEST_ASSERT_EQUAL_INT_MESSAGE((int)expected->data.steps.with_coordination,
+                                      (int)actual->data.steps.with_coordination, context);
+        break;
+    default:
+        TEST_FAIL_MESSAGE("unexpected output format type in round-trip test");
+    }
+}
+
+void assert_output_format_matches_runtime_round_trip(const OutputFormat *expected,
+                                                     const OutputFormat *actual,
+                                                     const char *message)
+{
+    OutFormatPayload expected_payload = {0};
+    build_output_format_payload(expected, &expected_payload);
+
+    OutFormatPayload actual_payload = {0};
+    build_output_format_payload(actual, &actual_payload);
+
+    assert_output_format_payload_matches(&expected_payload, &actual_payload, message);
+}
+
+void assert_output_format_matches_runtime(const OutputFormat *expected,
+                                          const OutFormatPayload *actual,
+                                          const char *context)
+{
+    OutFormatPayload expected_payload = {0};
+    build_output_format_payload(expected, &expected_payload);
+    assert_output_format_payload_matches(&expected_payload, actual, context);
 }

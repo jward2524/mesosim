@@ -715,6 +715,7 @@ static InputErrorFlag cmd_help(int argc, char **argv, int line, ParseContext *p_
 
 /* ================= Command table ================= */
 // TODO: need to add a way to associate lattice dimensions with cartesian dimensions
+// TODO: add a command for checkpointing
 // requriements: 1 = required, 0 = optional, -1 = forbidden
 const Command commands[] = {
     {"systemsize", cmd_systemsize, "systemsize NX NY NZ",

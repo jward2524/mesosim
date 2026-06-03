@@ -47,6 +47,7 @@ static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbo
     *pfilename = NULL;
     *verbose_flag = TEST;
 
+    // TODO: add a flag for starting from a checkpoint file
     // argv[0] is executable / program name
     for (int i = 1; i < argc; i++) {
         char *arg = argv[i];
