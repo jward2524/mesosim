@@ -28,7 +28,7 @@ void sran(unsigned long long j, RandomState *state)
     if (j == 0) {
         // seed of 0 is not allowed for this generator, so replace it with a large nonzero value
         // in this case, all 1 bits
-        j = ULONG_LONG_MAX;
+        j = ULLONG_MAX;
     }
 
     // avalanche step from MumurHash3, based on suggestion from
