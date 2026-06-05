@@ -741,7 +741,7 @@ void initialize_from_file(char *atoms_filename, struct SimulationState *ss,
         clean_and_error(EXIT_FAILURE);
     }
 
-    FILE *atom_file = fopen(atoms_filename, "r");
+    FILE *atom_file = fopen(atoms_filename, "rb");
     if (!atom_file) {
         printf("ERROR! Couldn't open output file %s\n", atoms_filename);
         fprintf(stderr, "Couldn't open file %s: %s\n", atoms_filename, strerror(errno));

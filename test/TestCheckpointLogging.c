@@ -4,16 +4,28 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define NTEMPS 4
+FILE *temp_logs[NTEMPS];
+char *temp_names[NTEMPS] = {"test/output/temp_log_0.log", "test/output/temp_log_1.log",
+                            "test/output/temp_log_2.log", "test/output/temp_log_3.log"};
+
 // TODO: set up ss and se in setUp so it cleans on test fail
 void setUp(void)
 {
+    for (int i = 0; i < NTEMPS; i++) {
+        temp_logs[i] = fopen(temp_names[i], "wb+");
+        fopen_error(temp_names[i], temp_logs[i]);
+    }
 }
 
 void tearDown(void)
 {
+    for (int i = 0; i < NTEMPS; i++) {
+        fclose(temp_logs[i]);
+    }
 }
 
-void test_fill_logging_payload_copies_selected_logging_scalars(void)
+void test_pack_logging_payload_copies_selected_logging_scalars(void)
 {
     // Copy a representative logging state into the compact payload and verify every scalar field.
     struct LoggingState ls = {0};
@@ -46,7 +58,7 @@ void test_fill_logging_payload_copies_selected_logging_scalars(void)
                                       "payload should keep the copied frame number");
 }
 
-void test_fill_logging_payload_copies_logging_edge_values(void)
+void test_pack_logging_payload_copies_logging_edge_values(void)
 {
     // Use a different mix of values to make sure the helper copies each scalar independently.
     struct LoggingState ls = {0};
@@ -74,7 +86,7 @@ void test_fill_logging_payload_copies_logging_edge_values(void)
                                   "overpotential precision should copy exactly");
 }
 
-void test_apply_logging_payload_restores_selected_logging_scalars(void)
+void test_unpack_logging_payload_restores_selected_logging_scalars(void)
 {
     LoggingPayload payload = {0};
     struct LoggingState ls = {0};
@@ -101,14 +113,14 @@ void test_apply_logging_payload_restores_selected_logging_scalars(void)
     TEST_ASSERT_NULL_MESSAGE(ls.sim_log, "sim_log should not be modified by the helper");
 }
 
-void test_fill_output_format_array_payload_serializes_formats(void)
+void test_pack_output_format_array_serializes_formats(void)
 {
     struct LoggingState ls = {0};
     OutFormatArrPayload arr = {0};
 
-    const int n = 4;
-    ls.out_formats_cnt = n;
-    ls.out_formats = (OutputFormat *)malloc((size_t)n * sizeof(OutputFormat));
+    const int n_formats = 4;
+    ls.out_formats_cnt = n_formats;
+    ls.out_formats = (OutputFormat *)calloc((size_t)n_formats, sizeof(OutputFormat));
     TEST_ASSERT_NOT_NULL_MESSAGE(ls.out_formats, "out_formats should allocate");
 
     /* CSV format entry */
@@ -120,6 +132,7 @@ void test_fill_output_format_array_payload_serializes_formats(void)
     ls.out_formats[0].csv.schedule.mode = OUTPUT_SCHEDULE_INTERVAL_ITERATION;
     ls.out_formats[0].csv.schedule.interval = 1.5;
     ls.out_formats[0].csv.schedule.frame_num = 7;
+    ls.out_formats[0].csv.file = temp_logs[0];
 
     /* Second CSV format entry */
     ls.out_formats[1].type = OUTPUT_FORMAT_CSV;
@@ -130,6 +143,7 @@ void test_fill_output_format_array_payload_serializes_formats(void)
     ls.out_formats[1].csv.schedule.mode = OUTPUT_SCHEDULE_LIST_TIME;
     ls.out_formats[1].csv.schedule.interval = 0.25;
     ls.out_formats[1].csv.schedule.frame_num = 11;
+    ls.out_formats[1].csv.file = temp_logs[1];
 
     /* STEPS format entry */
     ls.out_formats[2].type = OUTPUT_FORMAT_STEPS_CSV;
@@ -137,6 +151,7 @@ void test_fill_output_format_array_payload_serializes_formats(void)
     strncpy(ls.out_formats[2].steps.filename, "steps.csv",
             sizeof(ls.out_formats[2].steps.filename));
     ls.out_formats[2].steps.with_coordination = true;
+    ls.out_formats[2].csv.file = temp_logs[2];
 
     /* XYZ format entry */
     ls.out_formats[3].type = OUTPUT_FORMAT_XYZ;
@@ -151,9 +166,9 @@ void test_fill_output_format_array_payload_serializes_formats(void)
 
     CheckpointStatus status = pack_output_format_array(&arr, &ls);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "fill should succeed");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(n, arr.n_out_formats, "n_out_formats should copy");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(n_formats, arr.n_out_formats, "n_out_formats should copy");
 
-    for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < n_formats; ++i) {
         char message[64];
         snprintf(message, sizeof(message), "filled output format %d should match", i);
         assert_output_format_matches_runtime(&ls.out_formats[i], &arr.formats[i], message);
@@ -165,7 +180,7 @@ void test_fill_output_format_array_payload_serializes_formats(void)
     }
 }
 
-void test_write_output_format_array_serializes_formats(void)
+void test_serialize_output_format_array_serializes_formats(void)
 {
     struct LoggingState ls = {0};
     OutFormatArrPayload arr = {0};
@@ -174,7 +189,7 @@ void test_write_output_format_array_serializes_formats(void)
 
     /* Create three output formats: CSV, STEPS, XYZ to exercise variants */
     ls.out_formats_cnt = 3;
-    ls.out_formats = (OutputFormat *)malloc((size_t)ls.out_formats_cnt * sizeof(OutputFormat));
+    ls.out_formats = (OutputFormat *)calloc((size_t)ls.out_formats_cnt, sizeof(OutputFormat));
     TEST_ASSERT_NOT_NULL_MESSAGE(ls.out_formats, "out_formats should allocate");
 
     /* CSV entry */
@@ -182,6 +197,7 @@ void test_write_output_format_array_serializes_formats(void)
     ls.out_formats[0].is_active = true;
     strncpy(ls.out_formats[0].csv.filename, "out.csv", sizeof(ls.out_formats[0].csv.filename));
     ls.out_formats[0].csv.field_count = 2;
+    ls.out_formats[0].csv.file = temp_logs[0];
 
     /* STEPS entry */
     ls.out_formats[1].type = OUTPUT_FORMAT_STEPS_CSV;
@@ -189,6 +205,7 @@ void test_write_output_format_array_serializes_formats(void)
     strncpy(ls.out_formats[1].steps.filename, "steps_out.csv",
             sizeof(ls.out_formats[1].steps.filename));
     ls.out_formats[1].steps.with_coordination = true;
+    ls.out_formats[1].steps.file = temp_logs[1];
 
     /* XYZ entry */
     ls.out_formats[2].type = OUTPUT_FORMAT_XYZ;
@@ -226,7 +243,7 @@ void test_write_output_format_array_serializes_formats(void)
     }
 }
 
-void test_read_output_format_array_parses_written_payload(void)
+void test_serialize_output_format_array_parses_written_payload(void)
 {
     struct LoggingState ls = {0};
     OutFormatArrPayload arr = {0};
@@ -236,7 +253,7 @@ void test_read_output_format_array_parses_written_payload(void)
     size_t bytes_read = 0u;
 
     ls.out_formats_cnt = 2;
-    ls.out_formats = (OutputFormat *)malloc((size_t)ls.out_formats_cnt * sizeof(OutputFormat));
+    ls.out_formats = (OutputFormat *)calloc((size_t)ls.out_formats_cnt, sizeof(OutputFormat));
     TEST_ASSERT_NOT_NULL_MESSAGE(ls.out_formats, "out_formats should allocate");
 
     ls.out_formats[0].type = OUTPUT_FORMAT_CSV;
@@ -271,7 +288,7 @@ void test_read_output_format_array_parses_written_payload(void)
     }
 }
 
-void test_read_output_format_array_round_trip(void)
+void test_serialize_output_format_array_round_trip(void)
 {
     struct LoggingState ls = {0};
     OutFormatArrPayload arr = {0};
@@ -281,7 +298,7 @@ void test_read_output_format_array_round_trip(void)
     size_t bytes_read = 0u;
 
     ls.out_formats_cnt = 2;
-    ls.out_formats = (OutputFormat *)malloc((size_t)ls.out_formats_cnt * sizeof(OutputFormat));
+    ls.out_formats = (OutputFormat *)calloc((size_t)ls.out_formats_cnt, sizeof(OutputFormat));
     TEST_ASSERT_NOT_NULL_MESSAGE(ls.out_formats, "out_formats should allocate");
 
     ls.out_formats[0].type = OUTPUT_FORMAT_STEPS_CSV;
@@ -329,12 +346,12 @@ void test_apply_output_format_array_payload_restores_formats(void)
     OutFormatArrPayload arr = {0};
 
     arr.n_out_formats = 3;
-    arr.formats = (OutFormatPayload *)malloc((size_t)arr.n_out_formats * sizeof(OutFormatPayload));
+    arr.formats = (OutFormatPayload *)calloc((size_t)arr.n_out_formats, sizeof(OutFormatPayload));
     TEST_ASSERT_NOT_NULL_MESSAGE(arr.formats, "formats array should allocate");
 
     arr.formats[0].type = OUTPUT_FORMAT_CSV;
     arr.formats[0].is_active = true;
-    strncpy(arr.formats[0].data.csv.filename, "applied.csv",
+    strncpy(arr.formats[0].data.csv.filename, temp_names[0],
             sizeof(arr.formats[0].data.csv.filename));
     arr.formats[0].data.csv.field_count = 5;
 
@@ -345,36 +362,123 @@ void test_apply_output_format_array_payload_restores_formats(void)
     arr.formats[1].data.xyz.frame_num = 88;
     arr.formats[1].data.xyz.stripped = true;
 
-    arr.formats[0].type = OUTPUT_FORMAT_STEPS_CSV;
-    arr.formats[0].is_active = true;
-    strncpy(arr.formats[0].data.steps.filename, "applied_steps.csv",
-            sizeof(arr.formats[0].data.steps.filename));
-    arr.formats[0].data.steps.with_coordination = 0;
+    arr.formats[2].type = OUTPUT_FORMAT_STEPS_CSV;
+    arr.formats[2].is_active = true;
+    strncpy(arr.formats[2].data.steps.filename, temp_names[1],
+            sizeof(arr.formats[2].data.steps.filename));
+    arr.formats[2].data.steps.with_coordination = 0;
 
-    unpack_output_format_array(&arr, &ls);
+    CheckpointStatus status = unpack_output_format_array(&arr, &ls);
 
-    TEST_ASSERT_EQUAL_INT_MESSAGE(2, ls.out_formats_cnt,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "unpack should succeed");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(3, ls.out_formats_cnt,
                                   "output format count should restore from payload");
     assert_output_format_matches_runtime(&ls.out_formats[0], &arr.formats[0],
                                          "first output format should restore");
     assert_output_format_matches_runtime(&ls.out_formats[1], &arr.formats[1],
                                          "second output format should restore");
+    assert_output_format_matches_runtime(&ls.out_formats[2], &arr.formats[2],
+                                         "third output format should restore");
 
     free(arr.formats);
+}
+
+void test_serialize_output_format_array_with_file_contents_overwrites(void)
+{
+    struct LoggingState ls = {0};
+    struct LoggingState recovered_ls = {0};
+    OutFormatArrPayload arr = {0};
+    OutFormatArrPayload parsed = {0};
+    uint8_t *payload = NULL;
+    uint32_t payload_bytes = 0u;
+
+    ls.out_formats_cnt = 1;
+    ls.out_formats = (OutputFormat *)calloc((size_t)ls.out_formats_cnt, sizeof(OutputFormat));
+    TEST_ASSERT_NOT_NULL_MESSAGE(ls.out_formats, "out_formats should allocate");
+
+    ls.out_formats[0].type = OUTPUT_FORMAT_CSV;
+    ls.out_formats[0].is_active = true;
+    strncpy(ls.out_formats[0].csv.filename, temp_names[0], sizeof(ls.out_formats[0].csv.filename));
+    ls.out_formats[0].csv.field_count = 2;
+    ls.out_formats[0].csv.file = temp_logs[0];
+
+    // on Windows, newlines will count as two bytes \r\n
+    fprintf(temp_logs[0], "line1\nline2\n");
+    fflush(temp_logs[0]);
+
+    CheckpointStatus status = pack_output_format_array(&arr, &ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "fill should succeed");
+    TEST_ASSERT_NOT_EQUAL_INT_MESSAGE(
+        0, memcmp(&arr.formats[0].data.csv.file_position, &(fpos_t){0}, sizeof(fpos_t)),
+        "file position should be set and nonzero");
+
+    status = serialize_output_format_array(&arr, &payload, &payload_bytes);
+
+    // add something else to the file after serializing
+    fprintf(temp_logs[0], "line3\n");
+    fflush(temp_logs[0]);
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status,
+                                  "serialize_output_format_array should succeed");
+    TEST_ASSERT_NOT_NULL_MESSAGE(payload, "write should allocate payload bytes");
+
+    size_t bytes_read = 0u;
+    status = unserialize_output_format_array(payload, &bytes_read, &parsed);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status,
+                                  "serialize_output_format_array should succeed");
+    status = unpack_output_format_array(&parsed, &recovered_ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "unpack should succeed");
+    TEST_ASSERT_NOT_NULL_MESSAGE(recovered_ls.out_formats[0].csv.file,
+                                 "file pointer should be set");
+
+    // try overwriting the file contents
+    fprintf(recovered_ls.out_formats[0].csv.file, "line4\n");
+    fflush(recovered_ls.out_formats[0].csv.file);
+
+    // check that contents were overwritten and not appended
+    // simulation opens files in "w" mode, which on Windows will treat \r\n as one byte in fread but
+    // two bytes in ftell
+    // writing in "b" mode will print newlines as \n
+    size_t file_size = (size_t)ftell(temp_logs[0]);
+    TEST_ASSERT_GREATER_THAN_INT_MESSAGE(0, file_size, "file size should be greater than zero");
+
+    fseek(temp_logs[0], 0, SEEK_SET);
+    char *log_content = (char *)malloc((file_size + 1) * sizeof(char));
+    size_t n_read = fread(log_content, sizeof(char), file_size, temp_logs[0]);
+    log_content[n_read] = '\0';
+    TEST_ASSERT_EQUAL_INT_MESSAGE(file_size, n_read,
+                                  "there should be content to read from the file");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("line1\nline2\nline4\n", log_content,
+                                     "file contents should be overwritten, not appended");
+    free(log_content);
+
+    fclose(recovered_ls.out_formats[0].csv.file);
+    free(payload);
+    free(ls.out_formats);
+    if (arr.formats) {
+        free(arr.formats);
+    }
 }
 
 int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_fill_logging_payload_copies_selected_logging_scalars);
-    RUN_TEST(test_fill_logging_payload_copies_logging_edge_values);
-    RUN_TEST(test_apply_logging_payload_restores_selected_logging_scalars);
-    RUN_TEST(test_fill_output_format_array_payload_serializes_formats);
-    RUN_TEST(test_write_output_format_array_serializes_formats);
-    RUN_TEST(test_read_output_format_array_parses_written_payload);
-    RUN_TEST(test_read_output_format_array_round_trip);
+    RUN_TEST(test_pack_logging_payload_copies_selected_logging_scalars);
+    RUN_TEST(test_pack_logging_payload_copies_logging_edge_values);
+    RUN_TEST(test_unpack_logging_payload_restores_selected_logging_scalars);
+    RUN_TEST(test_pack_output_format_array_serializes_formats);
+    RUN_TEST(test_serialize_output_format_array_serializes_formats);
+    RUN_TEST(test_serialize_output_format_array_parses_written_payload);
+    RUN_TEST(test_serialize_output_format_array_round_trip);
+    RUN_TEST(test_apply_output_format_array_payload_restores_formats);
+    RUN_TEST(test_serialize_output_format_array_with_file_contents_overwrites);
 
     UNITY_END();
+
+    for (int i = 0; i < NTEMPS; i++) {
+        remove(temp_names[i]);
+    }
+
     return 0;
 }

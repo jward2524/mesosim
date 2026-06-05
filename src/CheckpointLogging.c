@@ -30,27 +30,46 @@ static void pack_output_schedule(OutSchedPayload *dest, const OutputSchedule *so
     dest->frame_num = source->frame_num;
 }
 
-static void pack_csv_format(OutFormatCsvPayload *dest, const OutputFormat *source)
+static CheckpointStatus pack_file_position(FILE *file, fpos_t *pos)
+{
+    if (!file) {
+        // fprintf(stderr, "Checkpoint error: null file pointer was provided for an output format");
+        return CHECKPOINT_OK;
+    }
+
+    int ret = fgetpos(file, pos);
+    if (ret) {
+        fprintf(stderr, "Checkpoint error: failed to get file position for CSV format: %s\n",
+                strerror(errno));
+        return CHECKPOINT_ERROR;
+    }
+    return CHECKPOINT_OK;
+}
+
+static CheckpointStatus pack_csv_format(OutFormatCsvPayload *dest, const OutputFormat *source)
 {
     pack_output_schedule(&dest->schedule, &source->csv.schedule);
     memcpy(dest->filename, source->csv.filename, sizeof(dest->filename));
     dest->field_count = source->csv.field_count;
     dest->frame_num = source->csv.frame_num;
+    return pack_file_position(source->csv.file, &dest->file_position);
 }
 
-static void pack_xyz_format(OutFormatXyzPayload *dest, const OutputFormat *source)
+static CheckpointStatus pack_xyz_format(OutFormatXyzPayload *dest, const OutputFormat *source)
 {
     pack_output_schedule(&dest->schedule, &source->xyz.schedule);
     memcpy(dest->prefix, source->xyz.prefix, sizeof(dest->prefix));
     memcpy(dest->suffix, source->xyz.suffix, sizeof(dest->suffix));
     dest->frame_num = source->xyz.frame_num;
     dest->stripped = (uint8_t)source->xyz.stripped;
+    return CHECKPOINT_OK;
 }
 
-static void pack_steps_format(OutFormatStepsPayload *dest, const OutputFormat *source)
+static CheckpointStatus pack_steps_format(OutFormatStepsPayload *dest, const OutputFormat *source)
 {
     memcpy(dest->filename, source->steps.filename, sizeof(dest->filename));
     dest->with_coordination = (uint8_t)source->steps.with_coordination;
+    return pack_file_position(source->steps.file, &dest->file_position);
 }
 
 CheckpointStatus pack_output_format_array(OutFormatArrPayload *arr_payload,
@@ -203,7 +222,30 @@ static void unpack_output_schedule(OutputSchedule *dest, const OutSchedPayload *
     dest->frame_num = source->frame_num;
 }
 
-static void unpack_csv_format(const OutFormatCsvPayload *csv_payload, OutputFormat *format)
+static CheckpointStatus reopen_output_file(const char *filename, const fpos_t *pos, FILE **file)
+{
+    if (filename[0] == '\0') {
+        return CHECKPOINT_OK;
+    }
+
+    *file = fopen(filename, "rb+");
+    if (!*file) {
+        fprintf(stderr, "Failed to open checkpoint file %s: %s\n", filename, strerror(errno));
+        return CHECKPOINT_ERROR;
+    }
+    int ret = fsetpos(*file, pos);
+    if (ret) {
+        fprintf(stderr, "Failed to set file position for checkpoint file %s: %s", filename,
+                strerror(errno));
+        fclose(*file);
+        *file = NULL;
+        return CHECKPOINT_ERROR;
+    }
+    return CHECKPOINT_OK;
+}
+
+static CheckpointStatus unpack_csv_format(const OutFormatCsvPayload *csv_payload,
+                                          OutputFormat *format)
 {
     unpack_output_schedule(&format->csv.schedule, &csv_payload->schedule);
     memcpy(format->csv.filename, csv_payload->filename, sizeof(format->csv.filename));
@@ -211,33 +253,40 @@ static void unpack_csv_format(const OutFormatCsvPayload *csv_payload, OutputForm
     format->csv.frame_num = csv_payload->frame_num;
     format->csv.field_count = csv_payload->field_count;
     format->csv.frame_num = csv_payload->frame_num;
+    return reopen_output_file(format->csv.filename, &csv_payload->file_position, &format->csv.file);
 }
 
-static void unpack_xyz_format(const OutFormatXyzPayload *xyz_payload, OutputFormat *format)
+static CheckpointStatus unpack_xyz_format(const OutFormatXyzPayload *xyz_payload,
+                                          OutputFormat *format)
 {
     unpack_output_schedule(&format->xyz.schedule, &xyz_payload->schedule);
     memcpy(format->xyz.prefix, xyz_payload->prefix, sizeof(format->xyz.prefix));
     memcpy(format->xyz.suffix, xyz_payload->suffix, sizeof(format->xyz.suffix));
     format->xyz.frame_num = xyz_payload->frame_num;
     format->xyz.stripped = (bool)xyz_payload->stripped;
+    return CHECKPOINT_OK;
 }
 
-static void unpack_steps_format(const OutFormatStepsPayload *steps_payload, OutputFormat *format)
+static CheckpointStatus unpack_steps_format(const OutFormatStepsPayload *steps_payload,
+                                            OutputFormat *format)
 {
     memcpy(format->steps.filename, steps_payload->filename, sizeof(format->steps.filename));
     format->steps.with_coordination = (bool)steps_payload->with_coordination;
+    return reopen_output_file(format->steps.filename, &steps_payload->file_position,
+                              &format->steps.file);
 }
 
-void unpack_output_format_array(const OutFormatArrPayload *arr_payload, struct LoggingState *ls)
+CheckpointStatus unpack_output_format_array(const OutFormatArrPayload *arr_payload,
+                                            struct LoggingState *ls)
 {
     if (arr_payload == NULL || ls == NULL) {
-        return;
+        return CHECKPOINT_OK;
     }
 
     ls->out_formats_cnt = arr_payload->n_out_formats;
     if (ls->out_formats_cnt <= 0) {
         ls->out_formats = NULL;
-        return;
+        return CHECKPOINT_OK;
     }
 
     ls->out_formats = (OutputFormat *)calloc((size_t)ls->out_formats_cnt, sizeof(*ls->out_formats));
@@ -246,7 +295,7 @@ void unpack_output_format_array(const OutFormatArrPayload *arr_payload, struct L
                 "Checkpoint error: failed to allocate memory for output formats in apply: %s\n",
                 strerror(errno));
         ls->out_formats_cnt = 0;
-        return;
+        return CHECKPOINT_ERROR;
     }
 
     for (int i = 0; i < arr_payload->n_out_formats; ++i) {
@@ -257,15 +306,16 @@ void unpack_output_format_array(const OutFormatArrPayload *arr_payload, struct L
         dest_format->is_active = (bool)source_format->is_active;
 
         // TODO: re-open files and move fpointers to the correct positions
+        CheckpointStatus status;
         switch (dest_format->type) {
         case OUTPUT_FORMAT_CSV:
-            unpack_csv_format(&source_format->data.csv, dest_format);
+            status = unpack_csv_format(&source_format->data.csv, dest_format);
             break;
         case OUTPUT_FORMAT_XYZ:
-            unpack_xyz_format(&source_format->data.xyz, dest_format);
+            status = unpack_xyz_format(&source_format->data.xyz, dest_format);
             break;
         case OUTPUT_FORMAT_STEPS_CSV:
-            unpack_steps_format(&source_format->data.steps, dest_format);
+            status = unpack_steps_format(&source_format->data.steps, dest_format);
             break;
         default:
             fprintf(stderr, "Checkpoint error: unsupported output format type %d in apply\n",
@@ -273,7 +323,16 @@ void unpack_output_format_array(const OutFormatArrPayload *arr_payload, struct L
             free(ls->out_formats);
             ls->out_formats = NULL;
             ls->out_formats_cnt = 0;
-            return;
+            status = CHECKPOINT_ERROR;
+        }
+
+        if (status != CHECKPOINT_OK) {
+            fprintf(stderr, "Checkpoint error: failed to unpack output format %d\n", i);
+            free(ls->out_formats);
+            ls->out_formats = NULL;
+            ls->out_formats_cnt = 0;
+            return CHECKPOINT_ERROR;
         }
     }
+    return CHECKPOINT_OK;
 }

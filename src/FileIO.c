@@ -76,11 +76,11 @@ void open_log_files(struct LoggingState *ls, unsigned flavor)
     for (int i = 0; i < ls->out_formats_cnt; i++) {
         OutputFormat *format = &(ls->out_formats[i]);
         if (format->type == OUTPUT_FORMAT_CSV) {
-            format->csv.file = fopen(format->csv.filename, "w+");
+            format->csv.file = fopen(format->csv.filename, "wb+");
             fopen_error(format->csv.filename, format->csv.file, "Failed to open csv file, ");
             output_csv_header(format);
         } else if (format->type == OUTPUT_FORMAT_STEPS_CSV) {
-            format->csv.file = fopen(format->steps.filename, "w+");
+            format->csv.file = fopen(format->steps.filename, "wb+");
             fopen_error(format->steps.filename, format->csv.file,
                         "Failed to open steps csv file, ");
 
@@ -96,7 +96,7 @@ void open_log_files(struct LoggingState *ls, unsigned flavor)
 void simulation_parameters_from_file(char *filename, struct SimulationConfig *inputs,
                                      struct LoggingState *ls)
 {
-    FILE *input_file = fopen(filename, "r");
+    FILE *input_file = fopen(filename, "rb");
     fopen_error(filename, input_file, "Failed to open input file, ");
 
     process_in_file(input_file, inputs, ls);
@@ -690,7 +690,7 @@ void write_xyz_file(OutputFormat *format, struct SimulationState *ss, struct Sim
                 format->xyz.prefix, format->xyz.frame_num, format->xyz.suffix);
         clean_and_error(EXIT_FAILURE);
     }
-    FILE *file = fopen(filename_full, "w+");
+    FILE *file = fopen(filename_full, "wb+");
     if (file == NULL) {
         printf("Error - Couldn't open output file %s\n", filename_full);
         fprintf(stderr, "Couldn't open file %s: %s\n", filename_full, strerror(errno));

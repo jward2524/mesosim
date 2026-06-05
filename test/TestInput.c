@@ -20,7 +20,7 @@ static FILE *mock_input_file = NULL;
 
 static FILE *open_mem(const char *text)
 {
-    FILE *tmpf = fopen(mock_name, "w+");
+    FILE *tmpf = fopen(mock_name, "wb+");
     fopen_error(mock_name, tmpf);
     if (!tmpf) {
         perror("Failed to create temporary file");

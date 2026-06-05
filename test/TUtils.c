@@ -20,14 +20,14 @@ void fopen_error(const char *filename, const FILE *file)
 
 FILE *open_file(const char *filename)
 {
-    FILE *file = fopen(filename, "r");
+    FILE *file = fopen(filename, "rb");
     fopen_error(filename, file);
     return file;
 }
 
 void init_temp(FILE **temp_log)
 {
-    *temp_log = fopen(temp_name, "w+");
+    *temp_log = fopen(temp_name, "wb+");
     fopen_error(temp_name, *temp_log);
 }
 
@@ -55,8 +55,8 @@ void build_array_header(uint8_t *buffer, uint16_t flag, uint32_t n)
     memcpy(buffer + sizeof(uint16_t) + sizeof(uint16_t), &n, sizeof(uint32_t));
 }
 
-static void build_output_format_payload(const OutputFormat *source,
-                                        OutFormatPayload *dest)
+// TODO: use pack?
+static void build_output_format_payload(const OutputFormat *source, OutFormatPayload *dest)
 {
     memset(dest, 0, sizeof(*dest));
     dest->type = (uint8_t)source->type;
@@ -108,8 +108,7 @@ static void assert_output_schedule_matches(const OutSchedPayload *expected,
 }
 
 void assert_output_format_payload_matches(const OutFormatPayload *expected,
-                                          const OutFormatPayload *actual,
-                                          const char *context)
+                                          const OutFormatPayload *actual, const char *context)
 {
     TEST_ASSERT_EQUAL_INT_MESSAGE(expected->type, actual->type, context);
     TEST_ASSERT_EQUAL_INT_MESSAGE(expected->is_active, actual->is_active, context);
@@ -162,8 +161,7 @@ void assert_output_format_matches_runtime_round_trip(const OutputFormat *expecte
 }
 
 void assert_output_format_matches_runtime(const OutputFormat *expected,
-                                          const OutFormatPayload *actual,
-                                          const char *context)
+                                          const OutFormatPayload *actual, const char *context)
 {
     OutFormatPayload expected_payload = {0};
     build_output_format_payload(expected, &expected_payload);

@@ -817,7 +817,7 @@ void test_write_xyz_file_creates_file_and_content(void)
 
     char filename[520];
     sprintf(filename, "%s_%d_%s.xyz", prefix, frame_num, suffix);
-    FILE *f = fopen(filename, "r");
+    FILE *f = fopen(filename, "rb");
     TEST_ASSERT_NOT_NULL(f);
     char line[256];
     char *ret = fgets(line, sizeof(line), f);

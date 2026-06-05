@@ -9,11 +9,21 @@
 #include <string.h>
 
 FILE *temp_checkpoint_file;
-const char temp_checkpoint_path[] = "build/test/temp_checkpoint.bin";
+const char temp_checkpoint_path[] = "test/output/temp_checkpoint.bin";
+
+// TODO: move the setup of temp files to TUtils and reuse
+#define NTEMPS 4
+FILE *temp_logs[NTEMPS];
+char *temp_names[NTEMPS] = {"test/output/temp_log_0.log", "test/output/temp_log_1.log",
+                            "test/output/temp_log_2.log", "test/output/temp_log_3.log"};
 
 // TODO: set up ss and se in setUp so it cleans on test fail
 void setUp(void)
 {
+    for (int i = 0; i < NTEMPS; i++) {
+        temp_logs[i] = fopen(temp_names[i], "wb+");
+        fopen_error(temp_names[i], temp_logs[i]);
+    }
 }
 
 void tearDown(void)
@@ -28,6 +38,10 @@ void tearDown(void)
     // if file didn't exist, remove will fail, but is ok
     if (pexists && rc) {
         perror("Remove of test checkpoint file failed");
+    }
+
+    for (int i = 0; i < NTEMPS; i++) {
+        fclose(temp_logs[i]);
     }
 }
 
@@ -388,7 +402,7 @@ void test_checkpoint_header_write_and_read_round_trip(void)
     CheckpointHeader written;
     CheckpointHeader read_back;
 
-    temp_checkpoint_file = fopen(temp_checkpoint_path, "w+");
+    temp_checkpoint_file = fopen(temp_checkpoint_path, "wb+");
     fopen_error(temp_checkpoint_path, temp_checkpoint_file);
 
     initialize_checkpoint_header(&written);
@@ -703,13 +717,13 @@ void test_checkpoint_save_and_load_logging_formats_success(void)
 
     const int n = 4;
     save_ls.out_formats_cnt = n;
-    save_ls.out_formats = (OutputFormat *)malloc((size_t)n * sizeof(OutputFormat));
+    save_ls.out_formats = (OutputFormat *)calloc((size_t)n, sizeof(OutputFormat));
     TEST_ASSERT_NOT_NULL_MESSAGE(save_ls.out_formats, "out_formats should allocate");
 
     /* CSV format entry */
     save_ls.out_formats[0].type = OUTPUT_FORMAT_CSV;
     save_ls.out_formats[0].is_active = true;
-    strncpy(save_ls.out_formats[0].csv.filename, "out.csv",
+    strncpy(save_ls.out_formats[0].csv.filename, temp_names[0],
             sizeof(save_ls.out_formats[0].csv.filename));
     save_ls.out_formats[0].csv.field_count = 2;
     save_ls.out_formats[0].csv.frame_num = 42;
@@ -720,7 +734,7 @@ void test_checkpoint_save_and_load_logging_formats_success(void)
     /* Second CSV format entry */
     save_ls.out_formats[1].type = OUTPUT_FORMAT_CSV;
     save_ls.out_formats[1].is_active = false;
-    strncpy(save_ls.out_formats[1].csv.filename, "other.csv",
+    strncpy(save_ls.out_formats[1].csv.filename, temp_names[1],
             sizeof(save_ls.out_formats[1].csv.filename));
     save_ls.out_formats[1].csv.field_count = 4;
     save_ls.out_formats[1].csv.frame_num = 99;
@@ -731,7 +745,7 @@ void test_checkpoint_save_and_load_logging_formats_success(void)
     /* STEPS format entry */
     save_ls.out_formats[2].type = OUTPUT_FORMAT_STEPS_CSV;
     save_ls.out_formats[2].is_active = true;
-    strncpy(save_ls.out_formats[2].steps.filename, "steps.csv",
+    strncpy(save_ls.out_formats[2].steps.filename, temp_names[2],
             sizeof(save_ls.out_formats[2].steps.filename));
     save_ls.out_formats[2].steps.with_coordination = true;
 
@@ -980,5 +994,10 @@ int main(void)
     RUN_TEST(test_checkpoint_rebuild_zones_and_rates_from_atoms);
 
     UNITY_END();
+
+    for (int i = 0; i < NTEMPS; i++) {
+        remove(temp_names[i]);
+    }
+
     return 0;
 }

@@ -515,7 +515,16 @@ CheckpointStatus read_checkpoint_file(const char *path, struct SimulationState *
 
     if (header.has_ls) {
         unpack_logging_payload(&logging_payload, ls);
-        unpack_output_format_array(&output_format_arr_payload, ls);
+        status = unpack_output_format_array(&output_format_arr_payload, ls);
+        if (status != CHECKPOINT_OK) {
+            fprintf(stderr,
+                    "Checkpoint error: failed to unpack output format array from checkpoint %s\n",
+                    path);
+            free(ls->out_formats);
+            ls->out_formats = NULL;
+            ls->out_formats_cnt = 0;
+            return CHECKPOINT_ERROR;
+        }
     }
 
     if (header.has_ss && header.has_se) {

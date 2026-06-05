@@ -32,6 +32,7 @@ typedef struct {
 typedef struct {
     OutSchedPayload schedule;
     char filename[256];
+    fpos_t file_position;
     int field_count;
     int frame_num;
 } OutFormatCsvPayload;
@@ -44,6 +45,7 @@ typedef struct {
 } OutFormatXyzPayload;
 typedef struct {
     char filename[256];
+    fpos_t file_position;
     uint8_t with_coordination;
 } OutFormatStepsPayload;
 typedef struct {
@@ -53,7 +55,7 @@ typedef struct {
         OutFormatCsvPayload csv;
         OutFormatXyzPayload xyz;
         OutFormatStepsPayload steps;
-    } data;
+    } data; // ENHANCE: remove this name so it matches OutputFormat
 } OutFormatPayload;
 #pragma pack(pop)
 
@@ -65,7 +67,8 @@ typedef struct {
 /* Output format array helpers */
 CheckpointStatus pack_output_format_array(OutFormatArrPayload *arr_payload,
                                           const struct LoggingState *ls);
-void unpack_output_format_array(const OutFormatArrPayload *arr_payload, struct LoggingState *ls);
+CheckpointStatus unpack_output_format_array(const OutFormatArrPayload *arr_payload,
+                                            struct LoggingState *ls);
 CheckpointStatus serialize_output_format_array(const OutFormatArrPayload *arr_payload,
                                                uint8_t **p_payload, uint32_t *p_payload_bytes);
 CheckpointStatus unserialize_output_format_array(uint8_t *payload, size_t *total_bytes_read,
