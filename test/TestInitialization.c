@@ -354,7 +354,6 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_initialize_simulation);
     RUN_TEST(test_get_shifts_sets_expected_shifts);
     RUN_TEST(test_set_primitive_basis_fcc_sets_expected_vectors);
     RUN_TEST(test_initialize_neighbor_offsets_fcc_sets_expected_values);
@@ -365,6 +364,7 @@ int main(void)
     RUN_TEST(test_set_default_orientation_sc_returns_identity);
     RUN_TEST(test_allocate_simulation_arrays_allocates_expected_buffers);
     RUN_TEST(test_initialize_env_from_input_sets_seed_and_overpotentials);
+    RUN_TEST(test_initialize_simulation);
 
     UNITY_END();
 

@@ -496,8 +496,7 @@ void initialize_neighbor_offsets(struct SimulationConfig *inputs, struct Simulat
     }
 
     // opposite_tvectors always only 1st nn
-    se->opposite_tvectors =
-        (int *)malloc((size_t)se->num_transition_vectors * sizeof(*se->opposite_tvectors));
+    se->opposite_tvectors = (int *)malloc((size_t)se->num_transition_vectors * sizeof(int));
     if (!se->opposite_tvectors) {
         perror("Couldn't allocate memory for jump offset opposite array");
         clean_and_error(errno);

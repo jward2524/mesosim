@@ -260,6 +260,8 @@ CheckpointStatus write_checkpoint_buffer(const char *path, const struct Simulati
         return CHECKPOINT_ERROR;
     }
 
+    free(payload);
+
     return CHECKPOINT_OK;
 }
 
@@ -493,6 +495,8 @@ CheckpointStatus read_checkpoint_file(const char *path, struct SimulationState *
         payload_ptr += bytes_read;
     }
 
+    free(payload);
+
     // apply payloads
     // apply ss and se first
     // calculate derived members
@@ -516,6 +520,7 @@ CheckpointStatus read_checkpoint_file(const char *path, struct SimulationState *
     if (header.has_ls) {
         unpack_logging_payload(&logging_payload, ls);
         status = unpack_output_format_array(&output_format_arr_payload, ls);
+        free(output_format_arr_payload.formats);
         if (status != CHECKPOINT_OK) {
             fprintf(stderr,
                     "Checkpoint error: failed to unpack output format array from checkpoint %s\n",
@@ -549,6 +554,5 @@ CheckpointStatus read_checkpoint_file(const char *path, struct SimulationState *
         free(atom_payload_arr);
     }
 
-    free(payload);
     return CHECKPOINT_OK;
 }

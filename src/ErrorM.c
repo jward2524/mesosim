@@ -169,6 +169,16 @@ void clean_and_error(int exit_error)
         }
         free_if_exists((void **)&ss->rate_arr);
 
+        if (ss->zone_arr) {
+            for (size_t i = 0; i < se->zone_count_u; i++) {
+                for (size_t j = 0; j < se->zone_count_v; j++) {
+                    free_if_exists((void **)&(ss->zone_arr[i][j]));
+                }
+                free_if_exists((void **)&(ss->zone_arr[i]));
+            }
+            free_if_exists((void **)&ss->zone_arr);
+        }
+
         free_if_exists((void **)&(ss->transition_probability.rate_arr_index));
         free_if_exists((void **)&(ss->transition_probability.lbound));
         free_if_exists((void **)&(ss->transition_probability.ubound));

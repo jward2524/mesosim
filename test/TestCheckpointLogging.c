@@ -1,6 +1,7 @@
 #include "CheckpointLogging.h"
 #include "TUtils.h"
 #include "unity.h"
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -380,7 +381,10 @@ void test_apply_output_format_array_payload_restores_formats(void)
     assert_output_format_matches_runtime(&ls.out_formats[2], &arr.formats[2],
                                          "third output format should restore");
 
+    fclose(ls.out_formats[0].csv.file);
+    fclose(ls.out_formats[2].steps.file);
     free(arr.formats);
+    free(ls.out_formats);
 }
 
 void test_serialize_output_format_array_with_file_contents_overwrites(void)
@@ -455,9 +459,9 @@ void test_serialize_output_format_array_with_file_contents_overwrites(void)
     fclose(recovered_ls.out_formats[0].csv.file);
     free(payload);
     free(ls.out_formats);
-    if (arr.formats) {
-        free(arr.formats);
-    }
+    free(recovered_ls.out_formats);
+    free(arr.formats);
+    free(parsed.formats);
 }
 
 int main(void)
@@ -477,7 +481,11 @@ int main(void)
     UNITY_END();
 
     for (int i = 0; i < NTEMPS; i++) {
-        remove(temp_names[i]);
+        int ret = remove(temp_names[i]);
+        if (ret != 0) {
+            fprintf(stderr, "Warning: failed to remove temporary file %s - %s\n", temp_names[i],
+                    strerror(errno));
+        }
     }
 
     return 0;

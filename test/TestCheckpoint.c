@@ -5,6 +5,7 @@
 #include "Initialization.h"
 #include "TUtils.h"
 #include "unity.h"
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -113,6 +114,16 @@ void test_checkpoint_save_and_load_env_arrays_and_atom_names(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "env array checkpoint should save successfully");
 
+    free(se_save.substrate_composition);
+    free(se_save.nn_energy);
+    free(se_save.is_soluble);
+    for (int i = 0; i < se_save.atom_names_cnt; ++i) {
+        free(se_save.atom_names[i]);
+    }
+    free(se_save.atom_names);
+    free(se_save.transition_vectors);
+    free(se_save.opposite_tvectors);
+
     // Load into a blank env so the test can verify the restore path repopulates every array.
     load_status = read_checkpoint_file(temp_checkpoint_path, NULL, &se_load, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
@@ -130,13 +141,16 @@ void test_checkpoint_save_and_load_env_arrays_and_atom_names(void)
     TEST_ASSERT_EQUAL_STRING_MESSAGE("A", se_load.atom_names[0], "atom name should restore");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("BB", se_load.atom_names[1], "atom name should restore");
 
-    free(se_save.substrate_composition);
-    free(se_save.nn_energy);
-    free(se_save.is_soluble);
-    for (int i = 0; i < se_save.atom_names_cnt; ++i) {
-        free(se_save.atom_names[i]);
+    free(se_load.substrate_composition);
+    free(se_load.nn_energy);
+    free(se_load.is_soluble);
+    for (int i = 0; i < se_load.atom_names_cnt; ++i) {
+        free(se_load.atom_names[i]);
     }
-    free(se_save.atom_names);
+    free(se_load.atom_names);
+    free(se_load.transition_vectors);
+    free(se_load.opposite_tvectors);
+    free(se_load.atoms_per_nn_level);
 }
 
 void test_checkpoint_load_rejects_corrupted_env_atom_names_header(void)
@@ -529,6 +543,13 @@ void test_checkpoint_save_and_load_env_scalars(void)
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.0, se.max_overpotential, "max overpotential should restore");
 
     remove(temp_checkpoint_path);
+    free(se.substrate_composition);
+    free(se.nn_energy);
+    free(se.is_soluble);
+    free(se.atom_names);
+    free(se.transition_vectors);
+    free(se.opposite_tvectors);
+    free(se.atoms_per_nn_level);
 }
 
 void test_checkpoint_save_and_load_state_and_env(void)
@@ -583,6 +604,22 @@ void test_checkpoint_save_and_load_state_and_env(void)
                                    "flavor should restore from combined checkpoint");
     TEST_ASSERT_EQUAL_INT_MESSAGE(40, se.system_size_x,
                                   "system size should restore from combined checkpoint");
+
+    free(ss.atom_arr);
+    free(ss.rate_arr);
+    free(ss.zone_arr);
+    free(ss.transition_arr);
+    free(ss.transition_probability.rate_arr_index);
+    free(ss.transition_probability.lbound);
+    free(ss.transition_probability.ubound);
+
+    free(se.substrate_composition);
+    free(se.nn_energy);
+    free(se.is_soluble);
+    free(se.atom_names);
+    free(se.transition_vectors);
+    free(se.opposite_tvectors);
+    free(se.atoms_per_nn_level);
 }
 
 void test_checkpoint_save_and_load_atom_round_trip(void)
@@ -638,6 +675,7 @@ void test_checkpoint_save_and_load_atom_round_trip(void)
     save_status = write_checkpoint_buffer(temp_checkpoint_path, &ss, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "atom checkpoint should save successfully");
+    free(se.is_soluble);
 
     memset(&ss, 0, sizeof(ss));
 
@@ -653,6 +691,26 @@ void test_checkpoint_save_and_load_atom_round_trip(void)
 
     free(ss.atom_arr[0]);
     free(ss.atom_arr);
+    free(ss.rate_arr);
+    free(ss.transition_arr);
+    free(ss.transition_probability.rate_arr_index);
+    free(ss.transition_probability.lbound);
+    free(ss.transition_probability.ubound);
+    for (size_t i = 0; i < se.zone_count_u; i++) {
+        for (size_t j = 0; j < se.zone_count_v; j++) {
+            free(ss.zone_arr[i][j]);
+        }
+        free(ss.zone_arr[i]);
+    }
+    free(ss.zone_arr);
+
+    free(se.substrate_composition);
+    free(se.nn_energy);
+    free(se.is_soluble);
+    free(se.atom_names);
+    free(se.transition_vectors);
+    free(se.opposite_tvectors);
+    free(se.atoms_per_nn_level);
 }
 
 void test_checkpoint_save_and_load_logging_scalars_success(void)
@@ -791,7 +849,11 @@ void test_checkpoint_save_and_load_logging_formats_success(void)
                                                         &load_ls.out_formats[i], message);
     }
 
+    fclose(load_ls.out_formats[0].csv.file);
+    fclose(load_ls.out_formats[1].csv.file);
+    fclose(load_ls.out_formats[2].steps.file);
     free(save_ls.out_formats);
+    free(load_ls.out_formats);
 }
 
 void test_checkpoint_load_missing_file_returns_error(void)
@@ -914,9 +976,11 @@ void test_checkpoint_rebuild_zones_and_rates_from_atoms(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "checkpoint with atoms should save successfully");
 
-    // Allocate the zone grid that read_checkpoint_file will fill while rebuilding derived data.
-    initialize_zones(&ss_restored.zone_arr, &se);
-    TEST_ASSERT_NOT_NULL(ss_restored.zone_arr);
+    free(se.transition_vectors);
+    free(se.opposite_tvectors);
+    free(se.atoms_per_nn_level);
+    free(se.is_soluble);
+    free(se.nn_energy);
 
     // Load the checkpoint and let the restore path rebuild the derived structures.
     load_status = read_checkpoint_file(temp_checkpoint_path, &ss_restored, &se, NULL);
@@ -962,6 +1026,20 @@ void test_checkpoint_rebuild_zones_and_rates_from_atoms(void)
         }
         free(ss_restored.zone_arr);
     }
+
+    free(ss_restored.rate_arr);
+    free(ss_restored.transition_arr);
+    free(ss_restored.transition_probability.rate_arr_index);
+    free(ss_restored.transition_probability.lbound);
+    free(ss_restored.transition_probability.ubound);
+
+    free(se.substrate_composition);
+    free(se.nn_energy);
+    free(se.is_soluble);
+    free(se.atom_names);
+    free(se.transition_vectors);
+    free(se.opposite_tvectors);
+    free(se.atoms_per_nn_level);
 }
 
 int main(void)
@@ -996,7 +1074,11 @@ int main(void)
     UNITY_END();
 
     for (int i = 0; i < NTEMPS; i++) {
-        remove(temp_names[i]);
+        int ret = remove(temp_names[i]);
+        if (ret != 0) {
+            fprintf(stderr, "Warning: failed to remove temporary file %s - %s\n", temp_names[i],
+                    strerror(errno));
+        }
     }
 
     return 0;
