@@ -240,6 +240,13 @@ typedef struct {
     };
 } OutputFormat;
 
+typedef struct {
+    char filename[256];
+    unsigned long interval;
+    unsigned long next_checkpoint;
+    int frame_num;
+} CheckpointFormat;
+
 // variables that describe state of logging
 // files and when to log
 struct LoggingState {
@@ -252,6 +259,8 @@ struct LoggingState {
     int increment_precision;
     int stime_precision;
     int overpot_precision;
+
+    CheckpointFormat checkpoint;
 
     OutputFormat *out_formats;
     int out_formats_cnt;

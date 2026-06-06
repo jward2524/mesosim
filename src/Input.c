@@ -15,10 +15,118 @@
 #define MAX_LINE 1024
 #define MAX_TOKENS 256
 
-// if function returns 0, function failed
-// if it returns 1, handler succeeeded
+// TODO: make global timespec variable so default checkpoint and output filenames can use it for
+// timestamping, and random seeding can be done with the nanoseconds
+
+static InputErrorFlag cmd_systemsize(int argc, char **argv, int line, ParseContext *p_ctx,
+                                     struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_temp(int argc, char **argv, int line, ParseContext *p_ctx,
+                               struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_seed(int argc, char **argv, int line, ParseContext *p_ctx,
+                               struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_potential(int argc, char **argv, int line, ParseContext *p_ctx,
+                                    struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_struct(int argc, char **argv, int line, ParseContext *p_ctx,
+                                 struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *p_ctx,
+                                 struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_checkpoint(int argc, char **argv, int line, ParseContext *p_ctx,
+                                     struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_geometry(int argc, char **argv, int line, ParseContext *p_ctx,
+                                   struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_atomtype(int argc, char **argv, int line, ParseContext *p_ctx,
+                                   struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_composition(int argc, char **argv, int line, ParseContext *p_ctx,
+                                      struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_dissolution(int argc, char **argv, int line, ParseContext *p_ctx,
+                                      struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_nnlevels(int argc, char **argv, int line, ParseContext *p_ctx,
+                                   struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_nne(int argc, char **argv, int line, ParseContext *p_ctx,
+                              struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_run(int argc, char **argv, int line, ParseContext *p_ctx,
+                              struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_flavor(int argc, char **argv, int line, ParseContext *p_ctx,
+                                 struct SimulationConfig *inputs, struct LoggingState *ls);
+static InputErrorFlag cmd_help(int argc, char **argv, int line, ParseContext *p_ctx,
+                               struct SimulationConfig *inputs, struct LoggingState *ls);
+
+/* ================= Command table ================= */
+// TODO: need to add a way to associate lattice dimensions with cartesian dimensions
+// TODO: add a command for checkpointing
+// requriements: 1 = required, 0 = optional, -1 = forbidden
+const Command commands[] = {
+    {"systemsize", cmd_systemsize, "systemsize NX NY NZ",
+     "Simulation box size (x,y,z) in cartesian units.", CMDCAT_GEOMETRY, CMDREQ_REQUIRED,
+     CMDREQ_REQUIRED},
+
+    {"temp", cmd_temp, "temp T", "Simulation temperature in K.", CMDCAT_THERMODYNAMICS,
+     CMDREQ_REQUIRED, CMDREQ_REQUIRED},
+
+    {"seed", cmd_seed, "seed random|default|N",
+     "Selection of the random seed value. Default: default", CMDCAT_RUN, CMDREQ_OPTIONAL,
+     CMDREQ_OPTIONAL},
+
+    {"potential", cmd_potential, "potential U0 [dUdt Umax]",
+     "Constant or swept electric potential in eV and eV/s. Default: 0", CMDCAT_THERMODYNAMICS,
+     CMDREQ_OPTIONAL, CMDREQ_FORBIDDEN},
+
+    {"struct", cmd_struct, "struct FCC|BCC|SC", "Crystal structure type.", CMDCAT_GEOMETRY,
+     CMDREQ_REQUIRED, CMDREQ_REQUIRED},
+
+    {"output", cmd_output,
+     "output [steps [filename] | csv [filename] | xyz [file prefix]] [interval|list] "
+     "[time|iteration] [interval "
+     "step|list] {fields [list of fields]}",
+     "Data output scheme. CSV formats support {fields} fields. XYZ filename is used as a prefix, "
+     "and new xyz files are output following the schedule",
+     CMDCAT_OUTPUT, CMDREQ_OPTIONAL, CMDREQ_OPTIONAL},
+
+    {"checkpoint", cmd_checkpoint, "checkpoint [filename] [interval step]",
+     "Checkpointing scheme. Checkpoints are output to the specified filename following the "
+     "schedule.",
+     CMDCAT_OUTPUT, CMDREQ_OPTIONAL, CMDREQ_OPTIONAL},
+
+    {"geometry", cmd_geometry, "geometry (sheet N|cluster R|file path)",
+     "Initial geometry configuration. `sheet` parameter is thickness in the third lattice "
+     "dimension, `cluster` parameter is the cluster radius in lattice units, and `file` parameter "
+     "is a path to an input file with atomic coordinates.",
+     CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
+
+    {"atomtype", cmd_atomtype, "atomtype A B [C ...]", "Define atom types and their order.",
+     CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
+
+    {"composition", cmd_composition, "composition xA xB [xC ...]",
+     "Atomic composition fractions; order follows atomtype.", CMDCAT_GEOMETRY, CMDREQ_REQUIRED,
+     CMDREQ_REQUIRED},
+
+    {"dissolution", cmd_dissolution, "dissolution true|false ...",
+     "Dissolution flags per atom type; order follows atomtype.", CMDCAT_GEOMETRY, CMDREQ_REQUIRED,
+     CMDREQ_FORBIDDEN},
+
+    {"nnlevels", cmd_nnlevels, "nnlevels N", "Number of nearest-neighbor shells.",
+     CMDCAT_THERMODYNAMICS, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
+
+    {"nne", cmd_nne, "1nne eAA eAB ...",
+     "Nearest-neighbor energies for shell n (flattened upper-triangle). For a three-component "
+     "system: AA AB AC BB BC CC",
+     CMDCAT_THERMODYNAMICS, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
+
+    {"run", cmd_run, "run time|iteration value", "Simulation end condition, time in seconds.",
+     CMDCAT_RUN, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
+
+    {"flavor", cmd_flavor, "flavor KMC|MC", "Simulation algorithm flavor.", CMDCAT_RUN,
+     CMDREQ_REQUIRED, CMDREQ_REQUIRED},
+
+    {"help", cmd_help, "help [command]", "Show documentation for commands.", CMDCAT_OUTPUT,
+     CMDREQ_OPTIONAL, CMDREQ_OPTIONAL},
+
+    {NULL, NULL, NULL, NULL, CMDCAT_UNCAT, CMDREQ_OPTIONAL, CMDREQ_OPTIONAL}};
 
 /* ================= Utilities ================= */
+
+// if function returns 0, function succeeded
+// if it returns 1, helper failed
 
 static int parse_int(const char *s, int *out)
 {
@@ -242,8 +350,6 @@ static InputErrorFlag cmd_systemsize(int argc, char **argv, int line, ParseConte
         fprintf(stderr, "Input error - could not parse systemsize arguments\n");
         return INPUT_ERR_INVALID_ARG;
     }
-    // TODO: move to finalization
-    // se->max_atoms = (long)se->system_size_x * (long)se->system_size_y * (long)se->system_size_z;
     return INPUT_ERR_NONE;
 }
 
@@ -276,8 +382,7 @@ static InputErrorFlag cmd_seed(int argc, char **argv, int line, ParseContext *p_
     }
 
     if (strcmp(argv[1], "random") == 0) {
-        time_t seedtime;
-        time(&seedtime);
+        time_t seedtime = time(NULL);
         inputs->rand_seed = (unsigned int)seedtime;
         return INPUT_ERR_NONE;
     }
@@ -339,8 +444,6 @@ static InputErrorFlag cmd_struct(int argc, char **argv, int line, ParseContext *
         fprintf(stderr, "Input error - structure type %s not valid\n", argv[1]);
         return INPUT_ERR_INVALID_ARG;
     }
-    // TODO: move to finalization
-    // inputs->num_transition_vectors = MAXIMUM_NUMBER_OF_NEIGHBORS;
     return INPUT_ERR_NONE;
 }
 
@@ -602,6 +705,53 @@ static InputErrorFlag cmd_output(int argc, char **argv, int line, ParseContext *
     }
 }
 
+static InputErrorFlag cmd_checkpoint(int argc, char **argv, int line, ParseContext *p_ctx,
+                                     struct SimulationConfig *inputs, struct LoggingState *ls)
+{
+    (void)line;
+    (void)p_ctx;
+    (void)inputs;
+
+    if (argc < 2) {
+        fprintf(stderr, "Input error - checkpoint command expects at least 1 arguments\n");
+        return INPUT_ERR_COUNT_MISMATCH;
+    }
+
+    int idx = 1;
+
+    // first argument can be filename or the interval
+    if (parse_ulong(argv[idx], &ls->checkpoint.interval)) {
+        // if not an integer, treat as filename and parse schedule from remaining arguments
+
+        if (argc > 3) {
+            fprintf(stderr, "Input error - checkpoint command with filename as first argument "
+                            "expects only 2 arguments\n");
+            return INPUT_ERR_COUNT_MISMATCH;
+        }
+
+        snprintf(ls->checkpoint.filename, sizeof(ls->checkpoint.filename), "%s", argv[idx]);
+        idx++;
+        parse_ulong(argv[idx], &ls->checkpoint.interval);
+    } else {
+        // if an integer, treat it as the interval
+        // use a default filename with timestamp
+
+        if (argc > 2) {
+            fprintf(stderr, "Input error - checkpoint command with interval as first argument "
+                            "expects only 1 argument\n");
+            return INPUT_ERR_COUNT_MISMATCH;
+        }
+
+        // generate default filename: checkpoint_[time in seconds].bin
+        time_t now = time(NULL);
+        snprintf(ls->checkpoint.filename, sizeof(ls->checkpoint.filename), "checkpoint_%ld.bin",
+                 (long)now);
+    }
+    ls->checkpoint.next_checkpoint = ls->checkpoint.interval;
+    ls->checkpoint.frame_num = 0;
+    return INPUT_ERR_NONE;
+}
+
 static InputErrorFlag cmd_geometry(int argc, char **argv, int line, ParseContext *p_ctx,
                                    struct SimulationConfig *inputs, struct LoggingState *ls)
 {
@@ -713,72 +863,7 @@ static InputErrorFlag cmd_help(int argc, char **argv, int line, ParseContext *p_
     return INPUT_ERR_OTHER;
 }
 
-/* ================= Command table ================= */
-// TODO: need to add a way to associate lattice dimensions with cartesian dimensions
-// TODO: add a command for checkpointing
-// requriements: 1 = required, 0 = optional, -1 = forbidden
-const Command commands[] = {
-    {"systemsize", cmd_systemsize, "systemsize NX NY NZ",
-     "Simulation box size (x,y,z) in cartesian units.", CMDCAT_GEOMETRY, CMDREQ_REQUIRED,
-     CMDREQ_REQUIRED},
-
-    {"temp", cmd_temp, "temp T", "Simulation temperature in K.", CMDCAT_THERMODYNAMICS,
-     CMDREQ_REQUIRED, CMDREQ_REQUIRED},
-
-    {"seed", cmd_seed, "seed random|default|N",
-     "Selection of the random seed value. Default: default", CMDCAT_RUN, CMDREQ_OPTIONAL,
-     CMDREQ_OPTIONAL},
-
-    {"potential", cmd_potential, "potential U0 [dUdt Umax]",
-     "Constant or swept electric potential in eV and eV/s. Default: 0", CMDCAT_THERMODYNAMICS,
-     CMDREQ_OPTIONAL, CMDREQ_FORBIDDEN},
-
-    {"struct", cmd_struct, "struct FCC|BCC|SC", "Crystal structure type.", CMDCAT_GEOMETRY,
-     CMDREQ_REQUIRED, CMDREQ_REQUIRED},
-
-    {"output", cmd_output,
-     "output [steps [filename] | csv [filename] | xyz [file prefix]] [interval|list] "
-     "[time|iteration] [interval "
-     "step|list] {fields [list of fields]}",
-     "Data output scheme. CSV formats support {fields} fields. XYZ filename is used as a prefix, "
-     "and new xyz files are output following the schedule",
-     CMDCAT_OUTPUT, CMDREQ_OPTIONAL, CMDREQ_OPTIONAL},
-
-    {"geometry", cmd_geometry, "geometry (sheet N|cluster R|file path)",
-     "Initial geometry configuration. `sheet` parameter is thickness in the third lattice "
-     "dimension, `cluster` parameter is the cluster radius in lattice units, and `file` parameter "
-     "is a path to an input file with atomic coordinates.",
-     CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
-
-    {"atomtype", cmd_atomtype, "atomtype A B [C ...]", "Define atom types and their order.",
-     CMDCAT_GEOMETRY, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
-
-    {"composition", cmd_composition, "composition xA xB [xC ...]",
-     "Atomic composition fractions; order follows atomtype.", CMDCAT_GEOMETRY, CMDREQ_REQUIRED,
-     CMDREQ_REQUIRED},
-
-    {"dissolution", cmd_dissolution, "dissolution true|false ...",
-     "Dissolution flags per atom type; order follows atomtype.", CMDCAT_GEOMETRY, CMDREQ_REQUIRED,
-     CMDREQ_FORBIDDEN},
-
-    {"nnlevels", cmd_nnlevels, "nnlevels N", "Number of nearest-neighbor shells.",
-     CMDCAT_THERMODYNAMICS, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
-
-    {"nne", cmd_nne, "1nne eAA eAB ...",
-     "Nearest-neighbor energies for shell n (flattened upper-triangle). For a three-component "
-     "system: AA AB AC BB BC CC",
-     CMDCAT_THERMODYNAMICS, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
-
-    {"run", cmd_run, "run time|iteration value", "Simulation end condition, time in seconds.",
-     CMDCAT_RUN, CMDREQ_REQUIRED, CMDREQ_REQUIRED},
-
-    {"flavor", cmd_flavor, "flavor KMC|MC", "Simulation algorithm flavor.", CMDCAT_RUN,
-     CMDREQ_REQUIRED, CMDREQ_REQUIRED},
-
-    {"help", cmd_help, "help [command]", "Show documentation for commands.", CMDCAT_OUTPUT,
-     CMDREQ_OPTIONAL, CMDREQ_OPTIONAL},
-
-    {NULL, NULL, NULL, NULL, CMDCAT_UNCAT, CMDREQ_OPTIONAL, CMDREQ_OPTIONAL}};
+/* ================= Parser ================= */
 
 void initialize_requirements(ParseContext *p_ctx)
 {
@@ -796,8 +881,6 @@ void mark_requirement(ParseContext *p_ctx, const Command *c)
     ptrdiff_t idx = c - commands;
     p_ctx->cmd_present[idx] = 1;
 }
-
-/* ================= Parser ================= */
 
 void clean_ctx(ParseContext *p_ctx)
 {

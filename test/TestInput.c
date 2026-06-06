@@ -16,6 +16,21 @@ static struct LoggingState *ls = NULL;
 char *mock_name = "test/mock_input.in";
 static FILE *mock_input_file = NULL;
 
+void setUp(void)
+{
+    initialize_states(&ss, &se, &ls);
+}
+
+void tearDown(void)
+{
+    if (mock_input_file) {
+        fclose(mock_input_file);
+    };
+    if (ss != NULL || se != NULL || ls != NULL) {
+        clean_and_error(0);
+    }
+}
+
 /* ================= Helpers ================= */
 
 static FILE *open_mem(const char *text)
@@ -31,19 +46,23 @@ static FILE *open_mem(const char *text)
     return tmpf;
 }
 
-void setUp(void)
+static void assert_default_filename_time_deviation(char *time_str)
 {
-    initialize_states(&ss, &se, &ls);
-}
+    time_t now = time(NULL);
+    char *endptr;
+    long file_time = strtol(time_str, &endptr, 10);
+    TEST_ASSERT_TRUE_MESSAGE(*endptr == '\0', "Time part should be fully numeric");
+    TEST_ASSERT_TRUE_MESSAGE(file_time > 0, "Extracted time from filename should be positive");
 
-void tearDown(void)
-{
-    if (mock_input_file) {
-        fclose(mock_input_file);
-    };
-    if (ss != NULL || se != NULL || ls != NULL) {
-        clean_and_error(0);
+    long deviation = file_time - (long)now;
+    if (deviation < 0) {
+        deviation = -deviation;
     }
+    long max_deviation = 1;
+    char deviation_msg[64];
+    snprintf(deviation_msg, sizeof(deviation_msg),
+             "CSV filename time deviation should be <= %ld second(s)", max_deviation);
+    TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
 }
 
 /* ================= Tests ================= */
@@ -834,7 +853,6 @@ void test_output_csv_default_filename_time_success(void)
     ParseContext ctx = {0};
     struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
-    time_t now = time(NULL);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
@@ -849,25 +867,15 @@ void test_output_csv_default_filename_time_success(void)
     TEST_ASSERT_NOT_NULL_MESSAGE(format->csv.filename, "CSV filename should not be NULL");
     const char *dot = strrchr(format->csv.filename, '.');
     TEST_ASSERT_NOT_NULL_MESSAGE(dot, "CSV filename should contain a dot");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(".csv", dot, "CSV filename should end with .csv");
+
     size_t len = (size_t)(dot - format->csv.filename);
     char time_part[32];
     TEST_ASSERT_TRUE_MESSAGE(len < sizeof(time_part), "Time part too long");
     strncpy(time_part, format->csv.filename, len);
     time_part[len] = '\0';
-    char *endptr;
-    long file_time = strtol(time_part, &endptr, 10);
-    TEST_ASSERT_TRUE_MESSAGE(*endptr == '\0', "CSV filename time part should be fully numeric");
-    TEST_ASSERT_TRUE_MESSAGE(file_time > 0, "Extracted time from filename should be positive");
 
-    long deviation = file_time - (long)now;
-    if (deviation < 0) {
-        deviation = -deviation;
-    }
-    long max_deviation = 1;
-    char deviation_msg[64];
-    snprintf(deviation_msg, sizeof(deviation_msg),
-             "CSV filename time deviation should be <= %ld second(s)", max_deviation);
-    TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
+    assert_default_filename_time_deviation(time_part);
 }
 
 void test_output_xyz_default_prefix_time_success(void)
@@ -955,6 +963,47 @@ void test_output_non_numeric_interval_fails(void)
         parse_input_file(mock_input_file, &ctx, &inputs, ls);
         TEST_FAIL_MESSAGE("Expected failure for non-numeric interval");
     });
+}
+
+void test_checkpoint_interval_only_success(void)
+{
+    const char *input = "checkpoint 500\n";
+    ParseContext ctx = {0};
+    struct SimulationConfig inputs = {0};
+    mock_input_file = open_mem(input);
+
+    parse_input_file(mock_input_file, &ctx, &inputs, ls);
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(500, ls->checkpoint.interval, "Checkpoint schedule interval");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(500, ls->checkpoint.next_checkpoint,
+                                     "Checkpoint next_checkpoint should match interval");
+
+    // check if default filename is correct
+    TEST_ASSERT_TRUE_MESSAGE(strlen(ls->checkpoint.filename) > 0,
+                             "Default checkpoint filename should be set");
+
+    const char *dot = strrchr(ls->checkpoint.filename, '.');
+    TEST_ASSERT_NOT_NULL_MESSAGE(dot, "Checkpoint filename should contain a dot");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(".bin", dot, "Checkpoint filename should end with .bin");
+
+    const char *under = strrchr(ls->checkpoint.filename, '_');
+    TEST_ASSERT_NOT_NULL_MESSAGE(under, "Checkpoint filename should contain an underscore");
+    char check_prefix[32];
+    size_t prefix_len = (size_t)(under - ls->checkpoint.filename);
+    TEST_ASSERT_TRUE_MESSAGE(prefix_len < sizeof(check_prefix), "Checkpoint prefix too long");
+    strncpy(check_prefix, ls->checkpoint.filename, prefix_len);
+    check_prefix[prefix_len] = '\0';
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("checkpoint", check_prefix,
+                                     "Checkpoint filename should start with 'checkpoint'");
+
+    // Extract the time from the filename, which should be of the form "checkpoint_[time].bin"
+    const char *time_start = under + 1;
+    char time_part[32];
+    size_t time_len = (size_t)(dot - time_start);
+    TEST_ASSERT_TRUE_MESSAGE(time_len < sizeof(time_part), "Checkpoint time part too long");
+    strncpy(time_part, time_start, time_len);
+    time_part[time_len] = '\0';
+    assert_default_filename_time_deviation(time_part);
 }
 
 void test_geometry_cluster_success(void)
@@ -1613,24 +1662,6 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    // End-to-end parser baselines
-    RUN_TEST(test_parse_input_two_atomtypes_one_shell_success);
-    RUN_TEST(test_parse_input_three_atomtypes_two_shells_success);
-
-    RUN_TEST(test_parse_input_cluster_nns_file_success);
-    RUN_TEST(test_parse_input_multi_command_unknown_mid_file_fails);
-
-    RUN_TEST(test_parse_input_multi_command_finalize_composition_sum_fails);
-    RUN_TEST(test_parse_input_missing_atomtype_fails);
-    RUN_TEST(test_parse_input_missing_nne_shell_fails);
-    RUN_TEST(test_parse_input_unknown_command_fails);
-
-    RUN_TEST(test_required_commands_all_present_success);
-    RUN_TEST(test_missing_required_systemsize_fails);
-    RUN_TEST(test_missing_required_struct_fails);
-    RUN_TEST(test_missing_multiple_required_commands_fails);
-    RUN_TEST(test_missing_all_required_commands_fails);
-
     // Command requirements
     RUN_TEST(test_required_commands_invalid_args_fail_for_argument);
     RUN_TEST(test_required_commands_commented_out_treated_as_missing);
@@ -1705,6 +1736,12 @@ int main(void)
     RUN_TEST(test_output_xyz_default_prefix_time_success);
     RUN_TEST(test_output_xyz_stripped_success);
 
+    // checkpoint
+    RUN_TEST(test_checkpoint_interval_only_success);
+    // RUN_TEST(test_checkpoint_filename_success);
+    // RUN_TEST(test_checkpoint_filename_only_fails);
+    // RUN_TEST(test_checkpoint_no_arguments_fails);
+
     // geometry
     RUN_TEST(test_geometry_cluster_success);
     RUN_TEST(test_geometry_invalid_type_fails);
@@ -1728,6 +1765,24 @@ int main(void)
     RUN_TEST(test_finalize_nne_direct_single_shell_success);
     RUN_TEST(test_finalize_nne_direct_duplicate_shell_fails);
     RUN_TEST(test_finalize_nne_direct_level_exceeds_nnlevels_fails);
+
+    // End-to-end parser baselines
+    RUN_TEST(test_parse_input_two_atomtypes_one_shell_success);
+    RUN_TEST(test_parse_input_three_atomtypes_two_shells_success);
+
+    RUN_TEST(test_parse_input_cluster_nns_file_success);
+    RUN_TEST(test_parse_input_multi_command_unknown_mid_file_fails);
+
+    RUN_TEST(test_parse_input_multi_command_finalize_composition_sum_fails);
+    RUN_TEST(test_parse_input_missing_atomtype_fails);
+    RUN_TEST(test_parse_input_missing_nne_shell_fails);
+    RUN_TEST(test_parse_input_unknown_command_fails);
+
+    RUN_TEST(test_required_commands_all_present_success);
+    RUN_TEST(test_missing_required_systemsize_fails);
+    RUN_TEST(test_missing_required_struct_fails);
+    RUN_TEST(test_missing_multiple_required_commands_fails);
+    RUN_TEST(test_missing_all_required_commands_fails);
 
     UNITY_END();
 

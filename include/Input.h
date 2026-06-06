@@ -62,6 +62,8 @@ enum CmdRequired {
     CMDREQ_FORBIDDEN,
 };
 
+// function signature for pointer to command handlers, CmdFunc
+// argc and argv include the keyword itself in argv[0]
 typedef InputErrorFlag (*CmdFunc)(int argc, char **argv, int line, ParseContext *ctx,
                                   struct SimulationConfig *inputs, struct LoggingState *ls);
 
