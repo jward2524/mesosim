@@ -29,16 +29,6 @@ static int int_check(double fvalue, int ireference, double epsilon)
 }
 
 /**
- * @brief returns a random decimal on the interval [0,1]
- *
- * @return double random value
- */
-double drand(void)
-{
-    return (double)rand() / RAND_MAX;
-}
-
-/**
  * @brief Get the corresponding index in atom_env
  *
  * @param offset_idx index in atom.neighbor_arr and se->transition_vectors

@@ -2,6 +2,7 @@
 #include "Atoms.h"
 #include "ErrorM.h"
 #include "FileIO.h"
+#include "Random.h"
 #include "Utils.h"
 #include "Vector.h"
 #include <errno.h>
@@ -173,8 +174,14 @@ void initialize_env_from_config(struct SimulationConfig *config, struct Simulati
     initialize_neighbor_offsets(config, se);
 
     // system size was copied during initialize_simulation_box
-    se->rand_seed = config->rand_seed;
-    srand(se->rand_seed);
+
+    if (memcmp(&config->rand_state, &(RandomState){0}, sizeof(RandomState)) == 0) {
+        // if rand_state is zeros, initialize it using rand_seed
+        sran(config->rand_seed, &se->rand_state);
+    } else {
+        // if rand_state is provided, use it directly
+        se->rand_state = config->rand_state;
+    }
 
     se->lattice_type = config->lattice_type;
 
@@ -591,7 +598,7 @@ void initialize_flat_sheet(int sheet_thickness, struct SimulationState *ss,
         for (int i = se->simbox_limits_lat[0][0]; i < se->simbox_limits_lat[0][1]; ++i) {
             // loop through x and y (two lattice directions)
             for (int j = se->simbox_limits_lat[1][0]; j < se->simbox_limits_lat[1][1]; ++j) {
-                rand = drand();
+                rand = dran(&se->rand_state);
 
                 // TODO: make into fxn
                 double bar = 0;
@@ -712,7 +719,7 @@ void initialize_spherical_cluster(int cluster_radius, struct SimulationState *ss
 
                 if (dist <= (radius_cart * radius_cart)) {
                     // particle is in bounds
-                    random_num = drand();
+                    random_num = dran(&se->rand_state);
                     // determining composition of atom to be placed
                     double bar = 0;
                     int type = -1;

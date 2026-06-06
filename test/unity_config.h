@@ -5,6 +5,8 @@
 #define UNITY_INCLUDE_DOUBLE
 
 #endif // UNITY_CONFIG_H
+
+// debugging code
 // #error "unity_config.h is being included"
 // #if !defined(UNITY_INCLUDE_DOUBLE)
 // #error "UNITY_INCLUDE_DOUBLE not visible again"

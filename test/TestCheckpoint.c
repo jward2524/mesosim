@@ -73,7 +73,7 @@ void test_checkpoint_save_and_load_env_arrays_and_atom_names(void)
 
     se_save.flavor = FLAVOR_KMC;
     se_save.lattice_type = FCC;
-    se_save.rand_seed = 24680u;
+    se_save.rand_state = (RandomState){.u = 12345, .v = 67890, .w = 24680};
     se_save.system_size_x = 20;
     se_save.system_size_y = 20;
     se_save.system_size_z = 20;
@@ -129,7 +129,9 @@ void test_checkpoint_save_and_load_env_arrays_and_atom_names(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
                                   "env array checkpoint should load successfully");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(FLAVOR_KMC, se_load.flavor, "flavor should restore");
-    TEST_ASSERT_EQUAL_UINT_MESSAGE(24680u, se_load.rand_seed, "seed should restore");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(12345, se_load.rand_state.u, "random state u should restore");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(67890, se_load.rand_state.v, "random state v should restore");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(24680, se_load.rand_state.w, "random state w should restore");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.25, se_load.substrate_composition[0],
                                      "substrate composition should restore");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.75, se_load.substrate_composition[1],
@@ -172,7 +174,7 @@ void test_checkpoint_load_rejects_corrupted_env_atom_names_header(void)
 
     se.flavor = FLAVOR_MC;
     se.lattice_type = BCC;
-    se.rand_seed = 123u;
+    se.rand_state = (RandomState){.u = 54321, .v = 9876, .w = 13579};
     se.system_size_x = 20;
     se.system_size_y = 20;
     se.system_size_z = 20;
@@ -506,7 +508,7 @@ void test_checkpoint_save_and_load_env_scalars(void)
     // This test keeps the env minimal on purpose so only the checkpointed metadata matters.
     se.flavor = FLAVOR_KMC;
     se.lattice_type = FCC;
-    se.rand_seed = 12345u;
+    se.rand_state = (RandomState){.u = 12345, .v = 67890, .w = 24680};
     se.system_size_x = 20;
     se.system_size_y = 20;
     se.system_size_z = 20;
@@ -528,7 +530,7 @@ void test_checkpoint_save_and_load_env_scalars(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
                                   "env scalar checkpoint should load successfully");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(FLAVOR_KMC, se.flavor, "flavor should restore");
-    TEST_ASSERT_EQUAL_UINT_MESSAGE(12345u, se.rand_seed, "random seed should restore");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(24680, se.rand_state.w, "random state should restore");
     TEST_ASSERT_EQUAL_INT_MESSAGE(20, se.system_size_x, "system size x should restore");
     TEST_ASSERT_EQUAL_INT_MESSAGE(20, se.system_size_y, "system size y should restore");
     TEST_ASSERT_EQUAL_INT_MESSAGE(20, se.system_size_z, "system size z should restore");
@@ -576,7 +578,7 @@ void test_checkpoint_save_and_load_state_and_env(void)
 
     se.flavor = FLAVOR_MC;
     se.lattice_type = FCC;
-    se.rand_seed = 12345u;
+    se.rand_state = (RandomState){.u = 12345, .v = 67890, .w = 24680};
     se.system_size_x = 40;
     se.system_size_y = 20;
     se.system_size_z = 20;
@@ -648,7 +650,7 @@ void test_checkpoint_save_and_load_atom_round_trip(void)
 
     se.flavor = FLAVOR_KMC;
     se.lattice_type = FCC;
-    se.rand_seed = 12345u;
+    se.rand_state = (RandomState){.u = 12345, .v = 67890, .w = 24680};
     se.system_size_x = 20;
     se.system_size_y = 20;
     se.system_size_z = 20;

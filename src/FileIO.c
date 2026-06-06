@@ -494,7 +494,7 @@ void input_logging(struct SimulationConfig *inputs, struct SimulationState *ss,
         }
     }
 
-    safe_log(ls->sim_log, "Random seed is %u\n", se->rand_seed);
+    safe_log(ls->sim_log, "Random generator seed is %u\n", inputs->rand_seed);
 
     switch (inputs->geometry) {
     case GEOMETRY_FLAT_SHEET:

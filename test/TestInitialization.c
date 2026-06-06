@@ -209,7 +209,6 @@ void test_initialize_env_from_input_sets_seed_and_overpotentials(void)
     in.system_size_y = 8;
     in.system_size_z = 8;
     in.lattice_type = SC;
-    in.rand_seed = 0xDEADBEEF;
     in.overpotential_ramp_rate = 0.11;
     in.max_overpotential = 2.2;
     in.num_nn_levels = 1;
@@ -222,7 +221,7 @@ void test_initialize_env_from_input_sets_seed_and_overpotentials(void)
 
     initialize_env_from_config(&in, se);
 
-    TEST_ASSERT_EQUAL_UINT_MESSAGE(in.rand_seed, se->rand_seed, "rand_seed copied");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(in.system_size_x, se->system_size_x, "rand_seed copied");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.11, se->overpotential_ramp_rate,
                                      "overpotential_ramp_rate copied");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(2.2, se->max_overpotential, "max_overpotential copied");
@@ -309,7 +308,14 @@ void test_initialize_simulation(void)
     TEST_ASSERT_TRUE_MESSAGE(1, "initialize simulation");
 
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293.0, ss->temperature, "ss.temperature set from inputs");
-    TEST_ASSERT_EQUAL_UINT_MESSAGE(12345u, se->rand_seed, "se.rand_seed copied from inputs");
+
+    // random state can't be checked, because rng is used in initialization
+    RandomState expected_rand_state;
+    sran(inputs.rand_seed, &expected_rand_state);
+    TEST_ASSERT_NOT_EQUAL_INT_MESSAGE(
+        memcmp(&expected_rand_state, &se->rand_state, sizeof(RandomState)), 0,
+        "se.rand_state initialized from rand_seed and used");
+
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.03, se->overpotential_ramp_rate,
                                      "se.overpotential_ramp_rate copied");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.2, se->max_overpotential, "se.max_overpotential copied");

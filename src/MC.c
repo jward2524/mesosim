@@ -1,6 +1,7 @@
 #include "Atoms.h"
 #include "ErrorM.h"
 #include "FileIO.h"
+#include "Random.h"
 #include "Simulation.h"
 #include "State.h"
 #include "Utils.h"
@@ -55,30 +56,13 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         simulation_run = ss->iter < (ss->final_iteration * (unsigned long)ss->atom_cnt);
 
         // select transition
-        // use multiple calls to rand() to allow selection from all possible transitions, not
-        // only limited to RAND_MAX
-        long long int extended_rand = 0;
-        double drand0 = -1.;
-        int rand0 = -1;
-        if (ss->transition_cnt > RAND_MAX) {
-            int div = (int)floor((double)ss->transition_cnt / RAND_MAX);
-            int rem = (int)(ss->transition_cnt % RAND_MAX);
-
-            for (int i = 0; i < div; i++) {
-                rand0 = rand();
-                extended_rand += rand0;
-            }
-            drand0 = drand();
-            extended_rand += (long long)nearbyint(rem * drand0);
-        } else {
-            drand0 = drand();
-            extended_rand = (long long)nearbyint(drand0 * (double)ss->transition_cnt);
-            if (extended_rand == ss->transition_cnt) {
-                extended_rand -= 1;
-            }
-        }
-
-        long long int selected_idx = extended_rand;
+        unsigned long long limit =
+            ULLONG_MAX - (ULLONG_MAX % (unsigned long long)ss->transition_cnt);
+        unsigned long long rand0;
+        do {
+            rand0 = ran(&se->rand_state);
+        } while (rand0 >= limit);
+        long int selected_idx = (long)(rand0 % (unsigned long long)ss->transition_cnt);
         Transition *selected_transition = ss->transition_arr[selected_idx];
 
         // calculate change in energy of system if transition were performed
@@ -104,7 +88,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         // otherwise, accept based on Boltzmann probability
         else {
             double boltzmann_prob = exp(deltaE / (kBoltz * ss->temperature));
-            double random = drand();
+            double random = dran(&se->rand_state);
             if (random <= boltzmann_prob) {
                 perform_flag = 1;
             }

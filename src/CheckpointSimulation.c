@@ -47,7 +47,7 @@ void unpack_state_payload_to_simstate(const SimStatePayload *payload, struct Sim
 void pack_simenv(SimEnvPayload *payload, const struct SimulationEnv *se)
 {
     payload->flavor = se->flavor;
-    payload->rand_seed = se->rand_seed;
+    payload->rand_state = se->rand_state;
 
     payload->system_size_x = se->system_size_x;
     payload->system_size_y = se->system_size_y;
@@ -77,7 +77,7 @@ void pack_simenv(SimEnvPayload *payload, const struct SimulationEnv *se)
 void unpack_simenv_payload_to_config(const SimEnvPayload *payload, struct SimulationConfig *config)
 {
     config->flavor = payload->flavor;
-    config->rand_seed = payload->rand_seed;
+    config->rand_state = payload->rand_state;
     config->system_size_x = payload->system_size_x;
     config->system_size_y = payload->system_size_y;
     config->system_size_z = payload->system_size_z;

@@ -26,7 +26,7 @@ typedef struct {
 #pragma pack(push, 1)
 typedef struct {
     unsigned flavor;
-    unsigned rand_seed;
+    RandomState rand_state;
 
     double overpotential_ramp_rate;
     double max_overpotential;

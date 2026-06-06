@@ -2,6 +2,7 @@
 #define STATE_H
 
 #include "Geometry.h"
+#include "Random.h"
 #include <stdbool.h> // bool
 #include <stdio.h>   // FILE
 
@@ -28,6 +29,7 @@ struct SimulationConfig {
     unsigned long final_iteration; // max number of iterations
     double temperature;
     unsigned rand_seed;
+    RandomState rand_state;
 
     /* SimulationEnv */
     int system_size_x, system_size_y, system_size_z;
@@ -62,7 +64,7 @@ struct SimulationEnv {
 
     /* --------- Simulation bounds --------- */
     unsigned flavor;
-    unsigned rand_seed;
+    RandomState rand_state;
 
     long int max_atoms;
     long int max_transitions;

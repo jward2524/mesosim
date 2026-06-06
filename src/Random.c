@@ -17,29 +17,29 @@
  * @brief Initialize the random state with a seed value, then run the generator a few times to mix
  * the state.
  *
- * @param j seed value to initialize the generator
+ * @param seed seed value to initialize the generator
  * @param state pointer to the random state struct to initialize
  */
-void sran(unsigned long long j, RandomState *state)
+void sran(unsigned long long seed, RandomState *state)
 {
     state->v = 4101842887655102017ULL;
     state->w = 1;
 
-    if (j == 0) {
+    if (seed == 0) {
         // seed of 0 is not allowed for this generator, so replace it with a large nonzero value
         // in this case, all 1 bits
-        j = ULLONG_MAX;
+        seed = ULLONG_MAX;
     }
 
     // avalanche step from MumurHash3, based on suggestion from
     // www.numerical.recipes/forumarchive/index.php/t-2267.html
-    j ^= j >> 33;
-    j *= 0xff51afd7ed558ccdULL;
-    j ^= j >> 33;
-    j *= 0xc4ceb9fe1a85ec53ULL;
-    j ^= j >> 33;
+    seed ^= seed >> 33;
+    seed *= 0xff51afd7ed558ccdULL;
+    seed ^= seed >> 33;
+    seed *= 0xc4ceb9fe1a85ec53ULL;
+    seed ^= seed >> 33;
 
-    state->u = j ^ state->v;
+    state->u = seed ^ state->v;
     ran(state);
     state->v = state->u;
     ran(state);
@@ -48,12 +48,12 @@ void sran(unsigned long long j, RandomState *state)
 }
 
 /**
- * @brief Combined random number generator, produces a random positive integer ranging from 1? to
+ * @brief Combined random number generator, produces a random positive integer ranging from 0 to
  * ULONG_LONG_MAX (usually 2^64-1). Implementation of Ran (Ch. 7.1) from Numerical Recipes in C++
  * (3rd edition), adapted for reentrant use. Described by [A1_l(C3) + A3_r] ^ B1
  *
  * @param state pointer to the random state struct
- * @return random integer in the range [1?, ULONG_LONG_MAX?]
+ * @return random integer in the range [0, ULONG_LONG_MAX]
  */
 unsigned long long ran(RandomState *state)
 {
@@ -90,5 +90,5 @@ double dran(RandomState *state)
     // division is expensive relative to multiplication, so multiply by the pre-computed reciprocal
     // of 2^64 (written with 18 significant digits, even though the limit of double precision is ~16
     // digits)
-    return 5.42101086242752217e-20 * ran(state);
+    return 5.42101086242752217e-20 * (double)ran(state);
 }

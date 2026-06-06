@@ -137,7 +137,7 @@ void test_fill_env_payload_copies_selected_env_scalars(void)
     SimEnvPayload payload = {0};
 
     se.flavor = FLAVOR_KMC;
-    se.rand_seed = 12345u;
+    se.rand_state = (RandomState){.u = 12345, .v = 67890, .w = 24680};
     se.overpotential_ramp_rate = 0.0125;
     se.max_overpotential = 1.25;
     se.system_size_x = 40;
@@ -161,8 +161,12 @@ void test_fill_env_payload_copies_selected_env_scalars(void)
                                    "flavor should copy into the payload");
     TEST_ASSERT_NOT_EQUAL_UINT_MESSAGE(se.flavor, payload.flavor,
                                        "payload should keep the copied flavor value");
-    TEST_ASSERT_EQUAL_UINT_MESSAGE(12345u, payload.rand_seed,
-                                   "random seed should copy into the payload");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(12345, payload.rand_state.u,
+                                   "random state u should copy into the payload");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(67890, payload.rand_state.v,
+                                   "random state v should copy into the payload");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(24680, payload.rand_state.w,
+                                   "random state w should copy into the payload");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0125, payload.overpotential_ramp_rate,
                                      "ramp rate should copy into the payload");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.25, payload.max_overpotential,
@@ -196,7 +200,7 @@ void test_apply_env_payload_to_config_restores_selected_env_scalars(void)
     // The config begins with different values so the restore step has visible work to do.
     SimEnvPayload payload = {
         .flavor = FLAVOR_MC,
-        .rand_seed = 54321u,
+        .rand_state = (RandomState){.u = 12345, .v = 67890, .w = 24680},
         .overpotential_ramp_rate = 0.02,
         .max_overpotential = 2.5,
         .system_size_x = 10,
@@ -211,9 +215,10 @@ void test_apply_env_payload_to_config_restores_selected_env_scalars(void)
         .atom_names_cnt = 2,
         .lattice_type = BCC,
     };
+    // config should reflect the values in payload if loaded correctly
     struct SimulationConfig config = {
         .flavor = FLAVOR_KMC,
-        .rand_seed = 1u,
+        .rand_state = (RandomState){.u = 12345, .v = 67890, .w = 24680},
         .overpotential_ramp_rate = 9.0,
         .max_overpotential = 9.5,
         .system_size_x = 99,
@@ -235,8 +240,8 @@ void test_apply_env_payload_to_config_restores_selected_env_scalars(void)
                                    "flavor should restore from the payload");
     TEST_ASSERT_NOT_EQUAL_UINT_MESSAGE(FLAVOR_KMC, config.flavor,
                                        "flavor should overwrite the old value");
-    TEST_ASSERT_EQUAL_UINT_MESSAGE(54321u, config.rand_seed,
-                                   "random seed should restore from the payload");
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(&payload.rand_state, &config.rand_state, sizeof(RandomState),
+                                     "random seed should restore from the payload");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.02, config.overpotential_ramp_rate,
                                      "ramp rate should restore from the payload");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(2.5, config.max_overpotential,

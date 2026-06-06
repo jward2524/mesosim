@@ -726,7 +726,6 @@ void test_input_logging_basic(void)
     se->num_nn_levels = 1;
     se->nn_energy = malloc(sizeof(double));
     se->nn_energy[0] = 0.1;
-    se->rand_seed = 123;
     ss->atom_cnt = 42;
     ss->temperature = 300.0;
     ss->overpotential = 0.5;
@@ -738,6 +737,7 @@ void test_input_logging_basic(void)
         .lattice_type = FCC,
         .geometry = GEOMETRY_CLUSTER,
         .geometry_param = 5,
+        .rand_seed = 123,
     };
 
     rewind(temp_log);
@@ -756,7 +756,7 @@ void test_input_logging_basic(void)
     // check that info is a substring of log output
     TEST_ASSERT_NOT_NULL(strstr(buffer, "System size is 10 x 20 x 30"));
     TEST_ASSERT_NOT_NULL(strstr(buffer, "Crystal structure is FCC"));
-    TEST_ASSERT_NOT_NULL(strstr(buffer, "Random seed is 123"));
+    TEST_ASSERT_NOT_NULL(strstr(buffer, "Random generator seed is 123"));
     TEST_ASSERT_NOT_NULL(strstr(buffer, "Initialized spherical cluster with radius 5"));
     TEST_ASSERT_NOT_NULL(strstr(buffer, "Atoms created, 42 total"));
     TEST_ASSERT_NOT_NULL(strstr(buffer, "Flavor is KMC"));

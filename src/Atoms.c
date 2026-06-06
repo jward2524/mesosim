@@ -1,5 +1,6 @@
 ﻿#include "Atoms.h"
 #include "ErrorM.h"
+#include "Random.h"
 #include "Simulation.h"
 #include "Utils.h"
 #include "Vector.h"
@@ -414,7 +415,7 @@ void remove_atom(long int atom_idx, struct SimulationState *ss, struct Simulatio
     // reincar_neighbors_cnt = 0;
 
     for (int i = 0; i < number_of_new_random_atoms; ++i) {
-        subv = drand();
+        subv = dran(&se->rand_state);
 
         double bar = 0;
         int type = -1;
