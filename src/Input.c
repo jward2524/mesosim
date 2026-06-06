@@ -723,9 +723,9 @@ static InputErrorFlag cmd_checkpoint(int argc, char **argv, int line, ParseConte
     if (parse_ulong(argv[idx], &ls->checkpoint.interval)) {
         // if not an integer, treat as filename and parse schedule from remaining arguments
 
-        if (argc > 3) {
+        if (argc != 3) {
             fprintf(stderr, "Input error - checkpoint command with filename as first argument "
-                            "expects only 2 arguments\n");
+                            "expects exactly 2 arguments\n");
             return INPUT_ERR_COUNT_MISMATCH;
         }
 
@@ -736,9 +736,9 @@ static InputErrorFlag cmd_checkpoint(int argc, char **argv, int line, ParseConte
         // if an integer, treat it as the interval
         // use a default filename with timestamp
 
-        if (argc > 2) {
+        if (argc != 2) {
             fprintf(stderr, "Input error - checkpoint command with interval as first argument "
-                            "expects only 1 argument\n");
+                            "expects exactly 1 argument\n");
             return INPUT_ERR_COUNT_MISMATCH;
         }
 

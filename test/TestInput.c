@@ -1006,6 +1006,48 @@ void test_checkpoint_interval_only_success(void)
     assert_default_filename_time_deviation(time_part);
 }
 
+void test_checkpoint_filename_success(void)
+{
+    const char *input = "checkpoint my_checkpoint.bin 200\n";
+    ParseContext ctx = {0};
+    struct SimulationConfig inputs = {0};
+    mock_input_file = open_mem(input);
+
+    parse_input_file(mock_input_file, &ctx, &inputs, ls);
+
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("my_checkpoint.bin", ls->checkpoint.filename,
+                                     "Checkpoint filename should match provided filename");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(200, ls->checkpoint.interval, "Checkpoint schedule interval");
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200, ls->checkpoint.next_checkpoint,
+                                     "Checkpoint next_checkpoint should match interval");
+}
+
+void test_checkpoint_filename_only_fails(void)
+{
+    const char *input = "checkpoint my_checkpoint.bin\n";
+    ParseContext ctx = {0};
+    struct SimulationConfig inputs = {0};
+    mock_input_file = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
+        parse_input_file(mock_input_file, &ctx, &inputs, ls);
+        TEST_FAIL_MESSAGE("Expected failure for checkpoint with filename but no interval");
+    });
+}
+
+void test_checkpoint_no_arguments_fails(void)
+{
+    const char *input = "checkpoint\n";
+    ParseContext ctx = {0};
+    struct SimulationConfig inputs = {0};
+    mock_input_file = open_mem(input);
+
+    EXPECT_EXIT(INPUT_ERR_COUNT_MISMATCH, {
+        parse_input_file(mock_input_file, &ctx, &inputs, ls);
+        TEST_FAIL_MESSAGE("Expected failure for checkpoint with no arguments");
+    });
+}
+
 void test_geometry_cluster_success(void)
 {
     const char *input = "geometry cluster 32\n";
@@ -1738,9 +1780,9 @@ int main(void)
 
     // checkpoint
     RUN_TEST(test_checkpoint_interval_only_success);
-    // RUN_TEST(test_checkpoint_filename_success);
-    // RUN_TEST(test_checkpoint_filename_only_fails);
-    // RUN_TEST(test_checkpoint_no_arguments_fails);
+    RUN_TEST(test_checkpoint_filename_success);
+    RUN_TEST(test_checkpoint_filename_only_fails);
+    RUN_TEST(test_checkpoint_no_arguments_fails);
 
     // geometry
     RUN_TEST(test_geometry_cluster_success);
