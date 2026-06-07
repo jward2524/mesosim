@@ -2,6 +2,7 @@
 #include "CheckpointLogging.h"
 #include "CheckpointSimulation.h"
 #include "CheckpointUtils.h"
+#include "FileIO.h"
 #include "Initialization.h"
 #include "Simulation.h"
 #include <errno.h>
@@ -133,9 +134,9 @@ CheckpointStatus read_checkpoint_header(FILE *file, CheckpointHeader *header)
  * is written)
  * @return CheckpointStatus
  */
-CheckpointStatus write_checkpoint_buffer(const char *path, const struct SimulationState *ss,
-                                         const struct SimulationEnv *se,
-                                         const struct LoggingState *ls)
+CheckpointStatus write_checkpoint_file(const char *path, const struct SimulationState *ss,
+                                       const struct SimulationEnv *se,
+                                       const struct LoggingState *ls)
 {
     // create temporary file with the same filename plus a .tmp suffix so interrupted writes do
     // not replace the previous checkpoint.
@@ -555,4 +556,29 @@ CheckpointStatus read_checkpoint_file(const char *path, struct SimulationState *
     }
 
     return CHECKPOINT_OK;
+}
+
+void checkpoint_on_schedule(const struct SimulationState *ss, const struct SimulationEnv *se,
+                            struct LoggingState *ls)
+{
+    if (!ls->checkpoint.enabled) {
+        return;
+    }
+    if (ss->iter >= ls->checkpoint.next_checkpoint) {
+        CheckpointStatus status = write_checkpoint_file(ls->checkpoint.filename, ss, se, ls);
+        if (status != CHECKPOINT_OK) {
+            // if fail, write error and continue with simulation (do not update next_checkpoint so
+            // it will try again on next iteration)
+            fprintf(stderr, "Checkpoint error: failed to write checkpoint at iteration %lu\n",
+                    ss->iter);
+            return;
+        }
+        ls->checkpoint.frame_num += 1;
+        ls->checkpoint.next_checkpoint = ss->iter + ls->checkpoint.interval;
+
+        // print checkpoint log message with iteration and stime
+        safe_log(ls->sim_log,
+                 "Checkpoint file %s successfully created: iteration %ld, simtime %lf\n",
+                 ls->checkpoint.filename, ss->iter, ss->elapsed_stime);
+    }
 }

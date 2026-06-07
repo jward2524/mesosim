@@ -110,7 +110,7 @@ void test_checkpoint_save_and_load_env_arrays_and_atom_names(void)
         memcpy(se_save.atom_names[i], names[i], name_len);
     }
 
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, NULL, &se_save, NULL);
+    save_status = write_checkpoint_file(temp_checkpoint_path, NULL, &se_save, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "env array checkpoint should save successfully");
 
@@ -207,7 +207,7 @@ void test_checkpoint_load_rejects_corrupted_env_atom_names_header(void)
         memcpy(se.atom_names[i], names[i], name_len);
     }
 
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, NULL, &se, NULL);
+    save_status = write_checkpoint_file(temp_checkpoint_path, NULL, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "baseline env array checkpoint should save successfully");
 
@@ -442,7 +442,7 @@ void test_checkpoint_save_and_load_header_only(void)
     CheckpointStatus save_status;
     CheckpointStatus load_status;
 
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, NULL, NULL, NULL);
+    save_status = write_checkpoint_file(temp_checkpoint_path, NULL, NULL, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "header-only checkpoint should save successfully");
 
@@ -471,7 +471,7 @@ void test_checkpoint_save_and_load_state_scalars(void)
     ss.overpotential = 0.8;
     ss.total_atoms_dissolved = 7;
 
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, &ss, NULL, NULL);
+    save_status = write_checkpoint_file(temp_checkpoint_path, &ss, NULL, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "state scalar checkpoint should save successfully");
 
@@ -520,7 +520,7 @@ void test_checkpoint_save_and_load_env_scalars(void)
     se.overpotential_ramp_rate = 0.01;
     se.max_overpotential = 1.0;
 
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, NULL, &se, NULL);
+    save_status = write_checkpoint_file(temp_checkpoint_path, NULL, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "env scalar checkpoint should save successfully");
 
@@ -589,7 +589,7 @@ void test_checkpoint_save_and_load_state_and_env(void)
     se.overpotential_ramp_rate = 0.01;
     se.max_overpotential = 1.0;
 
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, &ss, &se, NULL);
+    save_status = write_checkpoint_file(temp_checkpoint_path, &ss, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "combined state+env checkpoint should save successfully");
 
@@ -674,7 +674,7 @@ void test_checkpoint_save_and_load_atom_round_trip(void)
     ss.atom_cnt = 1;
     ss.atom_arr = atom_refs;
 
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, &ss, &se, NULL);
+    save_status = write_checkpoint_file(temp_checkpoint_path, &ss, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "atom checkpoint should save successfully");
     free(se.is_soluble);
@@ -730,7 +730,7 @@ void test_checkpoint_save_and_load_logging_scalars_success(void)
     ls.out_formats_cnt = 0;
     ls.out_formats = NULL;
 
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, NULL, NULL, &ls);
+    save_status = write_checkpoint_file(temp_checkpoint_path, NULL, NULL, &ls);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "checkpoint should save successfully with null state/env");
 
@@ -760,7 +760,7 @@ void test_checkpoint_save_and_load_logging_scalars_null_payload(void)
     CheckpointStatus save_status;
     CheckpointStatus load_status;
 
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, NULL, NULL, NULL);
+    save_status = write_checkpoint_file(temp_checkpoint_path, NULL, NULL, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "checkpoint should save successfully with null logging state");
 
@@ -820,7 +820,7 @@ void test_checkpoint_save_and_load_logging_formats_success(void)
     save_ls.out_formats[3].xyz.schedule.interval = 2.5;
     save_ls.out_formats[3].xyz.schedule.frame_num = 17;
 
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, NULL, NULL, &save_ls);
+    save_status = write_checkpoint_file(temp_checkpoint_path, NULL, NULL, &save_ls);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "checkpoint should save successfully with null state/env");
 
@@ -883,7 +883,7 @@ void test_checkpoint_load_corrupted_payload_returns_error(void)
     ss.temperature = 273.15;
     ss.overpotential = 0.25;
 
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, &ss, NULL, NULL);
+    save_status = write_checkpoint_file(temp_checkpoint_path, &ss, NULL, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "baseline checkpoint should save successfully");
 
@@ -974,7 +974,7 @@ void test_checkpoint_rebuild_zones_and_rates_from_atoms(void)
     }
 
     // Save the checkpoint before the restore-specific arrays are allocated.
-    save_status = write_checkpoint_buffer(temp_checkpoint_path, &ss_orig, &se, NULL);
+    save_status = write_checkpoint_file(temp_checkpoint_path, &ss_orig, &se, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, save_status,
                                   "checkpoint with atoms should save successfully");
 
@@ -1044,6 +1044,49 @@ void test_checkpoint_rebuild_zones_and_rates_from_atoms(void)
     free(se.atoms_per_nn_level);
 }
 
+void test_checkpoint_on_schedule_triggers_write(void)
+{
+    // A checkpoint scheduled on an iteration interval should trigger a write when the iteration
+    // counter hits the target.
+    struct SimulationState ss = {0};
+    struct SimulationEnv se = {0};
+    struct LoggingState ls = {0};
+    ls.sim_log = stdout;
+
+    ls.checkpoint = (CheckpointFormat){
+        .enabled = true,
+        .interval = 10,
+        .next_checkpoint = 10,
+        .frame_num = 0,
+    };
+    strncpy(ls.checkpoint.filename, temp_checkpoint_path, sizeof(ls.checkpoint.filename));
+    ss.iter = 9;
+
+    checkpoint_on_schedule(&ss, &se, &ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(10, ls.checkpoint.next_checkpoint,
+                                  "next checkpoint should not be incremented if not triggered");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, ls.checkpoint.frame_num,
+                                  "checkpoint frame number should not increment until after write");
+    // file shouldn't exist yet
+    FILE *file = fopen(temp_checkpoint_path, "rb");
+    TEST_ASSERT_NULL_MESSAGE(file, "checkpoint file should not exist before triggering");
+
+    ss.iter = 10;
+    checkpoint_on_schedule(&ss, &se, &ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls.checkpoint.frame_num,
+                                  "checkpoint frame number should not increment until after write");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(20, ls.checkpoint.next_checkpoint,
+                                  "next checkpoint should be scheduled after triggering");
+
+    // check that the file has content
+    file = fopen(temp_checkpoint_path, "rb");
+    TEST_ASSERT_NOT_NULL_MESSAGE(file, "checkpoint file should exist after triggering");
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fclose(file);
+    TEST_ASSERT_TRUE_MESSAGE(file_size > 0, "checkpoint file should have content after triggering");
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -1072,6 +1115,8 @@ int main(void)
     RUN_TEST(test_checkpoint_load_missing_file_returns_error);
     RUN_TEST(test_checkpoint_load_corrupted_payload_returns_error);
     RUN_TEST(test_checkpoint_rebuild_zones_and_rates_from_atoms);
+
+    RUN_TEST(test_checkpoint_on_schedule_triggers_write);
 
     UNITY_END();
 

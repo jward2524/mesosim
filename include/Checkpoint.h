@@ -26,12 +26,6 @@ typedef struct {
 #pragma pack(pop)
 
 // ENHANCE: macro for functions exposed only for testing
-CheckpointStatus write_checkpoint_buffer(const char *path, const struct SimulationState *ss,
-                                         const struct SimulationEnv *se,
-                                         const struct LoggingState *ls);
-CheckpointStatus read_checkpoint_file(const char *path, struct SimulationState *ss,
-                                      struct SimulationEnv *se, struct LoggingState *ls);
-
 uint32_t checkpoint_checksum32(const void *data, size_t size);
 void set_checkpoint_header_magic(CheckpointHeader *header);
 void initialize_checkpoint_header(CheckpointHeader *header);
@@ -52,5 +46,14 @@ CheckpointStatus rebuild_rates_and_transitions(struct SimulationState *ss,
                                                struct SimulationEnv *se);
 
 CheckpointStatus verify_payload_size(FILE *file, CheckpointHeader *header);
+
+CheckpointStatus write_checkpoint_file(const char *path, const struct SimulationState *ss,
+                                       const struct SimulationEnv *se,
+                                       const struct LoggingState *ls);
+CheckpointStatus read_checkpoint_file(const char *path, struct SimulationState *ss,
+                                      struct SimulationEnv *se, struct LoggingState *ls);
+
+void checkpoint_on_schedule(const struct SimulationState *ss, const struct SimulationEnv *se,
+                            struct LoggingState *ls);
 
 #endif // CHECKPOINT_H
