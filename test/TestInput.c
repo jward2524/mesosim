@@ -977,6 +977,8 @@ void test_checkpoint_interval_only_success(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(500, ls->checkpoint.interval, "Checkpoint schedule interval");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(500, ls->checkpoint.next_checkpoint,
                                      "Checkpoint next_checkpoint should match interval");
+    TEST_ASSERT_TRUE_MESSAGE(ls->checkpoint.enabled,
+                             "Checkpoint should be enabled when interval is provided");
 
     // check if default filename is correct
     TEST_ASSERT_TRUE_MESSAGE(strlen(ls->checkpoint.filename) > 0,
@@ -1015,6 +1017,8 @@ void test_checkpoint_filename_success(void)
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
+    TEST_ASSERT_TRUE_MESSAGE(ls->checkpoint.enabled,
+                             "Checkpoint should be enabled when interval is provided");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("my_checkpoint.bin", ls->checkpoint.filename,
                                      "Checkpoint filename should match provided filename");
     TEST_ASSERT_EQUAL_INT_MESSAGE(200, ls->checkpoint.interval, "Checkpoint schedule interval");
@@ -1547,6 +1551,8 @@ void test_required_commands_all_present_success(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(10, inputs.final_iteration, "Final iteration");
     TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_KMC, inputs.flavor, "Flavor");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(300.0, inputs.temperature, "Temperature");
+    TEST_ASSERT_FALSE_MESSAGE(ls->checkpoint.enabled,
+                              "Checkpoint should be disabled no command is present");
 }
 
 void test_missing_required_systemsize_fails(void)

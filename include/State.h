@@ -241,6 +241,7 @@ typedef struct {
 } OutputFormat;
 
 typedef struct {
+    bool enabled;
     char filename[256];
     unsigned long interval;
     unsigned long next_checkpoint;

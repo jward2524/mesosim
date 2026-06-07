@@ -749,6 +749,7 @@ static InputErrorFlag cmd_checkpoint(int argc, char **argv, int line, ParseConte
     }
     ls->checkpoint.next_checkpoint = ls->checkpoint.interval;
     ls->checkpoint.frame_num = 0;
+    ls->checkpoint.enabled = true;
     return INPUT_ERR_NONE;
 }
 
