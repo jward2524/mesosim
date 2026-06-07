@@ -15,10 +15,6 @@
 #define TEST 0
 #endif
 
-static struct SimulationState *sim_state;
-static struct SimulationEnv *sim_env;
-static struct LoggingState *log_state;
-
 static void usage(int help_type)
 {
     if (help_type == 2) {
@@ -85,6 +81,13 @@ static void parse_arguments(int argc, char *argv[], char **pfilename, int *verbo
     }
 }
 
+static void simulation_setup(struct SimulationState *ss, struct SimulationEnv *se,
+                             struct LoggingState *ls);
+static void perform_simulation(struct SimulationState *ss, struct SimulationEnv *se,
+                               struct LoggingState *ls);
+static void simulation_cleanup(struct SimulationState *ss, struct SimulationEnv *se,
+                               struct LoggingState *ls);
+
 int main(int argc, char *argv[])
 {
     clock_t presim_start = clock();
@@ -101,11 +104,15 @@ int main(int argc, char *argv[])
     time_t starttime = 0;
     time(&starttime);
 
+    struct SimulationState *sim_state;
+    struct SimulationEnv *sim_env;
+    struct LoggingState *log_state;
     initialize_states(&sim_state, &sim_env, &log_state);
 
+    log_state->sim_log = stdout;
+    // fresh start here
     log_state->verbose = verbose_flag;
     log_state->verbose_interval = verbose_interval;
-    log_state->sim_log = stdout;
 
     safe_log(log_state->sim_log, "Start time: %s\n", ctime(&starttime));
     safe_log(log_state->sim_log, "Attempting to read in file %s\n", input_filename);
@@ -117,36 +124,18 @@ int main(int argc, char *argv[])
 
     open_log_files(log_state, inputs.flavor);
 
-    // TODO: take user inputs as argument
     initialize_simulation(&inputs, sim_state, sim_env, log_state);
+    // end fresh start
 
     double presim_time = (double)(clock() - presim_start) / CLOCKS_PER_SEC;
     safe_log(log_state->sim_log, "Pre-simulation setup time: %lg seconds\n", presim_time);
 
-    if (log_state->verbose)
-        printf("Beginning simulation\n");
-
     clock_t sim_start = clock();
 
-    // perform simulations
-    unsigned long sim_error;
-    switch (sim_env->flavor) {
-    case FLAVOR_KMC:
-        sim_error = perform_simulation(sim_state, sim_env, log_state);
-        break;
-    case FLAVOR_MC:
-        sim_error = perform_metropolis_mc(sim_state, sim_env, log_state);
-        break;
-    default:
-        fprintf(stderr, "Flavor %d not recognized, no simulation performed\n", sim_env->flavor);
-        sim_error = 1;
-        break;
-    }
+    simulation_setup(sim_state, sim_env, log_state);
+    perform_simulation(sim_state, sim_env, log_state);
+    simulation_cleanup(sim_state, sim_env, log_state);
 
-    if (sim_error != 0) {
-        fprintf(stderr, "ERROR! Something went wrong in the simulation\n");
-        clean_and_error(EXIT_FAILURE);
-    }
     double sim_time = (double)(clock() - sim_start) / CLOCKS_PER_SEC;
     safe_log(log_state->sim_log, "Simulation time: %lg seconds\n", sim_time);
     safe_log(log_state->sim_log, "Average iteration time: %lg seconds\n",
@@ -155,4 +144,69 @@ int main(int argc, char *argv[])
     clean_and_error(EXIT_SUCCESS);
 
     return 0;
+}
+
+static void simulation_setup(struct SimulationState *ss, struct SimulationEnv *se,
+                             struct LoggingState *ls)
+{
+    if (ls->verbose) {
+        printf("Beginning simulation\n");
+    }
+
+    // refresh transitions and compute transition array before starting simulation loop
+    for (int i = 0; i < ss->atom_cnt; ++i) {
+        refresh_transitions(i, ss, se);
+    }
+    if (se->flavor == FLAVOR_KMC) {
+        compute_transition_array(ss, se);
+    }
+
+    // log initial state at beginning of simulation
+    // if starting from checkpoint, don't log initial state bc already logged
+    if (ss->iter == 0) {
+        write_logs(NULL, ss, se, ls);
+    }
+
+    return;
+}
+
+static void perform_simulation(struct SimulationState *ss, struct SimulationEnv *se,
+                               struct LoggingState *ls)
+{
+    unsigned long sim_error;
+    switch (se->flavor) {
+    case FLAVOR_KMC:
+        sim_error = perform_kmc(ss, se, ls);
+        break;
+    case FLAVOR_MC:
+        sim_error = perform_metropolis_mc(ss, se, ls);
+        break;
+    default:
+        fprintf(stderr, "Flavor %d not recognized, no simulation performed\n", se->flavor);
+        sim_error = 1;
+        break;
+    }
+}
+
+static void simulation_cleanup(struct SimulationState *ss, struct SimulationEnv *se,
+                               struct LoggingState *ls)
+{
+    write_logs(NULL, ss, se, ls);
+
+    switch (se->flavor) {
+    case FLAVOR_KMC:
+        if ((ss->final_iteration > 0) && (ss->iter >= ss->final_iteration)) {
+            safe_log(ls->sim_log, "Reached final iteration and terminated\n");
+        }
+        if ((ss->run_stime > 0) && (ss->elapsed_stime >= ss->run_stime)) {
+            safe_log(ls->sim_log, "Reached end of simulation time and terminated\n");
+        }
+        break;
+    case FLAVOR_MC:
+        safe_log(ls->sim_log, "Reached final iteration and terminated\n");
+        break;
+    }
+    if (ls->verbose) {
+        printf("Finished simulation\n");
+    }
 }

@@ -10,7 +10,7 @@
 void pack_simstate(SimStatePayload *payload, const struct SimulationState *ss)
 {
     payload->iter = ss->iter;
-    payload->mmc_steps = ss->mmc_steps;
+    payload->mmc_step = ss->mmc_step;
     payload->final_iteration = ss->final_iteration;
     payload->run_stime = ss->run_stime;
     payload->simulation_should_kill_itself = ss->simulation_should_kill_itself;
@@ -28,7 +28,7 @@ void pack_simstate(SimStatePayload *payload, const struct SimulationState *ss)
 void unpack_state_payload_to_simstate(const SimStatePayload *payload, struct SimulationState *ss)
 {
     ss->iter = payload->iter;
-    ss->mmc_steps = payload->mmc_steps;
+    ss->mmc_step = payload->mmc_step;
     ss->final_iteration = payload->final_iteration;
     ss->run_stime = payload->run_stime;
     ss->simulation_should_kill_itself = payload->simulation_should_kill_itself; // XXX

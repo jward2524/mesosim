@@ -26,33 +26,20 @@ static double calculate_new_energy(const long atom_idx, const int offset_idx,
 unsigned long perform_metropolis_mc(struct SimulationState *ss, struct SimulationEnv *se,
                                     struct LoggingState *ls)
 {
-    // Metropolis MC steps per particle
-    ss->mmc_steps = 0;
-
-    // TODO: was this set elsewhere?
-    // ss->iter = 0;
-
-    for (int i = 0; i < ss->atom_cnt; ++i) {
-        refresh_transitions(i, ss, se);
-    }
-
     // TODO: forbid analysis_types that aren't iteration
-    char suffix[BUFFER_SIZE];
-    snprintf(suffix, BUFFER_SIZE, "i0");
-
-    // log initial state
-    write_logs(NULL, ss, se, ls);
 
     int old_u, old_v, old_w;
     int new_u, new_v, new_w;
     int coord;
-    int simulation_run = 1;
+    bool simulation_run = true;
     while (simulation_run) {
-        ss->iter++;
+        ss->iter++; // simulation is on iteration 1
         if (ss->iter % (unsigned long)ss->atom_cnt == 0) {
-            ss->mmc_steps++;
+            ss->mmc_step++; // "" mmc_step 1
         }
         // flag if this iteration is the last iteration
+        // based on iter counter so that final mmc_step can be completed
+        // done here to keep close to increment
         simulation_run = ss->iter < (ss->final_iteration * (unsigned long)ss->atom_cnt);
 
         // select transition
@@ -104,7 +91,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
 
         if (perform_flag) {
             // perform transition
-            // duplicating what is in perform_simulation
+            // duplicating what is in perform_kmc
 
             coord = get_coordination(transitioning_atom_idx, ss, se);
 
@@ -125,7 +112,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
                 // printf("Iteration %ld, energy %le\n", ss->iter, ss->total_internal_energy);
             }
             if (ss->iter % (unsigned long)ss->atom_cnt == 0) {
-                printf("MMC %lu, iteration %ld, energy %le\n", ss->mmc_steps, ss->iter,
+                printf("MMC %lu, iteration %ld, energy %le\n", ss->mmc_step, ss->iter,
                        ss->total_internal_energy);
             }
         }
@@ -146,12 +133,6 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
 
         output_on_schedule(&step_data, ss, se, ls);
     }
-
-    // write elapsed_stime to mark finish
-    write_logs(NULL, ss, se, ls);
-    safe_log(ls->sim_log, "Reached final iteration and terminated\n");
-
-    printf("Finished simulation\n");
 
     return 0;
 }

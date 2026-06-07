@@ -329,10 +329,10 @@ const char *get_atoms_dissolved(const struct SimulationState *ss, const struct C
     return fstring_to_buffer("%d", ss->total_atoms_dissolved);
 }
 
-const char *get_mmc_steps(const struct SimulationState *ss, const struct CsvLsView *view)
+const char *get_mmc_step(const struct SimulationState *ss, const struct CsvLsView *view)
 {
     (void)view;
-    return fstring_to_buffer("%lu", ss->mmc_steps);
+    return fstring_to_buffer("%lu", ss->mmc_step);
 }
 
 const CsvFieldFunc csv_field_map[] = {{"iter", get_iteration, FLAVOR_UNDEFINED},
@@ -342,7 +342,7 @@ const CsvFieldFunc csv_field_map[] = {{"iter", get_iteration, FLAVOR_UNDEFINED},
                                       {"overpotential", get_overpotential, FLAVOR_KMC},
                                       {"atoms", get_atoms, FLAVOR_UNDEFINED},
                                       {"atoms_dissolved", get_atoms_dissolved, FLAVOR_KMC},
-                                      {"mmc_steps", get_mmc_steps, FLAVOR_MC}};
+                                      {"mmc_step", get_mmc_step, FLAVOR_MC}};
 
 const size_t CSV_FIELD_FUNCS_COUNT = sizeof(csv_field_map) / sizeof(CsvFieldFunc);
 
@@ -767,7 +767,7 @@ static int check_and_advance_checkpoint(OutputSchedule *sched, unsigned flavor, 
 {
     OutputScheduleMode mode = sched->mode;
 
-    unsigned long int iter = flavor == FLAVOR_MC ? ss->mmc_steps : ss->iter;
+    unsigned long int iter = flavor == FLAVOR_MC ? ss->mmc_step : ss->iter;
 
     int iter_reached = fabs(sched->next_checkpoint - (double)iter) < FABS_TOL;
     int stime_reached = ss->elapsed_stime >= sched->next_checkpoint;

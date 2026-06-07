@@ -459,7 +459,7 @@ void test_checkpoint_save_and_load_state_scalars(void)
     CheckpointStatus load_status;
 
     ss.iter = 42ul;
-    ss.mmc_steps = 99ul;
+    ss.mmc_step = 99ul;
     ss.final_iteration = 1234ul;
     ss.run_stime = 12.5;
     ss.simulation_should_kill_itself = true;
@@ -481,7 +481,7 @@ void test_checkpoint_save_and_load_state_scalars(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, load_status,
                                   "state scalar checkpoint should load successfully");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(42u, ss.iter, "iteration counter should restore");
-    TEST_ASSERT_EQUAL_UINT_MESSAGE(99u, ss.mmc_steps, "mmc steps should restore");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(99u, ss.mmc_step, "mmc steps should restore");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(1234u, ss.final_iteration, "final iteration should restore");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(12.5, ss.run_stime, "runtime limit should restore");
     TEST_ASSERT_TRUE_MESSAGE(ss.simulation_should_kill_itself, "kill-itself flag should restore");
@@ -564,7 +564,7 @@ void test_checkpoint_save_and_load_state_and_env(void)
 
     // populate both state and env for a combined checkpoint
     ss.iter = 100ul;
-    ss.mmc_steps = 99ul;
+    ss.mmc_step = 99ul;
     ss.final_iteration = 1234ul;
     ss.run_stime = 12.5;
     ss.simulation_should_kill_itself = true;
@@ -636,7 +636,7 @@ void test_checkpoint_save_and_load_atom_round_trip(void)
 
     // populate both state and env for a combined checkpoint
     ss.iter = 42ul;
-    ss.mmc_steps = 99ul;
+    ss.mmc_step = 99ul;
     ss.final_iteration = 1234ul;
     ss.run_stime = 12.5;
     ss.simulation_should_kill_itself = true;

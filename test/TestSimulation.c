@@ -39,7 +39,7 @@ void test_simulation(void)
 
     initialize_simulation(&inputs, ss, se, ls);
 
-    perform_simulation(ss, se, ls);
+    perform_kmc(ss, se, ls);
     TEST_PASS();
 }
 

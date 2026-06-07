@@ -20,7 +20,7 @@ void test_fill_state_payload_copies_selected_state_scalars(void)
     SimStatePayload payload = {0};
 
     ss.iter = 17ul;
-    ss.mmc_steps = 23ul;
+    ss.mmc_step = 23ul;
     ss.final_iteration = 99ul;
     ss.run_stime = 4.5;
     ss.simulation_should_kill_itself = true;
@@ -40,8 +40,7 @@ void test_fill_state_payload_copies_selected_state_scalars(void)
     TEST_ASSERT_EQUAL_UINT_MESSAGE(17u, payload.iter, "iter should copy into the payload");
     TEST_ASSERT_NOT_EQUAL_UINT_MESSAGE(ss.iter, payload.iter,
                                        "payload should keep the copied iter value");
-    TEST_ASSERT_EQUAL_UINT_MESSAGE(23u, payload.mmc_steps,
-                                   "mmc steps should copy into the payload");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(23u, payload.mmc_step, "mmc steps should copy into the payload");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(99u, payload.final_iteration,
                                    "final iteration should copy into the payload");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(4.5, payload.run_stime,
@@ -70,7 +69,7 @@ void test_apply_state_payload_to_simstate_restores_selected_state_scalars(void)
     // overwritten.
     SimStatePayload payload = {
         .iter = 11ul,
-        .mmc_steps = 22ul,
+        .mmc_step = 22ul,
         .final_iteration = 33ul,
         .run_stime = 6.25,
         .simulation_should_kill_itself = false,
@@ -84,7 +83,7 @@ void test_apply_state_payload_to_simstate_restores_selected_state_scalars(void)
     };
     struct SimulationState ss = {
         .iter = 555ul,
-        .mmc_steps = 666ul,
+        .mmc_step = 666ul,
         .final_iteration = 777ul,
         .run_stime = 8.0,
         .simulation_should_kill_itself = true,
@@ -104,7 +103,7 @@ void test_apply_state_payload_to_simstate_restores_selected_state_scalars(void)
 
     TEST_ASSERT_EQUAL_UINT_MESSAGE(11u, ss.iter, "iter should restore from the payload");
     TEST_ASSERT_NOT_EQUAL_UINT_MESSAGE(555u, ss.iter, "iter should overwrite the old value");
-    TEST_ASSERT_EQUAL_UINT_MESSAGE(22u, ss.mmc_steps, "mmc steps should restore from payload");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(22u, ss.mmc_step, "mmc steps should restore from payload");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(33u, ss.final_iteration,
                                    "final iteration should restore from payload");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(6.25, ss.run_stime, "run time should restore from payload");

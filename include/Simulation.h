@@ -4,8 +4,8 @@
 #include "State.h"
 #include <stdbool.h>
 
-unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEnv *se,
-                                 struct LoggingState *ls);
+unsigned long perform_kmc(struct SimulationState *ss, struct SimulationEnv *se,
+                          struct LoggingState *ls);
 void compute_transition_array(struct SimulationState *ss, struct SimulationEnv *se);
 int refresh_transitions(long atom_idx, struct SimulationState *ss, struct SimulationEnv *se);
 int get_rate(unsigned char *atom_env, int final_config_neighbor_cnt, unsigned char is_evaporation,

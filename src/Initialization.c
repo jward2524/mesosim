@@ -93,6 +93,7 @@ void initialize_state_from_config(struct SimulationConfig *config, struct Simula
     ss->elapsed_stime = 0.0;
     ss->total_atoms_dissolved = 0;
     ss->iter = 0;
+    ss->mmc_step = 0;
 }
 
 void set_maximum_array_sizes(struct SimulationEnv *se)

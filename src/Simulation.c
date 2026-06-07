@@ -1,5 +1,6 @@
 ﻿#include "Simulation.h"
 #include "Atoms.h"
+#include "Checkpoint.h"
 #include "ErrorM.h"
 #include "FileIO.h"
 #include "Mesosim.h"
@@ -12,31 +13,9 @@
 
 // static const double FABS_TOL = 1e-6;
 
-// ENHANCE: pass struct with all simulation parameters as argument
-// potentially FILE* as arguments
-unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEnv *se,
-                                 struct LoggingState *ls)
+unsigned long perform_kmc(struct SimulationState *ss, struct SimulationEnv *se,
+                          struct LoggingState *ls)
 {
-    // prev and current iteration simulation times, for overpotential moving
-    double cur_stime, prev_stime;
-
-    double transition_type_probability;
-
-    // double vap;
-    unsigned char atype;
-
-    prev_stime = ss->elapsed_stime;
-
-    bool simulation_end = false;
-
-    for (int i = 0; i < ss->atom_cnt; ++i) {
-        // resets all kinetic paramters
-        refresh_transitions(i, ss, se);
-    }
-    compute_transition_array(ss, se);
-
-    write_logs(NULL, ss, se, ls);
-
     // start with everything current to the current state
     // choose a transition
     // perform the transition
@@ -44,20 +23,20 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
     // update rates
     // next iteration
 
+    // prev and current iteration simulation times, for overpotential moving
+    double cur_stime, prev_stime;
+    double transition_type_probability;
+
+    prev_stime = ss->elapsed_stime;
+
     // containers for coordinates
     int lastxt, lastyt, lastzt;
     int old_x, old_y, old_z;
     // int neighbor_x, neighbor_y, neighbor_z, neighbor_idx;
 
-    while (!simulation_end) {
+    bool simulation_run = true;
+    while (simulation_run) {
         ss->iter++;
-
-        if (ss->simulation_should_kill_itself) // abort simulation (only happens if atoms overlap)
-        {
-            ss->simulation_should_kill_itself = false;
-            fprintf(stderr, "killed somehow\n");
-            return 1; // return 1 b/c error
-        }
 
         // pick the type of transition to occur
         double rand1 = dran(&se->rand_state);
@@ -120,7 +99,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
 
                     adjust_pbc(&lastxt, &lastyt, &lastzt, se);
 
-                    atype = ss->atom_arr[transitioning_atom_idx]->type;
+                    unsigned char atype = ss->atom_arr[transitioning_atom_idx]->type;
 
                     // moves atom?
                     remove_atom(transitioning_atom_idx, ss, se);
@@ -171,7 +150,7 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         // random numbers)
 
         // random number can't be zero, else increment=inf
-        double rand3 = ((double)ran(&se->rand_state) + 1) / ((double)RAND_MAX + 1);
+        double rand3 = ((double)ran(&se->rand_state) + 1) / ((double)ULLONG_MAX + 1);
         double stime_increment = -log(rand3) / ss->frequency_sum;
         ss->elapsed_stime += stime_increment;
         ls->stime_precision =
@@ -241,26 +220,15 @@ unsigned long perform_simulation(struct SimulationState *ss, struct SimulationEn
         };
 
         output_on_schedule(&step_data, ss, se, ls);
+        checkpoint_on_schedule(ss, se, ls);
 
         // check if simulation is over
         if (ss->sim_end_type == SIM_END_BY_STIME) {
-            simulation_end = (ss->elapsed_stime >= ss->run_stime);
+            simulation_run = (ss->elapsed_stime < ss->run_stime);
         } else if (ss->sim_end_type == SIM_END_BY_ITERATIONS) {
-            simulation_end = (ss->iter >= ss->final_iteration);
+            simulation_run = (ss->iter < ss->final_iteration);
         }
     }
-
-    // write elapsed_stime to mark finish
-    if ((ss->final_iteration > 0) && (ss->iter >= ss->final_iteration)) {
-        write_logs(NULL, ss, se, ls);
-        safe_log(ls->sim_log, "Reached final iteration and terminated\n");
-    }
-    if ((ss->run_stime > 0) && (ss->elapsed_stime >= ss->run_stime)) {
-        write_logs(NULL, ss, se, ls);
-        safe_log(ls->sim_log, "Reached end of simulation time and terminated\n");
-    }
-
-    printf("Finished simulation\n");
 
     return 0;
 }

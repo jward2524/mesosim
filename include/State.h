@@ -162,7 +162,7 @@ struct SimulationState {
     TransProb transition_probability;
 
     unsigned long iter;
-    unsigned long mmc_steps;
+    unsigned long mmc_step;        // Metropolis MC steps per particle
     unsigned long final_iteration; // max number of iterations
     double run_stime;              // simulation max runtime default (in seconds)
     bool simulation_should_kill_itself;

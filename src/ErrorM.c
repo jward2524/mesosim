@@ -33,6 +33,7 @@ void set_state(struct SimulationState **p_ss, struct SimulationEnv **p_se,
 void initialize_states(struct SimulationState **p_ss, struct SimulationEnv **p_se,
                        struct LoggingState **p_ls)
 {
+    // initialize to zero; many properties assume default to zero
     *p_ss = calloc(1, sizeof(struct SimulationState));
     *p_se = calloc(1, sizeof(struct SimulationEnv));
     *p_ls = calloc(1, sizeof(struct LoggingState));

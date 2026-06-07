@@ -230,12 +230,12 @@ static CheckpointStatus reopen_output_file(const char *filename, const fpos_t *p
 
     *file = fopen(filename, "rb+");
     if (!*file) {
-        fprintf(stderr, "Failed to open checkpoint file %s: %s\n", filename, strerror(errno));
+        fprintf(stderr, "Failed to open output file %s: %s\n", filename, strerror(errno));
         return CHECKPOINT_ERROR;
     }
     int ret = fsetpos(*file, pos);
     if (ret) {
-        fprintf(stderr, "Failed to set file position for checkpoint file %s: %s", filename,
+        fprintf(stderr, "Failed to set file position for output file %s: %s", filename,
                 strerror(errno));
         fclose(*file);
         *file = NULL;

@@ -9,7 +9,7 @@
 #pragma pack(push, 1)
 typedef struct {
     unsigned long iter;
-    unsigned long mmc_steps;
+    unsigned long mmc_step;
     unsigned long final_iteration;
     double run_stime;
     bool simulation_should_kill_itself;
