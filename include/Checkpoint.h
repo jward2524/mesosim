@@ -42,9 +42,6 @@ CheckpointStatus read_checkpoint_header(FILE *file, CheckpointHeader *header);
 CheckpointStatus write_checkpoint_payload(FILE *file, const uint8_t *payload,
                                           const uint32_t payload_bytes);
 
-CheckpointStatus rebuild_rates_and_transitions(struct SimulationState *ss,
-                                               struct SimulationEnv *se);
-
 CheckpointStatus verify_payload_size(FILE *file, CheckpointHeader *header);
 
 CheckpointStatus write_checkpoint_file(const char *path, const struct SimulationState *ss,

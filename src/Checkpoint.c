@@ -266,29 +266,6 @@ CheckpointStatus write_checkpoint_file(const char *path, const struct Simulation
     return CHECKPOINT_OK;
 }
 
-// rebuild rate and transition arrays from restored atoms
-// must be called after zones are rebuilt
-CheckpointStatus rebuild_rates_and_transitions(struct SimulationState *ss, struct SimulationEnv *se)
-{
-    if (!ss || !ss->atom_arr || ss->atom_cnt <= 0) {
-        return CHECKPOINT_OK; // nothing to rebuild
-    }
-
-    // reset rate and transition counts to 0 (they will be rebuilt)
-    ss->rate_cnt = 0;
-    ss->transition_cnt = 0;
-
-    // rebuild transitions for each atom by recomputing its possible moves
-    for (long int i = 0; i < ss->atom_cnt; ++i) {
-        refresh_transitions(i, ss, se);
-    }
-
-    // rebuild the transition probability structure for efficient event selection
-    compute_transition_array(ss, se);
-
-    return CHECKPOINT_OK;
-}
-
 CheckpointStatus verify_payload_size(FILE *file, CheckpointHeader *header)
 {
     if (fseek(file, 0, SEEK_END) != 0) {
@@ -547,7 +524,6 @@ CheckpointStatus read_checkpoint_file(const char *path, struct SimulationState *
                 return status;
             }
         }
-        rebuild_rates_and_transitions(ss, se);
     }
 
     // env arrays in env_arr_payload have ownership transferred to SimulationEnv

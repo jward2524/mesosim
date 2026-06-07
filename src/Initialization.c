@@ -916,8 +916,8 @@ void corners2limits(double corners_cart[8][3], int limits_lat[3][2], double inv_
     }
 }
 
-void initialize_simulation(struct SimulationConfig *inputs, struct SimulationState *ss,
-                           struct SimulationEnv *se, struct LoggingState *ls)
+void initialize_simulation_from_input(struct SimulationConfig *inputs, struct SimulationState *ss,
+                                      struct SimulationEnv *se, struct LoggingState *ls)
 {
 
     se->zone_count_u = TTS;

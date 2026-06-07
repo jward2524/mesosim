@@ -37,7 +37,7 @@ void test_simulation(void)
     simulation_parameters_from_file(filename, &inputs, ls);
     open_log_files(ls, se->flavor);
 
-    initialize_simulation(&inputs, ss, se, ls);
+    initialize_simulation_from_input(&inputs, ss, se, ls);
 
     perform_kmc(ss, se, ls);
     TEST_PASS();

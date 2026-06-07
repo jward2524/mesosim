@@ -26,6 +26,8 @@ void initialize_state_from_config(struct SimulationConfig *inputs, struct Simula
 void set_default_orientation(int lattice_type, double rmat[3][3]);
 
 void corners2limits(double corners_cart[8][3], int limits_lat[3][2], double inv_basis[3][3]);
-void initialize_simulation(struct SimulationConfig *inputs, struct SimulationState *sim_state,
-                           struct SimulationEnv *sim_env, struct LoggingState *log_state);
+void initialize_simulation_from_input(struct SimulationConfig *inputs,
+                                      struct SimulationState *sim_state,
+                                      struct SimulationEnv *sim_env,
+                                      struct LoggingState *log_state);
 #endif // INITIALIZATION_H

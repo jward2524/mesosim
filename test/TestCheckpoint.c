@@ -324,16 +324,6 @@ void test_verify_payload_size_rejects_mismatched_file_size(void)
                                   "mismatched file size should be rejected");
 }
 
-void test_rebuild_rates_and_transitions_is_noop_for_empty_state(void)
-{
-    // With no atoms present, the rebuild helper should return success without doing any work.
-    struct SimulationState ss = {0};
-    struct SimulationEnv se = {0};
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, rebuild_rates_and_transitions(&ss, &se),
-                                  "empty state should be a no-op for transition rebuilding");
-}
-
 void test_checkpoint_header_magic_helpers(void)
 {
     // Set the magic, validate it, then corrupt one byte to confirm the check fails.
@@ -909,7 +899,7 @@ void test_checkpoint_load_corrupted_payload_returns_error(void)
                                   "loading a corrupted checkpoint should fail cleanly");
 }
 
-void test_checkpoint_rebuild_zones_and_rates_from_atoms(void)
+void test_checkpoint_atom_restore_roundtrip(void)
 {
     // Exercise the full restore path that rebuilds zones and transition/rate data from atoms.
     struct SimulationState ss_orig = {0};
@@ -1114,7 +1104,7 @@ int main(void)
 
     RUN_TEST(test_checkpoint_load_missing_file_returns_error);
     RUN_TEST(test_checkpoint_load_corrupted_payload_returns_error);
-    RUN_TEST(test_checkpoint_rebuild_zones_and_rates_from_atoms);
+    RUN_TEST(test_checkpoint_atom_restore_roundtrip);
 
     RUN_TEST(test_checkpoint_on_schedule_triggers_write);
 

@@ -303,7 +303,7 @@ void test_initialize_simulation(void)
 
     ls->sim_log = temp_log;
 
-    initialize_simulation(&inputs, ss, se, ls);
+    initialize_simulation_from_input(&inputs, ss, se, ls);
 
     TEST_ASSERT_TRUE_MESSAGE(1, "initialize simulation");
 
