@@ -1,9 +1,10 @@
+#include "MC.h"
 #include "Atoms.h"
+#include "Checkpoint.h"
 #include "ErrorM.h"
 #include "FileIO.h"
 #include "Random.h"
 #include "Simulation.h"
-#include "State.h"
 #include "Utils.h"
 #include <limits.h>
 #include <math.h>
@@ -132,6 +133,7 @@ unsigned long perform_metropolis_mc(struct SimulationState *ss, struct Simulatio
         };
 
         output_on_schedule(&step_data, ss, se, ls);
+        checkpoint_on_schedule(ss, se, ls);
     }
 
     return 0;

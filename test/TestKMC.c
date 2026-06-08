@@ -1,11 +1,12 @@
 #include "ErrorM.h"
 #include "FileIO.h"
 #include "Initialization.h"
-#include "MC.h"
+#include "KMC.h"
 #include "Simulation.h"
 #include "State.h"
 #include "TUtils.h"
 #include "unity.h"
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -32,7 +33,7 @@ void tearDown(void)
 void test_kmc(void)
 {
     ls->sim_log = temp_log;
-    char filename[] = "test/mc.in";
+    char filename[] = "test/cluster_nns.in";
     struct SimulationConfig inputs = {0};
     simulation_parameters_from_file(filename, &inputs, ls);
     open_log_files(ls, se->flavor);
@@ -42,10 +43,19 @@ void test_kmc(void)
     for (int i = 0; i < ss->atom_cnt; ++i) {
         refresh_transitions(i, ss, se);
     }
+    compute_transition_array(ss, se);
 
-    perform_metropolis_mc(ss, se, ls);
+    perform_kmc(ss, se, ls);
     TEST_PASS();
 }
+
+// TODO: add test for number of files produced and number of lines in csv files and values in csv
+// files
+
+// TODO: test individual function in Simulation.c
+// add_to/remove_from_transition_array cases: removed transition is [only one in list, last in list,
+// first in list, middle of list, first in rate list, last in rate list, middle of rate list, only
+// one in rate list]
 
 int main(void)
 {

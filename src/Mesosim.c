@@ -3,6 +3,7 @@
 #include "FileIO.h"
 #include "Initialization.h"
 #include "Input.h"
+#include "KMC.h"
 #include "MC.h"
 #include "Simulation.h"
 #include "State.h"
@@ -12,8 +13,11 @@
 #include <time.h>
 
 // makefile defines TEST macro in debug mode
-#ifndef TEST
+#if !defined(TEST)
 #define TEST 0
+#define main main
+#else
+#define main main_mesosim
 #endif
 
 typedef enum { START_INPUT = 1, START_CHECKPOINT } StartType;

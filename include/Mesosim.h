@@ -1,6 +1,8 @@
 #ifndef MESOSIM_H
 #define MESOSIM_H
 
-// only here to make makefile easier
+#ifdef TEST
+int main_mesosim(int argc, char *argv[]);
+#endif
 
 #endif // MESOSIM_H

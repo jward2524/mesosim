@@ -17,19 +17,15 @@ void tearDown(void)
 {
 }
 
-void test_parse_comment(void)
+void test_test(void)
 {
-    char line[] = "systemsize 128 128 128";
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(128, 128, "system size x");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(128, 128, "system size y");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(128, 128, "system size z");
+    TEST_PASS();
 }
 
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_parse_comment);
+    RUN_TEST(test_test);
     UNITY_END();
 
     // return 0 else makefile throws error
