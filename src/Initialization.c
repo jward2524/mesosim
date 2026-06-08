@@ -924,6 +924,9 @@ void initialize_simulation_from_input(struct SimulationConfig *inputs, struct Si
     se->zone_count_v = TTS;
     se->zone_count_w = TTS;
 
+    // precision to use for increments of simulation time and overpotential
+    ls->increment_precision = 3;
+
     initialize_state_from_config(inputs, ss);
     initialize_env_from_config(inputs, se);
     allocate_simulation_arrays(ss, se);

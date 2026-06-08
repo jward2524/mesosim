@@ -53,7 +53,7 @@ void test_kmc(void)
     TEST_ASSERT_NOT_NULL_MESSAGE(ptr, "fgets should read a line");
     ptr = fgets(line, sizeof(line), ls->out_formats[0].csv.file);
     TEST_ASSERT_NOT_NULL_MESSAGE(ptr, "fgets should read a line");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("0,200,1.02e+00,226468.050001,293.000000\n", line,
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("0,200,1.01766e+00,226468.050001,293.000000\n", line,
                                      "CSV state log after KMC step");
 
     fclose(ls->out_formats[0].csv.file);

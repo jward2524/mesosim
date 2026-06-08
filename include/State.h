@@ -256,7 +256,10 @@ struct LoggingState {
     int verbose;
     unsigned long verbose_interval; // interval for printing verbose output to console
 
-    // precision of incremented doubles
+    // precision of incremented doubles to resolve increments
+    // ex: increment = 0.0017, total = 100
+    // increment_precision = 0 -> total = 100.002
+    // increment_precision = 3 -> total = 100.001700
     int increment_precision;
     int stime_precision;
     int overpot_precision;
