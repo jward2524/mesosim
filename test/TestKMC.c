@@ -46,11 +46,46 @@ void test_kmc(void)
     compute_transition_array(ss, se);
 
     perform_kmc(ss, se, ls);
-    TEST_PASS();
-}
 
-// TODO: add test for number of files produced and number of lines in csv files and values in csv
-// files
+    rewind(ls->out_formats[0].csv.file);
+    char line[256];
+    char *ptr = fgets(line, sizeof(line), ls->out_formats[0].csv.file);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ptr, "fgets should read a line");
+    ptr = fgets(line, sizeof(line), ls->out_formats[0].csv.file);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ptr, "fgets should read a line");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("0,200,1.02e+00,226468.050001,293.000000\n", line,
+                                     "CSV state log after KMC step");
+
+    fclose(ls->out_formats[0].csv.file);
+
+    // no initial output '_0_i0' file because that is done by Mesosim.c
+    char *output_filenames[] = {
+        "test/output/cluster_0_i500.xyz",  "test/output/cluster_1_i1000.xyz",
+        "test/output/cluster_2_i1500.xyz", "test/output/cluster_3_i2000.xyz",
+        "test/output/cluster.csv",
+    };
+
+    FILE *f = fopen("file_does_not_exist.txt", "r");
+    TEST_ASSERT_NULL_MESSAGE(f, "File should not exist");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ENOENT, errno, "Error should be ENOENT for non-existent file");
+    int errno_nexist = errno;
+
+    for (size_t i = 0; i < sizeof(output_filenames) / sizeof(output_filenames[0]); ++i) {
+        f = fopen(output_filenames[i], "r");
+        TEST_ASSERT_NOT_NULL_MESSAGE(f, "File should exist");
+
+        // expect an error from file not existing, so if its a different error, report it
+        if (errno != errno_nexist) {
+            fprintf(stderr, "Error opening file %s: %s\n", output_filenames[i], strerror(errno));
+        }
+
+        fclose(f);
+        int ret = remove(output_filenames[i]);
+        if (ret != 0) {
+            fprintf(stderr, "Error deleting file %s: %s\n", output_filenames[i], strerror(errno));
+        }
+    }
+}
 
 // TODO: test individual function in Simulation.c
 // add_to/remove_from_transition_array cases: removed transition is [only one in list, last in list,
