@@ -6,6 +6,7 @@
 #include "State.h"
 #include "TUtils.h"
 #include "unity.h"
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -44,7 +45,23 @@ void test_kmc(void)
     }
 
     perform_metropolis_mc(ss, se, ls);
-    TEST_PASS();
+
+    rewind(ls->out_formats[0].csv.file);
+    char line[256];
+    char *ptr = fgets(line, sizeof(line), ls->out_formats[0].csv.file);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ptr, "fgets should read a line");
+    ptr = fgets(line, sizeof(line), ls->out_formats[0].csv.file);
+    TEST_ASSERT_NOT_NULL_MESSAGE(ptr, "fgets should read a line");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("0,1,193941,170451.449999,293.000000\n", line,
+                                     "CSV state log after MC step");
+
+    fclose(ls->out_formats[0].csv.file);
+    ls->out_formats[0].csv.file = NULL;
+    int ret = remove(ls->out_formats[0].csv.filename);
+    if (ret != 0) {
+        fprintf(stderr, "Error deleting file %s: %s\n", ls->out_formats[0].csv.filename,
+                strerror(errno));
+    }
 }
 
 int main(void)

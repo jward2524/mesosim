@@ -22,6 +22,7 @@ FILE *open_file(const char *filename);
 void init_temp(FILE **temp_log);
 void clean_temp(FILE **temp_log);
 void close_if_exists(FILE **file);
+void assert_many_files_exist_and_remove(const char **output_filenames, size_t num_files);
 
 void build_array_header(uint8_t *buffer, uint16_t flag, uint32_t n);
 void assert_output_format_matches_runtime(const OutputFormat *expected,

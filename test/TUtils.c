@@ -48,6 +48,41 @@ void close_if_exists(FILE **file)
     }
 }
 
+void assert_file_exists_and_remove(const char *filename)
+{
+    FILE *f = fopen("file_does_not_exist.txt", "r");
+    TEST_ASSERT_NULL_MESSAGE(f, "File should not exist");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(ENOENT, errno, "Error should be ENOENT for non-existent file");
+    int errno_nexist = errno;
+
+    f = fopen(filename, "rb");
+
+    if (!f) {
+        // expect an error from file not existing, so if its a different error, report it
+        if (errno != errno_nexist) {
+            fprintf(stderr, "Error opening file %s: %s\n", filename, strerror(errno));
+            TEST_FAIL_MESSAGE("File should exist but couldn't be opened");
+        }
+        char error_msg[256];
+        sprintf(error_msg, "File %s should exist but couldn't be opened", filename);
+        TEST_ASSERT_NOT_NULL_MESSAGE(f, error_msg);
+    }
+
+    fclose(f);
+
+    int ret = remove(filename);
+    if (ret != 0) {
+        fprintf(stderr, "Error deleting file %s: %s\n", filename, strerror(errno));
+    }
+}
+
+void assert_many_files_exist_and_remove(const char **output_filenames, size_t num_files)
+{
+    for (size_t i = 0; i < num_files; ++i) {
+        assert_file_exists_and_remove(output_filenames[i]);
+    }
+}
+
 void build_array_header(uint8_t *buffer, uint16_t flag, uint32_t n)
 {
     memcpy(buffer, &((const uint16_t){CHECKPOINT_ARRAY_MAGIC}), sizeof(uint16_t));
