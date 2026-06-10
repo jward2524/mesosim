@@ -6,6 +6,7 @@
 #include "Random.h"
 #include "Simulation.h"
 #include "Utils.h"
+#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 

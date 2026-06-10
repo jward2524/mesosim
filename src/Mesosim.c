@@ -273,7 +273,16 @@ static void simulation_cleanup(struct SimulationState *ss, struct SimulationEnv 
         safe_log(ls->sim_log, "Reached final iteration and terminated\n");
         break;
     }
+
     if (ls->verbose) {
         printf("Finished simulation\n");
+    }
+
+    if (ls->checkpoint.enabled) {
+        int ret = remove(ls->checkpoint.filename);
+        if (ret != 0) {
+            fprintf(stderr, "Error deleting checkpoint file %s: %s\n", ls->checkpoint.filename,
+                    strerror(errno));
+        }
     }
 }
