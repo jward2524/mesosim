@@ -207,13 +207,17 @@ void clean_and_error(int exit_error)
 
     // LoggingState
     if (ls != NULL) {
-        if (ls->sim_log)
+        if (ls->sim_log && (ls->sim_log != stdout)) {
             fclose(ls->sim_log);
+            ls->sim_log = NULL;
+        }
         for (int i = 0; i < ls->out_formats_cnt; i++) {
             OutputFormat f = ls->out_formats[i];
             if (f.type == OUTPUT_FORMAT_CSV) {
-                if (f.csv.file)
+                if (f.csv.file) {
                     fclose(f.csv.file);
+                    f.csv.file = NULL;
+                }
                 if (f.csv.field_names) {
                     for (int j = 0; j < f.csv.field_count; j++) {
                         free_if_exists((void **)&f.csv.field_names[j]);
@@ -223,8 +227,10 @@ void clean_and_error(int exit_error)
                 free_if_exists((void **)&f.csv.field_funcs);
                 free_if_exists((void **)&f.csv.schedule.list);
             } else if (f.type == OUTPUT_FORMAT_STEPS_CSV) {
-                if (f.steps.file)
+                if (f.steps.file) {
                     fclose(f.steps.file);
+                    f.steps.file = NULL;
+                }
             } else if (f.type == OUTPUT_FORMAT_XYZ) {
                 free_if_exists((void **)&f.xyz.schedule.list);
             }
