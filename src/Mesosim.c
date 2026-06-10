@@ -13,11 +13,11 @@
 #include <time.h>
 
 // makefile defines TEST macro in debug mode
-#if !defined(TEST)
+#ifndef TEST
 #define TEST 0
-#define main main
+#define MESOSIM_MAIN main
 #else
-#define main main_mesosim
+#define MESOSIM_MAIN main_mesosim
 #endif
 
 typedef enum { START_INPUT = 1, START_CHECKPOINT } StartType;
@@ -41,7 +41,7 @@ static void perform_simulation(struct SimulationState *ss, struct SimulationEnv 
 static void simulation_cleanup(struct SimulationState *ss, struct SimulationEnv *se,
                                struct LoggingState *ls);
 
-int main(int argc, char *argv[])
+int MESOSIM_MAIN(int argc, char *argv[])
 {
     // simulation fails fast, so main won't return a value unless simulation successfully completes
 
