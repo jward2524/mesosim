@@ -9,4 +9,4 @@ temp 293
 seed 12345
 flavor MC
 run iteration 2
-output csv test/output/mc.csv interval iteration 1 fields iter time energy temperature
+output csv test/output/mc.csv interval iteration 1 fields mmc_step iter energy temperature

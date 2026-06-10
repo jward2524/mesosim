@@ -336,7 +336,7 @@ const char *get_mmc_step(const struct SimulationState *ss, const struct CsvLsVie
 }
 
 const CsvFieldFunc csv_field_map[] = {{"iter", get_iteration, FLAVOR_UNDEFINED},
-                                      {"time", get_time, FLAVOR_UNDEFINED},
+                                      {"time", get_time, FLAVOR_KMC},
                                       {"energy", get_energy, FLAVOR_UNDEFINED},
                                       {"temperature", get_temperature, FLAVOR_UNDEFINED},
                                       {"overpotential", get_overpotential, FLAVOR_KMC},

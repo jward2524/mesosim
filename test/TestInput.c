@@ -938,8 +938,8 @@ void test_output_unrecognized_field_fails(void)
 void test_output_unsupported_field_for_flavor_fails(void)
 {
     const char *input =
-        "flavor KMC\n"
-        "output csv test/output/cluster.csv interval iteration 200 fields iter time notafield\n";
+        "flavor MC\n"
+        "output csv test/output/cluster.csv interval iteration 200 fields iter time\n";
     ParseContext ctx = {0};
     struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
@@ -1779,6 +1779,7 @@ int main(void)
     RUN_TEST(test_output_fields_empty_fails);
     RUN_TEST(test_output_xyz_with_fields_fails);
     RUN_TEST(test_output_unrecognized_field_fails);
+    RUN_TEST(test_output_unsupported_field_for_flavor_fails);
     RUN_TEST(test_output_non_numeric_interval_fails);
     RUN_TEST(test_output_csv_default_filename_time_success);
     RUN_TEST(test_output_xyz_default_prefix_time_success);
