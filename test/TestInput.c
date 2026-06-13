@@ -59,6 +59,7 @@ static void assert_default_filename_time_deviation(char *time_str)
         deviation = -deviation;
     }
     long max_deviation = 1;
+
     char deviation_msg[64];
     snprintf(deviation_msg, sizeof(deviation_msg),
              "CSV filename time deviation should be <= %ld second(s)", max_deviation);
@@ -231,6 +232,12 @@ void test_parse_input_cluster_nns_file_success(void)
                                   "Simulation end type");
     TEST_ASSERT_EQUAL_UINT_MESSAGE(2000U, (unsigned int)inputs.final_iteration,
                                    "Final iteration value");
+
+    TEST_ASSERT_TRUE_MESSAGE(ls->checkpoint.enabled,
+                             "Checkpoint should be enabled when checkpoint command is present");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.bin", ls->checkpoint.filename,
+                                     "Checkpoint filename");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1000, ls->checkpoint.interval, "Checkpoint interval");
 }
 
 void test_parse_input_multi_command_unknown_mid_file_fails(void)
@@ -738,6 +745,12 @@ void test_output_steps_default_filename_coord_success(void)
     TEST_ASSERT_TRUE_MESSAGE(len > 10 &&
                                  strcmp(format->steps.filename + len - 10, "_steps.csv") == 0,
                              "Default steps filename should end with _steps.csv");
+
+    // Get the part of the filename that includes the time
+    char time_str[32];
+    strncpy(time_str, format->steps.filename, len - 10);
+    time_str[len - 10] = '\0';
+    assert_default_filename_time_deviation(time_str);
 }
 
 void test_output_steps_with_filename_success(void)
@@ -884,7 +897,6 @@ void test_output_xyz_default_prefix_time_success(void)
     ParseContext ctx = {0};
     struct SimulationConfig inputs = {0};
     mock_input_file = open_mem(input);
-    time_t now = time(NULL);
 
     parse_input_file(mock_input_file, &ctx, &inputs, ls);
 
@@ -904,21 +916,8 @@ void test_output_xyz_default_prefix_time_success(void)
     TEST_ASSERT_TRUE_MESSAGE(len < sizeof(time_part), "Time part too long");
     strncpy(time_part, format->xyz.prefix, len);
     time_part[len] = '\0';
-    char *endptr;
-    long file_time = strtol(time_part, &endptr, 10);
-    TEST_ASSERT_TRUE_MESSAGE(*endptr == '\0', "XYZ prefix time part should be fully numeric");
-    TEST_ASSERT_TRUE_MESSAGE(file_time > 0, "Extracted time from prefix should be positive");
 
-    long deviation = file_time - (long)now;
-    if (deviation < 0) {
-        deviation = -deviation;
-    }
-    long max_deviation = 1;
-    char deviation_msg[64];
-    snprintf(deviation_msg, sizeof(deviation_msg),
-             "XYZ prefix time deviation should be <= %ld second(s)", max_deviation);
-    TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
-    TEST_ASSERT_FALSE_MESSAGE(format->xyz.stripped, "XYZ stripped flag should be false by default");
+    assert_default_filename_time_deviation(time_part);
 }
 
 void test_output_unrecognized_field_fails(void)

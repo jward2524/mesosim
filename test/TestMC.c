@@ -30,7 +30,7 @@ void tearDown(void)
     clean_and_error(0);
 }
 
-void test_kmc(void)
+void test_mc(void)
 {
     ls->sim_log = temp_log;
     char filename[] = "test/mc.in";
@@ -55,6 +55,10 @@ void test_kmc(void)
     TEST_ASSERT_EQUAL_STRING_MESSAGE("0,1,193941,170451.449999,293.000000\n", line,
                                      "CSV state log after MC step");
 
+    FILE *checkpoint_file = fopen(ls->checkpoint.filename, "rb");
+    TEST_ASSERT_NOT_NULL_MESSAGE(checkpoint_file, "Checkpoint file should be created");
+    fclose(checkpoint_file);
+
     fclose(ls->out_formats[0].csv.file);
     ls->out_formats[0].csv.file = NULL;
     int ret = remove(ls->out_formats[0].csv.filename);
@@ -67,7 +71,7 @@ void test_kmc(void)
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_kmc);
+    RUN_TEST(test_mc);
     UNITY_END();
 
     clean_temp(&temp_log);

@@ -36,6 +36,9 @@ void test_mesosim(void)
     TEST_ASSERT_EQUAL_STRING_MESSAGE("0,0,0e+00,226704.000001,293.000000\n", line, "CSV state log");
     fclose(f);
 
+    FILE *checkpoint_file = fopen("test/output/cluster.bin", "rb");
+    TEST_ASSERT_NULL_MESSAGE(checkpoint_file, "Checkpoint file should have been deleted");
+
     const char *output_filenames[] = {
         "test/output/cluster_0_i0.xyz",    "test/output/cluster_1_i500.xyz",
         "test/output/cluster_2_i1000.xyz", "test/output/cluster_3_i1500.xyz",

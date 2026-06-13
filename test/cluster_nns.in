@@ -14,3 +14,4 @@ flavor KMC
 run iteration 2000
 output csv test/output/cluster.csv interval iteration 200 fields iter time energy temperature
 output xyz stripped test/output/cluster interval iteration 500
+checkpoint test/output/cluster.bin 1000

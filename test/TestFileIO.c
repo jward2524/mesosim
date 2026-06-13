@@ -38,9 +38,12 @@ void tearDown(void)
     close_if_exists(&input_file);
 }
 
-// mostly redundant with TestInput.c tests
 void test_process_in_file_cluster(void)
 {
+    // mostly redundant with TestInput.c tests
+    // specifically test_parse_input_cluster_nns_file_success
+    // just test that it works
+
     char filename[] = "test/cluster_nns.in";
     input_file = open_file(filename);
     struct SimulationConfig inputs = {0};
@@ -48,54 +51,17 @@ void test_process_in_file_cluster(void)
     process_in_file(input_file, &inputs, ls);
     TEST_ASSERT_EQUAL_INT_MESSAGE(FLAVOR_KMC, inputs.flavor, "flavor");
     TEST_ASSERT_EQUAL_INT_MESSAGE(128, inputs.system_size_x, "system size x");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(128, inputs.system_size_y, "system size y");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(128, inputs.system_size_z, "system size z");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(293., inputs.temperature, "temperature");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(12345, inputs.rand_seed, "random seed");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.9, inputs.initial_overpotential, "initial overpotential");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.03, inputs.overpotential_ramp_rate, "overpotential ramp");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.2, inputs.max_overpotential, "max overpotential");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(2, inputs.num_nn_levels, "number of nn shells");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, inputs.nn_energy[0], "nn energy shell 1 idx 0");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, inputs.nn_energy[1], "nn energy shell 1 idx 1");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.15, inputs.nn_energy[2], "nn energy shell 1 idx 2");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, inputs.nn_energy[3], "nn energy shell 2 idx 0");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, inputs.nn_energy[4], "nn energy shell 2 idx 1");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.10, inputs.nn_energy[5], "nn energy shell 2 idx 2");
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(FCC, inputs.lattice_type, "lattice type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(GEOMETRY_CLUSTER, inputs.geometry, "geometry type");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(32, inputs.geometry_param, "cluster radius");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("", inputs.atoms_filename, "geometry filename");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(2, inputs.num_elements, "number of elements");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(3, inputs.num_bond_types, "number of bond types");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(2, inputs.atom_names_cnt, "number of atom names");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("Ag", inputs.atom_names[0], "first atom name");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("Au", inputs.atom_names[1], "second atom name");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, inputs.is_soluble[0], "Ag solubility");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, inputs.is_soluble[1], "Au solubility");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.75, inputs.substrate_composition[0], "Ag composition");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.25, inputs.substrate_composition[1], "Au composition");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(SIM_END_BY_ITERATIONS, inputs.sim_end_type,
-                                  "simulation end type");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0, inputs.run_stime, "simulation max runtime");
     TEST_ASSERT_EQUAL_INT_MESSAGE(2000, inputs.final_iteration, "simulation max iteration");
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(2, ls->out_formats_cnt, "number of output formats");
     TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_CSV, ls->out_formats[0].type,
                                   "output 0 format type");
-    OutputFormat *format = &ls->out_formats[0];
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, format->csv.frame_num, "frame number");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., format->csv.schedule.interval, "csv log interval");
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(200., format->csv.schedule.next_checkpoint,
-                                     "csv log checkpoint");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_SCHEDULE_INTERVAL_ITERATION, format->csv.schedule.mode,
-                                  "logging analysis type");
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(OUTPUT_FORMAT_XYZ, ls->out_formats[1].type,
-                                  "output 1 format type");
-    format = &ls->out_formats[1];
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1, format->xyz.stripped, "stripped xyz");
+    TEST_ASSERT_TRUE_MESSAGE(ls->checkpoint.enabled,
+                             "Checkpoint should be enabled when checkpoint command is present");
 }
 
 void test_process_in_file_mc(void)
@@ -146,6 +112,12 @@ void test_process_in_file_mc(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, format->csv.frame_num, "frame number");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., format->csv.schedule.interval, "log interval");
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1., format->csv.schedule.next_checkpoint, "log checkpoint");
+
+    TEST_ASSERT_TRUE_MESSAGE(ls->checkpoint.enabled,
+                             "Checkpoint should be enabled when checkpoint command is present");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("test/output/cluster.bin", ls->checkpoint.filename,
+                                     "Checkpoint filename");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, ls->checkpoint.interval, "Checkpoint interval");
 }
 
 void test_process_xyz_file(void)

@@ -1,3 +1,4 @@
+#include "Checkpoint.h"
 #include "ErrorM.h"
 #include "FileIO.h"
 #include "Initialization.h"
@@ -30,7 +31,7 @@ void tearDown(void)
     clean_and_error(0);
 }
 
-void test_kmc(void)
+void test_mc(void)
 {
     ls->sim_log = temp_log;
     char filename[] = "test/cluster_nns.in";
@@ -59,6 +60,14 @@ void test_kmc(void)
     fclose(ls->out_formats[0].csv.file);
     ls->out_formats[0].csv.file = NULL;
 
+    FILE *checkpoint_file = fopen(ls->checkpoint.filename, "rb");
+    TEST_ASSERT_NOT_NULL_MESSAGE(checkpoint_file, "Checkpoint file should be created");
+    fclose(checkpoint_file);
+
+    // validate checkpoint file is valid
+    CheckpointStatus status = read_checkpoint_file(ls->checkpoint.filename, ss, se, ls);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CHECKPOINT_OK, status, "Checkpoint file should be valid");
+
     // no initial output '_0_i0' file because that is done by Mesosim.c
     const char *output_filenames[] = {
         "test/output/cluster_0_i500.xyz",  "test/output/cluster_1_i1000.xyz",
@@ -78,7 +87,7 @@ void test_kmc(void)
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_kmc);
+    RUN_TEST(test_mc);
     UNITY_END();
 
     clean_temp(&temp_log);
