@@ -540,21 +540,22 @@ void checkpoint_on_schedule(const struct SimulationState *ss, const struct Simul
     if (!ls->checkpoint.enabled) {
         return;
     }
-    if (ss->iter >= ls->checkpoint.next_checkpoint) {
+    unsigned long int cmp_iter = se->flavor == FLAVOR_MC ? ss->mmc_step : ss->iter;
+    if (cmp_iter >= ls->checkpoint.next_checkpoint) {
         CheckpointStatus status = write_checkpoint_file(ls->checkpoint.filename, ss, se, ls);
         if (status != CHECKPOINT_OK) {
             // if fail, write error and continue with simulation (do not update next_checkpoint so
             // it will try again on next iteration)
             fprintf(stderr, "Checkpoint error: failed to write checkpoint at iteration %lu\n",
-                    ss->iter);
+                    cmp_iter);
             return;
         }
         ls->checkpoint.frame_num += 1;
-        ls->checkpoint.next_checkpoint = ss->iter + ls->checkpoint.interval;
+        ls->checkpoint.next_checkpoint = cmp_iter + ls->checkpoint.interval;
 
         // print checkpoint log message with iteration and stime
         safe_log(ls->sim_log,
                  "Checkpoint file %s successfully created: iteration %ld, simtime %lf\n",
-                 ls->checkpoint.filename, ss->iter, ss->elapsed_stime);
+                 ls->checkpoint.filename, cmp_iter, ss->elapsed_stime);
     }
 }
