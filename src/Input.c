@@ -18,6 +18,8 @@
 // TODO: make global timespec variable so default checkpoint and output filenames can use it for
 // timestamping, and random seeding can be done with the nanoseconds
 
+static time_t file_time = {0};
+
 static InputErrorFlag cmd_systemsize(int argc, char **argv, int line, ParseContext *p_ctx,
                                      struct SimulationConfig *inputs, struct LoggingState *ls);
 static InputErrorFlag cmd_temp(int argc, char **argv, int line, ParseContext *p_ctx,
@@ -556,8 +558,7 @@ static InputErrorFlag parse_output_csv(int argc, char **argv, struct LoggingStat
         idx++;
     } else {
         // generate default filename: [time in seconds].csv
-        time_t now = time(NULL);
-        snprintf(format->csv.filename, sizeof(format->csv.filename), "%ld.csv", (long)now);
+        snprintf(format->csv.filename, sizeof(format->csv.filename), "%ld.csv", (long)file_time);
     }
     InputErrorFlag err = parse_output_schedule(argc, argv, &idx, &format->csv.schedule, 1);
     if (err != INPUT_ERR_NONE) {
@@ -620,8 +621,7 @@ static InputErrorFlag parse_output_xyz(int argc, char **argv, struct LoggingStat
         idx++;
     } else {
         // generate default prefix: [time].xyz
-        time_t now = time(NULL);
-        snprintf(format->xyz.prefix, sizeof(format->xyz.prefix), "%ld.xyz", (long)now);
+        snprintf(format->xyz.prefix, sizeof(format->xyz.prefix), "%ld.xyz", (long)file_time);
     }
 
     InputErrorFlag err = parse_output_schedule(argc, argv, &idx, &format->xyz.schedule, 0);
@@ -651,9 +651,8 @@ static InputErrorFlag parse_steps_csv(int argc, char **argv, struct LoggingState
         idx++;
     } else {
         // generate default filename: [time in seconds]_iter.csv
-        time_t now = time(NULL);
         snprintf(format->steps.filename, sizeof(format->steps.filename), "%ld_steps.csv",
-                 (long)now);
+                 (long)file_time);
     }
 
     // Check for optional 'coord' parameter
@@ -743,9 +742,8 @@ static InputErrorFlag cmd_checkpoint(int argc, char **argv, int line, ParseConte
         }
 
         // generate default filename: checkpoint_[time in seconds].bin
-        time_t now = time(NULL);
         snprintf(ls->checkpoint.filename, sizeof(ls->checkpoint.filename), "checkpoint_%ld.bin",
-                 (long)now);
+                 (long)file_time);
     }
     ls->checkpoint.next_checkpoint = ls->checkpoint.interval;
     ls->checkpoint.frame_num = 0;
@@ -900,6 +898,8 @@ void parse_input_file(FILE *fp, ParseContext *p_ctx, struct SimulationConfig *in
     char line[MAX_LINE];
     char *argv[MAX_TOKENS];
     int lineno = 0;
+
+    file_time = time(NULL);
 
     initialize_requirements(p_ctx);
     while (fgets(line, sizeof(line), fp)) {

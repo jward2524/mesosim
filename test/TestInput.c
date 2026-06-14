@@ -16,9 +16,12 @@ static struct LoggingState *ls = NULL;
 char *mock_name = "test/mock_input.in";
 static FILE *mock_input_file = NULL;
 
+static time_t file_time = {0};
+
 void setUp(void)
 {
     initialize_states(&ss, &se, &ls);
+    file_time = time(NULL);
 }
 
 void tearDown(void)
@@ -48,13 +51,12 @@ static FILE *open_mem(const char *text)
 
 static void assert_default_filename_time_deviation(char *time_str)
 {
-    time_t now = time(NULL);
     char *endptr;
-    long file_time = strtol(time_str, &endptr, 10);
+    long extracted_time = strtol(time_str, &endptr, 10);
     TEST_ASSERT_TRUE_MESSAGE(*endptr == '\0', "Time part should be fully numeric");
-    TEST_ASSERT_TRUE_MESSAGE(file_time > 0, "Extracted time from filename should be positive");
+    TEST_ASSERT_TRUE_MESSAGE(extracted_time > 0, "Extracted time from filename should be positive");
 
-    long deviation = file_time - (long)now;
+    long deviation = extracted_time - (long)file_time;
     if (deviation < 0) {
         deviation = -deviation;
     }
@@ -62,7 +64,8 @@ static void assert_default_filename_time_deviation(char *time_str)
 
     char deviation_msg[64];
     snprintf(deviation_msg, sizeof(deviation_msg),
-             "CSV filename time deviation should be <= %ld second(s)", max_deviation);
+             "CSV filename time deviation should be <= %ld second(s), is %ld s", max_deviation,
+             deviation);
     TEST_ASSERT_TRUE_MESSAGE(deviation <= max_deviation, deviation_msg);
 }
 
